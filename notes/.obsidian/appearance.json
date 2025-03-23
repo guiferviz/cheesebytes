@@ -1,0 +1,17 @@
+{
+  "cssTheme": "",
+  "baseFontSize": 14,
+  "theme": "obsidian",
+  "accentColor": "#ffda1f",
+  "enabledCssSnippets": [
+    "tasks-plugin-backlinks-icon",
+    "tasks-plugin-styles",
+    "truata",
+    "color-borders-by-path",
+    "no-ligatures"
+  ],
+  "translucency": true,
+  "interfaceFontFamily": "IosevkaTermSlab Nerd Font Mono",
+  "textFontFamily": "IosevkaTermSlab Nerd Font Mono",
+  "monospaceFontFamily": "IosevkaTermSlab Nerd Font Mono"
+}

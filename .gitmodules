@@ -1,0 +1,6 @@
+[submodule "notes/.obsidian/plugins/obsidian-marimo"]
+	path = notes/.obsidian/plugins/obsidian-marimo
+	url = git@github.com:guiferviz/obsidian-marimo.git
+[submodule "notes/.obsidian/plugins/obsidian-webpage-export"]
+	path = notes/.obsidian/plugins/obsidian-webpage-export
+	url = git@github.com:KosmosisDire/obsidian-webpage-export.git

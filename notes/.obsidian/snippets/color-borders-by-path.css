@@ -1,0 +1,9 @@
+.markdown-preview-view.truata,
+.markdown-source-view.truata {
+    border: 5px solid #634ed1;
+}
+
+.markdown-preview-view.public,
+.markdown-source-view.public {
+    border: 5px solid #de2b2b;
+}

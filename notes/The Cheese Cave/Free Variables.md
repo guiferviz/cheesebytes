@@ -1,0 +1,1 @@
+*Free variables* are identifiers in an expression that are not bound to a specific value or parameter within that expression.

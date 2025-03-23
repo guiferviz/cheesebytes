@@ -1,0 +1,21 @@
+{
+  "alwaysUpdateLinks": true,
+  "showUnsupportedFiles": true,
+  "attachmentFolderPath": "Attachments",
+  "userIgnoreFilters": [
+    "excalidraw/",
+    "excalidraw/scripts/",
+    "templates/",
+    "old/"
+  ],
+  "pdfExportSettings": {
+    "includeName": true,
+    "pageSize": "A4",
+    "landscape": false,
+    "margin": "0",
+    "downscalePercent": 60
+  },
+  "vimMode": true,
+  "newFileLocation": "root",
+  "promptDelete": false
+}
