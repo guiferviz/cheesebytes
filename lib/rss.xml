@@ -1,0 +1,730 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Cheese 🧀 Bytes]]></title><description><![CDATA[Obsidian digital garden]]></description><link>https://cheesebytes.com/</link><image><url>https://cheesebytes.com/lib/media/favicon.png</url><title>Cheese 🧀 Bytes</title><link>https://cheesebytes.com/</link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Sun, 23 Mar 2025 19:02:33 GMT</lastBuildDate><atom:link href="https://cheesebytes.com/lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Sun, 23 Mar 2025 19:02:31 GMT</pubDate><copyright><![CDATA[guiferviz]]></copyright><ttl>60</ttl><dc:creator>guiferviz</dc:creator><item><title><![CDATA[A List That Contains Itself]]></title><description><![CDATA[ 
+ <br>I have been writing recently about <a data-href="Having Fun With Python Chained Assignments" href="https://cheesebytes.com/the-cheese-cave/having-fun-with-python-chained-assignments.html" class="internal-link" target="_self" rel="noopener nofollow">Having Fun With Python Chained Assignments</a>, and it turns out there is a well-known variation of a chained assignments puzzle. In this <a data-href="Decode The Code" href="https://cheesebytes.com/the-cheese-cave/decode-the-code.html" class="internal-link" target="_self" rel="noopener nofollow">Decode The Code</a>, I am going to show a surprising way of creating a list that contains itself. It is always fun to work with self-referencing!<br>a = a[0] = [0]
+print(a)  # Prints: [[...]]
+assert a != [[...]]
+assert a == [a]
+assert a is a[0]
+<br>What is a = a[0] = [0] doing, and how is even possible for it to work?<br><br>The&nbsp;[[...]]&nbsp;is Python's way of indicating that the list&nbsp;a&nbsp;contains itself. It is an expression we cannot directly write in code because three dots in Python represent an ellipsis data type object, not a reference to the outer object. Therefore,&nbsp;assert a != [[...]]&nbsp;even though&nbsp;print(a)&nbsp;outputs&nbsp;[[...]].<br>This line is surprising at first because in other languages like C or Java, assignments are made from right to left. With the first assignment being&nbsp;a[0] = [0], it seems impossible for the code to work, because&nbsp;a&nbsp;is not defined.<br>To solve this puzzle, we need to know <a data-href="How Chained Assignments Work In Python" href="https://cheesebytes.com/the-cheese-cave/how-chained-assignments-work-in-python.html" class="internal-link" target="_self" rel="noopener nofollow">How Chained Assignments Work In Python</a>. The rightmost expression is evaluated first, so the list with&nbsp;[0]&nbsp;is created first. Then, this value is assigned to the targets&nbsp;a&nbsp;and&nbsp;a[0]&nbsp;in order, from left to right. That is the key to understanding this.<br>This means the code is actually equivalent to:<br>_rightmost_expr = [0]
+a = _rightmost_expr
+a[0] = _rightmost_expr
+<br>Note that introducing the&nbsp;_rightmost_expr&nbsp;variable is key here; otherwise, two different&nbsp;[0]&nbsp;in the code would lead to two different objects:<br>a = [0]
+a[0] = [0]
+assert a == [[0]]
+<br><br>This note is not going to be very extensive because I already found a really nice post about this example on <a data-tooltip-position="top" aria-label="https://susam.net/peculiar-self-references.html" rel="noopener nofollow" class="external-link" href="https://susam.net/peculiar-self-references.html" target="_blank">susam.net - Peculiar Self-References</a>. It contains a more extensive explanation and various interesting variations.]]></description><link>https://cheesebytes.com/the-cheese-cave/a-list-that-contains-itself.html</link><guid isPermaLink="false">The Cheese Cave/A List That Contains Itself.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Example]]></title><description><![CDATA[ 
+ <br>A closure is a function that remembers the variables from the scope where it was created, even after that scope has exited. This allows the function to use those variables later, even if it is called from a different context.<br><br>def enjoy_cheese(name):
+	def cheesy_message():
+		return f"Yummy, I love {name}!"
+	return cheesy_message
+
+taste_cheese = enjoy_cheese("Roquefort")
+print(taste_cheese()) # Output: Hmmm, Roquefort!
+<br>In this example, the&nbsp;cheesy_message&nbsp;function is a closure that remembers the&nbsp;name&nbsp;variable ("Roquefort") from the&nbsp;enjoy_cheese&nbsp;function, allowing it to use that value later.]]></description><link>https://cheesebytes.com/the-cheese-cave/closure.html</link><guid isPermaLink="false">The Cheese Cave/Closure.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Closure VS. Function]]></title><description><![CDATA[ 
+ <br>A <a data-href="Closure" href="https://cheesebytes.com/the-cheese-cave/closure.html" class="internal-link" target="_self" rel="noopener nofollow">Closure</a> is a programming construct that combines a function (lambda or not) with its surrounding context, allowing the function to access <a data-href="Free Variables" href="https://cheesebytes.com/the-cheese-cave/free-variables.html" class="internal-link" target="_self" rel="noopener nofollow">Free Variables</a> defined outside of it.<br>This means that a closure captures the values of these variables, enabling the function to be evaluated even after its original context has finished executing. While often confused with lambdas, a closure specifically refers to the environment that binds these free variables, making the expression self-contained and evaluable.<br>See more about this comparison in this Stack Overflow question: <a data-tooltip-position="top" aria-label="https://stackoverflow.com/questions/220658/what-is-the-difference-between-a-closure-and-a-lambda" rel="noopener nofollow" class="external-link" href="https://stackoverflow.com/questions/220658/what-is-the-difference-between-a-closure-and-a-lambda" target="_blank">What is the difference between a 'closure' and a 'lambda'?</a>.]]></description><link>https://cheesebytes.com/the-cheese-cave/closure-vs.-function.html</link><guid isPermaLink="false">The Cheese Cave/Closure VS. Function.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Decode The Code]]></title><description><![CDATA[ 
+ <br>The Decode the Code challenges present snippets of code designed to test your ability to predict their behaviour without executing them. These snippets often exploit the finer details of a programming language, pushing you to analyse its quirks and edge cases. The main goal is to figure out what the code will do and why it behaves that way. Even if you do not guess the exact output, it is a fun and rewarding challenge to uncover the logic hidden within.]]></description><link>https://cheesebytes.com/the-cheese-cave/decode-the-code.html</link><guid isPermaLink="false">The Cheese Cave/Decode The Code.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Entity Component Systems (ECS)]]></title><description><![CDATA[ 
+ <br>Entity Component Systems (ECS) is an architectural pattern used in game development and simulations to manage complex systems. They originate from a desire to simplify the <a data-href="Game Loop" href="https://cheesebytes.com/Game Loop" class="internal-link" target="_self" rel="noopener nofollow">Game Loop</a>. It breaks down into three main parts:<br>
+<br>Entity: A general-purpose object that serves as a container for components. It represents individual items or characters in the game world but does not contain any logic or data itself.
+<br>Component: A modular piece of data that defines specific attributes or behaviors of an entity. Components are reusable and can be attached to entities to give them specific properties, like position, velocity, or health.
+<br>System: A process that operates on entities with specific components. Systems contain the logic to manipulate the data in components, updating the state of entities based on game rules or interactions.
+<br>A great post explaining the motivation behind Entity Component Systems, very complete and with sample code:&nbsp;<a data-tooltip-position="top" aria-label="https://www.richardlord.net/blog/ecs/what-is-an-entity-framework" rel="noopener nofollow" class="external-link" href="https://www.richardlord.net/blog/ecs/what-is-an-entity-framework" target="_blank">Richard Lord's Blog on ECS</a>.]]></description><link>https://cheesebytes.com/the-cheese-cave/entity-component-systems-(ecs).html</link><guid isPermaLink="false">The Cheese Cave/Entity Component Systems (ECS).md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Examples]]></title><description><![CDATA[ 
+ <br>Introduced in <a data-href="Python" href="https://cheesebytes.com/the-cheese-cave/python.html" class="internal-link" target="_self" rel="noopener nofollow">Python</a> in <a data-tooltip-position="top" aria-label="https://peps.python.org/pep-3132/" rel="noopener nofollow" class="external-link" href="https://peps.python.org/pep-3132/" target="_blank">PEP-3132</a>, extended unpacking is a way of allowing more flexible unpacking of iterable objects. It enables the use of the&nbsp;*&nbsp;operator to capture multiple items in a list or tuple into a single variable, while still allowing other elements to be unpacked into separate variables.<br><br><br>In this example,&nbsp;first&nbsp;captures the first element, while&nbsp;remaining&nbsp;captures all subsequent elements in the list:<br>first, *remaining = range(5)
+assert first == 0
+assert remaining == [1, 2, 3, 4]
+<br><br>The&nbsp;*&nbsp;operator can be used in various positions within the unpacking pattern. Here,&nbsp;first&nbsp;and&nbsp;last&nbsp;capture the first and last elements, respectively, while&nbsp;middle&nbsp;captures all elements in between.<br>first, *middle, last = range(5)
+assert first == 0
+assert middle == [1, 2, 3]
+assert last == 4
+]]></description><link>https://cheesebytes.com/the-cheese-cave/extended-unpacking.html</link><guid isPermaLink="false">The Cheese Cave/Extended Unpacking.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Free Variables]]></title><description><![CDATA[ 
+ <br>Free variables are identifiers in an expression that are not bound to a specific value or parameter within that expression.]]></description><link>https://cheesebytes.com/the-cheese-cave/free-variables.html</link><guid isPermaLink="false">The Cheese Cave/Free Variables.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Having Fun With Python Chained Assignments]]></title><description><![CDATA[ 
+ <br>Working on a <a data-href="Dancing Links (DLX)" href="https://cheesebytes.com/Dancing Links (DLX)" class="internal-link" target="_self" rel="noopener nofollow">Dancing Links (DLX)</a> implementation, I found myself writing:<br>values = [v0, v1, v2] = 0, 1, 2
+<br>My objective was to create three integer variables (v0 = 0, v1 = 1 and v2 = 2) and a list containing these three integers (values = [0, 1, 2]). However, I inadvertently created a new <a data-href="Decode The Code" href="https://cheesebytes.com/the-cheese-cave/decode-the-code.html" class="internal-link" target="_self" rel="noopener nofollow">Decode The Code</a> challenge in <a data-href="Python" href="https://cheesebytes.com/the-cheese-cave/python.html" class="internal-link" target="_self" rel="noopener nofollow">Python</a> :)<br>Without running the code, can you identify what I did not achieve as expected? The code compiles without errors; it is the functionality that did not work as intended.<br><br>The problem lies in the type of the variable&nbsp;values; it is not a list. What is it then?<br>values = [v0, v1, v2] = 0, 1, 2
+assert isinstance(values, tuple)
+<br>It is a tuple! But why is this the case?<br><br>My initial understanding was that the assignments of expressions were executed from right to left, similar to C or Java. I thought&nbsp;[v0, v1, v2] = 0, 1, 2&nbsp;was creating a list with values 0, 1, and 2, and then assigning that list to the&nbsp;values&nbsp;variable. However, this understanding is incorrect in Python!<br>The fact that&nbsp;values&nbsp;ends up being a&nbsp;tuple&nbsp;only makes sense once we understand <a data-href="How Chained Assignments Work In Python" href="https://cheesebytes.com/the-cheese-cave/how-chained-assignments-work-in-python.html" class="internal-link" target="_self" rel="noopener nofollow">How Chained Assignments Work In Python</a>. In Python, when you perform a chained assignment, the rightmost expression is evaluated first. In this case, the expression&nbsp;0, 1, 2&nbsp;is evaluated first, resulting in a tuple&nbsp;(0, 1, 2). This tuple is then independently assigned to each of the targets on the left:&nbsp;values and v0,&nbsp;v1, and&nbsp;v2. Therefore, it does not matter how&nbsp;v0,&nbsp;v1, and&nbsp;v2&nbsp;are written (with or without brackets []),&nbsp;values&nbsp;is assigned to the&nbsp;(0, 1, 2)&nbsp;tuple.<br><br><br>One obvious way to resolve this is by separating the assignments into two lines:<br>v0, v1, v2 = 0, 1, 2
+values = [v0, v1, v2]
+<br>While I would likely choose this option for a company codebase, where code clarity is crucial and it is important to avoid confusing colleagues with coding puzzles, this solution is rather boring 🥱.<br><br>Alternatively, we can use a one-liner that correctly assigns&nbsp;values&nbsp;as a list. Simply take the original statement and convert the rightmost expression of the assignment into a list.<br>values = [v0, v1, v2] = [0, 1, 2]
+assert isinstance(values, list)
+<br>The specific type of the second target is not relevant to our goal, as long as it is an iterable object that allows unpacking. The following two methods of writing it are equivalent:<br>values = (v0, v1, v2) = [0, 1, 2]
+assert isinstance(values, list)
+values = v0, v1, v2 = [0, 1, 2]
+assert isinstance(values, list)
+<br><br>The understanding gained from solving this problem can also be applied to tackle another related challenge:&nbsp;<a data-href="A List That Contains Itself" href="https://cheesebytes.com/the-cheese-cave/a-list-that-contains-itself.html" class="internal-link" target="_self" rel="noopener nofollow">A List That Contains Itself</a>. This problem is more complex due to the use of the same variable in both the first and second targets. To solve it, it is crucial to understand not only the mechanics of chained assignments but also the sequence in which they are executed.]]></description><link>https://cheesebytes.com/the-cheese-cave/having-fun-with-python-chained-assignments.html</link><guid isPermaLink="false">The Cheese Cave/Having Fun With Python Chained Assignments.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[How Chained Assignments Work In Python]]></title><description><![CDATA[ 
+ <br>A chained assignment in <a data-href="Python" href="https://cheesebytes.com/the-cheese-cave/python.html" class="internal-link" target="_self" rel="noopener nofollow">Python</a> assigns the same value to multiple variables in a single statement. For example:<br>a = b = c = value
+<br>In chained assignments, the rightmost expression is evaluated first, meaning it is fully resolved before any assignments are made to the variables on the left.<br>Consider this example:<br>a = b = []
+<br>Here, the rightmost expression&nbsp;[]&nbsp;is evaluated first, resulting in an empty list. This list is then assigned to both&nbsp;a&nbsp;and&nbsp;b. In the&nbsp;<a data-tooltip-position="top" aria-label="https://docs.python.org/3/reference/simple_stmts.html#assignment-statements" rel="noopener nofollow" class="external-link" href="https://docs.python.org/3/reference/simple_stmts.html#assignment-statements" target="_blank">Python documentation on assignments</a>,&nbsp;a&nbsp;and&nbsp;b&nbsp;are referred to as&nbsp;targets. The assignment to these targets occurs from left to right, so&nbsp;a&nbsp;is assigned first, followed by&nbsp;b. This order is crucial in some cases, especially when reusing the same variable, as it can affect the outcome of your code. In this example, since we are merely creating new variables, the order is not significant. However, for an example where order matters, refer to&nbsp;<a data-href="A List That Contains Itself" href="https://cheesebytes.com/the-cheese-cave/a-list-that-contains-itself.html" class="internal-link" target="_self" rel="noopener nofollow">A List That Contains Itself</a>.<br>The following code is equivalent to the chained assignment a = b = []:<br>_rightmost_expr = []
+a = _rightmost_expr
+b = _rightmost_expr
+<br>Introducing the&nbsp;_rightmost_expr&nbsp;variable is essential to avoid creating two separate lists:<br>a = []
+b = []
+assert a is not b
+b.append(1)
+assert a == []
+<br>Conversely, with the _rightmost_expr or with a chained assignment:<br>a = b = []
+assert a is b
+b.append(1)
+assert a == [1]
+]]></description><link>https://cheesebytes.com/the-cheese-cave/how-chained-assignments-work-in-python.html</link><guid isPermaLink="false">The Cheese Cave/How Chained Assignments Work In Python.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Marimo Html]]></title><description><![CDATA[ 
+ <br>Hola!<br>
+				
+				
+				
+					Loading Marimo, please wait...
+					import%20marimo%20as%20mo%0Amo.md(%22Ejemplo!%22)
+				
+			<br>
+				
+				
+				
+					Loading Marimo, please wait...
+					slider%20%3D%20mo.ui.slider(1%2C%20100)%0Aslider
+				
+			<br>
+				
+				
+				
+					Loading Marimo, please wait...
+					mo.md(f%22The%20value%20is%20%7Bslider.value%7D%22)
+				
+			]]></description><link>https://cheesebytes.com/the-cheese-cave/marimo-html.html</link><guid isPermaLink="false">The Cheese Cave/Marimo HTML.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Marimo HTML MAUP]]></title><description><![CDATA[ 
+ <br>Hola! Esto es parecido a <a data-href="Marimo HTML" href="https://cheesebytes.com/the-cheese-cave/marimo-html.html" class="internal-link" target="_self" rel="noopener nofollow">Marimo HTML</a>.<br>import marimo as mo
+import anywidget
+import traitlets
+import random
+
+
+def generate_points(n, canvas_size, seed=None):
+    if seed:
+        random.seed(seed)
+    return [{"x": random.uniform(0, canvas_size), "y": random.uniform(0, canvas_size)} for _ in range(n)]
+
+
+class MAUPWidget(anywidget.AnyWidget):
+    _esm = r"""
+    function render({ model, el }) {
+      let canvasSize = model.get("canvas_size") || 500;
+      let gridType = model.get("grid_type") || "square";
+      let cellSize = parseFloat(model.get("cell_size") || "50");
+      let orientation = parseFloat(model.get("orientation") || "0");
+      let points = model.get("points") || [];
+      let heatmapColors = model.get("heatmap_colors");
+      let offsetX = parseFloat(model.get("grid_origin_x") || "0");
+      let offsetY = parseFloat(model.get("grid_origin_y") || "0");
+      let applyFilter = model.get("apply_filter");  // new flag
+
+      const canvas = document.createElement("canvas");
+      canvas.width = canvasSize;
+      canvas.height = canvasSize;
+      canvas.style.border = "1px solid #ccc";
+      el.innerHTML = "";
+      el.appendChild(canvas);
+      const ctx = canvas.getContext("2d");
+
+      let dragging = false;
+      let dragStartX = 0, dragStartY = 0;
+      let startOffsetX = offsetX, startOffsetY = offsetY;
+
+      const sqrt3 = Math.sqrt(3);
+
+      function parseHexColor(hex) {
+        let r = parseInt(hex.slice(1,3), 16);
+        let g = parseInt(hex.slice(3,5), 16);
+        let b = parseInt(hex.slice(5,7), 16);
+        let a = 1.0;
+        if(hex.length === 9) {
+          a = parseInt(hex.slice(7,9), 16) / 255;
+        }
+        return {r, g, b, a};
+      }
+
+      function interpolateBetween(color1, color2, factor) {
+        factor = Math.min(Math.max(factor, 0), 1);
+        const c1 = parseHexColor(color1);
+        const c2 = parseHexColor(color2);
+        const r = Math.round(c1.r + factor * (c2.r - c1.r));
+        const g = Math.round(c1.g + factor * (c2.g - c1.g));
+        const b = Math.round(c1.b + factor * (c2.b - c1.b));
+        const a = c1.a + factor * (c2.a - c1.a);
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
+      }
+
+      function getHeatmapColor(intensity) {
+        let n = heatmapColors.length;
+        if (n === 0) return "rgba(0,0,0,1)";
+        if (n === 1) return heatmapColors[0];
+        let segment = intensity * (n - 1);
+        let index = Math.floor(segment);
+        let factor = segment - index;
+        if (index &gt;= n - 1) return heatmapColors[n - 1];
+        return interpolateBetween(heatmapColors[index], heatmapColors[index + 1], factor);
+      }
+
+      function toGridCoords(x, y) {
+        const rx = x - offsetX;
+        const ry = y - offsetY;
+        const theta = orientation * Math.PI / 180;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+        return {
+          x: rx * cosT + ry * sinT,
+          y: -rx * sinT + ry * cosT
+        };
+      }
+
+      function getSquareGridBounds() {
+        const corners = [
+          { x: 0, y: 0 },
+          { x: canvas.width, y: 0 },
+          { x: canvas.width, y: canvas.height },
+          { x: 0, y: canvas.height }
+        ];
+        let xs = [], ys = [];
+        for (const pt of corners) {
+          const gridPt = toGridCoords(pt.x, pt.y);
+          xs.push(gridPt.x);
+          ys.push(gridPt.y);
+        }
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const iMin = Math.floor(minX / cellSize);
+        const iMax = Math.ceil(maxX / cellSize) - 1;
+        const jMin = Math.floor(minY / cellSize);
+        const jMax = Math.ceil(maxY / cellSize) - 1;
+        return { iMin, iMax, jMin, jMax };
+      }
+
+      function getHexGridBounds() {
+        const corners = [
+          { x: 0, y: 0 },
+          { x: canvas.width, y: 0 },
+          { x: canvas.width, y: canvas.height },
+          { x: 0, y: canvas.height }
+        ];
+        let qs = [], rs = [];
+        const theta = orientation * Math.PI / 180;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+        for (const pt of corners) {
+          const rx = pt.x - offsetX;
+          const ry = pt.y - offsetY;
+          const gridX = rx * cosT + ry * sinT;
+          const gridY = -rx * sinT + ry * cosT;
+          const q = (gridX * (sqrt3/3) - gridY/3) / cellSize;
+          const r = (gridY * (2/3)) / cellSize;
+          qs.push(q);
+          rs.push(r);
+        }
+        const minQ = Math.floor(Math.min(...qs));
+        const maxQ = Math.ceil(Math.max(...qs));
+        const minR = Math.floor(Math.min(...rs));
+        const maxR = Math.ceil(Math.max(...rs));
+        return { minQ, maxQ, minR, maxR };
+      }
+
+      // --- Gaussian filter functions ---
+      function applyGaussianFilterSquare(counts, bounds) {
+        let newCounts = new Map();
+        let kernel = [
+          [0.0625, 0.125, 0.0625],
+          [0.125,  0.25,  0.125],
+          [0.0625, 0.125, 0.0625]
+        ];
+        for (let i = bounds.iMin; i &lt;= bounds.iMax; i++) {
+          for (let j = bounds.jMin; j &lt;= bounds.jMax; j++) {
+            let sum = 0;
+            for (let di = -1; di &lt;= 1; di++) {
+              for (let dj = -1; dj &lt;= 1; dj++) {
+                let key = `${i+di},${j+dj}`;
+                let value = counts.get(key) || 0;
+                sum += kernel[di+1][dj+1] * value;
+              }
+            }
+            newCounts.set(`${i},${j}`, sum);
+          }
+        }
+        return newCounts;
+      }
+
+      function applyGaussianFilterHex(counts, bounds) {
+        let newCounts = new Map();
+        // Define neighbor offsets for axial coordinates in hex grid:
+        let neighbors = [[1,0], [-1,0], [0,1], [0,-1], [1,-1], [-1,1]];
+        let centerWeight = 0.5;
+        let neighborWeight = 0.0833333;  // 1/12 so that total weight sums to 1
+        for (let q = bounds.minQ - 1; q &lt;= bounds.maxQ + 1; q++) {
+          for (let r = bounds.minR - 1; r &lt;= bounds.maxR + 1; r++) {
+            let sum = centerWeight * (counts.get(`${q},${r}`) || 0);
+            for (let k = 0; k &lt; neighbors.length; k++) {
+              let dq = neighbors[k][0], dr = neighbors[k][1];
+              let key = `${q+dq},${r+dr}`;
+              sum += neighborWeight * (counts.get(key) || 0);
+            }
+            newCounts.set(`${q},${r}`, sum);
+          }
+        }
+        return newCounts;
+      }
+      // --- End Gaussian filter functions ---
+
+      // Cálculo de recuento de puntos for square grid
+      function computeSquareCounts() {
+        const counts = new Map();
+        const theta = orientation * Math.PI / 180;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+        for (const p of points) {
+          const rx = p.x - offsetX;
+          const ry = p.y - offsetY;
+          const gridX = rx * cosT + ry * sinT;
+          const gridY = -rx * sinT + ry * cosT;
+          const i = Math.floor(gridX / cellSize);
+          const j = Math.floor(gridY / cellSize);
+          const key = `${i},${j}`;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+        return counts;
+      }
+
+      function computeHexCounts() {
+        const counts = new Map();
+        const theta = orientation * Math.PI / 180;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+        for (const p of points) {
+          const rx = p.x - offsetX;
+          const ry = p.y - offsetY;
+          const gridX = rx * cosT + ry * sinT;
+          const gridY = -rx * sinT + ry * cosT;
+          const q_frac = (gridX * (sqrt3/3) - gridY/3) / cellSize;
+          const r_frac = (gridY * (2/3)) / cellSize;
+          let q = q_frac, r = r_frac, s = -q - r;
+          let rq = Math.round(q);
+          let rr = Math.round(r);
+          let rs = Math.round(s);
+          const q_diff = Math.abs(rq - q);
+          const r_diff = Math.abs(rr - r);
+          const s_diff = Math.abs(rs - s);
+          if (q_diff &gt; r_diff &amp;&amp; q_diff &gt; s_diff) {
+            rq = -rr - rs;
+          } else if (r_diff &gt; s_diff) {
+            rr = -rq - rs;
+          } else {
+            rs = -rq - rr;
+          }
+          const key = `${rq},${rr}`;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+        return counts;
+      }
+
+      function drawSquareGrid() {
+        const bounds = getSquareGridBounds();
+        let counts = computeSquareCounts();
+        if (applyFilter) {
+          counts = applyGaussianFilterSquare(counts, bounds);
+        }
+        let maxCount = 0;
+        for (let i = bounds.iMin; i &lt;= bounds.iMax; i++) {
+          for (let j = bounds.jMin; j &lt;= bounds.jMax; j++) {
+            const key = `${i},${j}`;
+            const count = counts.get(key) || 0;
+            if (count &gt; maxCount) maxCount = count;
+          }
+        }
+        const theta = orientation * Math.PI / 180;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+
+        for (let i = bounds.iMin; i &lt;= bounds.iMax; i++) {
+          for (let j = bounds.jMin; j &lt;= bounds.jMax; j++) {
+            const key = `${i},${j}`;
+            const count = counts.get(key) || 0;
+            const intensity = maxCount ? (count / maxCount) : 0;
+            const color = getHeatmapColor(intensity);
+            ctx.fillStyle = color;
+            const corners = [
+              { x: i * cellSize,         y: j * cellSize },
+              { x: (i+1) * cellSize,       y: j * cellSize },
+              { x: (i+1) * cellSize,       y: (j+1) * cellSize },
+              { x: i * cellSize,         y: (j+1) * cellSize }
+            ];
+            ctx.beginPath();
+            for (let k = 0; k &lt; corners.length; k++) {
+              const gx = corners[k].x;
+              const gy = corners[k].y;
+              const globalX = offsetX + gx * cosT - gy * sinT;
+              const globalY = offsetY + gx * sinT + gy * cosT;
+              if (k === 0) ctx.moveTo(globalX, globalY);
+              else ctx.lineTo(globalX, globalY);
+            }
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+      }
+
+      function drawHexGrid() {
+        const bounds = getHexGridBounds();
+        let counts = computeHexCounts();
+        if (applyFilter) {
+          counts = applyGaussianFilterHex(counts, bounds);
+        }
+        let maxCount = 0;
+        for (let q = bounds.minQ - 1; q &lt;= bounds.maxQ + 1; q++) {
+          for (let r = bounds.minR - 1; r &lt;= bounds.maxR + 1; r++) {
+            const key = `${q},${r}`;
+            const count = counts.get(key) || 0;
+            if (count &gt; maxCount) maxCount = count;
+          }
+        }
+        const theta = orientation * Math.PI / 180;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+        const R = cellSize;  // use cellSize as radius
+        const hexCorners = [
+          { x: 0, y: -R },
+          { x: (sqrt3/2) * R, y: -0.5 * R },
+          { x: (sqrt3/2) * R, y: 0.5 * R },
+          { x: 0, y: R },
+          { x: - (sqrt3/2) * R, y: 0.5 * R },
+          { x: - (sqrt3/2) * R, y: -0.5 * R }
+        ];
+
+        for (let q = bounds.minQ - 1; q &lt;= bounds.maxQ + 1; q++) {
+          for (let r = bounds.minR - 1; r &lt;= bounds.maxR + 1; r++) {
+            const key = `${q},${r}`;
+            const count = counts.get(key) || 0;
+            const intensity = maxCount ? (count / maxCount) : 0;
+            const color = getHeatmapColor(intensity);
+            ctx.fillStyle = color;
+            const centerX = R * sqrt3 * (q + 0.5 * r);
+            const centerY = R * 1.5 * r;
+            ctx.beginPath();
+            for (let i = 0; i &lt; hexCorners.length; i++) {
+              const corner = hexCorners[i];
+              const gx = centerX + corner.x;
+              const gy = centerY + corner.y;
+              const globalX = offsetX + gx * cosT - gy * sinT;
+              const globalY = offsetY + gx * sinT + gy * cosT;
+              if (i === 0) ctx.moveTo(globalX, globalY);
+              else ctx.lineTo(globalX, globalY);
+            }
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+      }
+
+      function drawPoints() {
+        ctx.fillStyle = "black";
+        for (const p of points) {
+          ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (gridType === "square") {
+          drawSquareGrid();
+        } else if (gridType === "hex") {
+          drawHexGrid();
+        }
+        drawPoints();
+      }
+
+      // Enable interactive dragging if flagged.
+      if (model.get("interactive")) {
+        canvas.addEventListener("pointerdown", (e) =&gt; {
+          dragging = true;
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          startOffsetX = offsetX;
+          startOffsetY = offsetY;
+          canvas.setPointerCapture(e.pointerId);
+        });
+        canvas.addEventListener("pointermove", (e) =&gt; {
+          if (!dragging) return;
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          offsetX = startOffsetX + dx;
+          offsetY = startOffsetY + dy;
+          draw();
+        });
+        canvas.addEventListener("pointerup", () =&gt; {
+          dragging = false;
+          model.set("grid_origin_x", offsetX);
+          model.set("grid_origin_y", offsetY);
+          model.save_changes();
+        });
+      }
+
+      // Listen for parameter changes.
+      model.on("change:canvas_size", () =&gt; {
+        canvas.width = model.get("canvas_size");
+        canvas.height = model.get("canvas_size");
+        draw();
+      });
+      model.on("change:grid_type", () =&gt; {
+        gridType = model.get("grid_type");
+        draw();
+      });
+      model.on("change:cell_size", () =&gt; {
+        cellSize = parseFloat(model.get("cell_size"));
+        draw();
+      });
+      model.on("change:orientation", () =&gt; {
+        orientation = parseFloat(model.get("orientation"));
+        draw();
+      });
+      model.on("change:points", () =&gt; {
+        points = model.get("points") || [];
+        draw();
+      });
+      model.on("change:heatmap_colors", () =&gt; {
+        heatmapColors = model.get("heatmap_colors");
+        draw();
+      });
+      model.on("change:grid_origin_x", () =&gt; {
+        offsetX = parseFloat(model.get("grid_origin_x")) || 0;
+        draw();
+      });
+      model.on("change:grid_origin_y", () =&gt; {
+        offsetY = parseFloat(model.get("grid_origin_y")) || 0;
+        draw();
+      });
+      model.on("change:apply_filter", () =&gt; {
+        applyFilter = model.get("apply_filter");
+        draw();
+      });
+
+      // Initial draw.
+      draw();
+      model.set("ready", true);
+      model.save_changes();
+    }
+    export default { render };
+    """
+
+    canvas_size = traitlets.Int(500).tag(sync=True)
+    grid_type = traitlets.Unicode("square").tag(sync=True)   # "square" or "hex"
+    cell_size = traitlets.Float(50.0).tag(sync=True)
+    orientation = traitlets.Float(0.0).tag(sync=True)          # degrees
+    points = traitlets.List(trait=traitlets.Dict(), default_value=[]).tag(sync=True)
+    heatmap_colors = traitlets.List(trait=traitlets.Unicode(), default_value=["#009900AA", "#FFFF00AA", "#ff0000AA"]).tag(sync=True)
+    grid_origin_x = traitlets.Float(0.0).tag(sync=True)
+    grid_origin_y = traitlets.Float(0.0).tag(sync=True)
+    interactive = traitlets.Bool(True).tag(sync=True)
+    apply_filter = traitlets.Bool(False).tag(sync=True)
+<br>view1 = MAUPWidget(
+    canvas_size=300,
+    grid_type="square",
+    cell_size=50,
+    points=generate_points(100, 300, seed=1),
+    grid_origin_x=-127.9337158203125,
+    grid_origin_y=-2.0025634765625,
+    interactive=False,
+)
+view2 = MAUPWidget(
+    canvas_size = 300,
+    grid_type = "square",
+    cell_size = 50,
+    points = generate_points(100, 300, seed=1),
+    grid_origin_x=54.2108154296875,
+    grid_origin_y=123.05267333984375,
+    interactive=False,
+)
+mo.hstack([view1, mo.md("$\\to$"), view2], justify="center", align="center")
+<br>canvas_size = mo.ui.slider(100, 800, value=500, show_value=True)
+orientation = mo.ui.slider(0, 360, value=0, show_value=True)
+grid_type = mo.ui.dropdown(options=["square", "hex"], value="square")
+cell_size = mo.ui.slider(10, 150, value=50, show_value=True)
+num_points = mo.ui.slider(50, 500, value=200, show_value=True)
+seed_slider = mo.ui.slider(0, 1000, value=0, show_value=True)
+gauss_filter_switch = mo.ui.switch(False)
+
+params = mo.md(f"""
+| Parameter       | Value         |
+|-----------------|---------------|
+| Canvas Size     | {canvas_size} |
+| Orientation     | {orientation} |
+| Grid Type       | {grid_type}   |
+| Cell Size       | {cell_size}   |
+| Nº Dots         | {num_points}  |
+| Seed            | {seed_slider} |
+| Gaussian Filter | {gauss_filter_switch} |
+""")
+regenerate = mo.ui.button(label="Regenerate")
+<br>widget = MAUPWidget(
+	canvas_size=canvas_size.value,
+	grid_type=grid_type.value,
+	cell_size=cell_size.value,
+	orientation=orientation.value,
+	points=generate_points(num_points.value, canvas_size.value, seed=seed_slider.value if seed_slider.value else None),
+	apply_filter=gauss_filter_switch.value,
+)
+mo.vstack(
+	[
+		mo.md("# Play With It\nDo not just take my word for it, try it yourself! Use the sliders to tweak the settings, then click and drag the grid on the canvas to see how different configurations completely transform the visualization.\n\nNote: Setting the seed to 0 means that no fixed seed is used—each generation will be completely random. Simply click the 'Regenerate' button to redraw a new set of points and see different outcomes."),
+		mo.hstack([mo.vstack([params, mo.center(regenerate)]), widget], justify="start", gap=2),
+	],
+	gap=2,
+)
+<br>import pandas as pd
+
+pd.ones(10).show()
+<br>]]></description><link>https://cheesebytes.com/the-cheese-cave/marimo-html-maup.html</link><guid isPermaLink="false">The Cheese Cave/Marimo HTML MAUP.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Marimo Iframe Notebook Test]]></title><description><![CDATA[ 
+ <br>]]></description><link>https://cheesebytes.com/the-cheese-cave/marimo-iframe-notebook-test.html</link><guid isPermaLink="false">The Cheese Cave/Marimo Iframe Notebook Test.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Obsidian Marimo - Test Note]]></title><description><![CDATA[ 
+ <br>Hola!<br>
+				
+				
+				
+					Loading Marimo, please wait...
+					import%20marimo%20as%20mo%0Amo.md(%22Ejemplo!%22)%2C%20mo.show_code()
+				
+			<br>slider = mo.ui.slider(1, 100)
+slider
+<br>mo.md(f"The value is {slider.value}")
+]]></description><link>https://cheesebytes.com/the-cheese-cave/obsidian-marimo-test-note.html</link><guid isPermaLink="false">The Cheese Cave/Obsidian Marimo - Test Note.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Packing And Unpacking In Python]]></title><description><![CDATA[ 
+ <br>In <a data-href="Python" href="https://cheesebytes.com/the-cheese-cave/python.html" class="internal-link" target="_self" rel="noopener nofollow">Python</a>, packing and unpacking are concepts related to handling multiple values with tuples, lists, and dictionaries.<br>Packing: This refers to the process of taking multiple values and putting them into a single variable. For example, when you assign multiple values to a single variable using a tuple, list or dict, you are packing those values.<br>packed_tuple = 1, 2, 3
+another_packed_tuple = (1, 2, 3)
+packed_list = [4, 5, 6]
+packed_dict = {"a": 1, "b": 2}
+<br>Unpacking: This is the reverse process, where you take a collection of values and extract them into individual variables. This is useful when you want to work with each value separately.<br>packed_tuple = 1, 2, 3
+a, b, c = packed_tuple
+assert a == 1 and b == 2 and c == 3
+
+packed_list = [4, 5, 6]
+x, y, z = packed_list
+assert x == 4 and y == 5 and z == 6
+
+packed_dict = {"a": 1, "b": 2}
+a, b = packed_dict
+assert a == "a" and b == "b"
+<br>Note that when unpacking a dictionary, you are actually unpacking its keys, not the values. This is similar to how dictionaries behave in a&nbsp;for&nbsp;loop by default, where iteration is over the keys.<br>In unpacking, the number of variables on the left must match the number of elements in the collection being unpacked. Python also supports <a data-href="Extended Unpacking" href="https://cheesebytes.com/the-cheese-cave/extended-unpacking.html" class="internal-link" target="_self" rel="noopener nofollow">Extended Unpacking</a>, which allows you to capture remaining elements using the&nbsp;*&nbsp;operator.]]></description><link>https://cheesebytes.com/the-cheese-cave/packing-and-unpacking-in-python.html</link><guid isPermaLink="false">The Cheese Cave/Packing And Unpacking In Python.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[PySpark]]></title><description><![CDATA[ 
+ <br><a data-href="Apache Spark" href="https://cheesebytes.com/Apache Spark" class="internal-link" target="_self" rel="noopener nofollow">Apache Spark</a> in <a data-href="Python" href="https://cheesebytes.com/the-cheese-cave/python.html" class="internal-link" target="_self" rel="noopener nofollow">Python</a>.]]></description><link>https://cheesebytes.com/the-cheese-cave/pyspark.html</link><guid isPermaLink="false">The Cheese Cave/PySpark.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Pyspark Issue When Nesting A Few Expressions]]></title><description><![CDATA[<a class="tag" href="https://cheesebytes.com/?query=tag:TODO" style="background-color: rgb(4, 108, 116); color: white; font-weight: 700; border: none; border-radius: 1em; padding: 0.2em 0.5em;">#TODO</a> 
+ <br><a href="https://cheesebytes.com?query=tag:TODO" class="tag" target="_blank" rel="noopener nofollow">#TODO</a> <br>Try and run this simple code in <a data-href="PySpark" href="https://cheesebytes.com/the-cheese-cave/pyspark.html" class="internal-link" target="_self" rel="noopener nofollow">PySpark</a>:<br>n_cols = 40
+
+# Create a df with 40 columns, each filled with the number one.
+data = [tuple(1 for _ in range(n_cols))]
+schema = ", ".join(f"col{i} int" for i in range(n_cols))
+df = spark.createDataFrame(data, schema)
+
+# Sum all cols one by one: col0 + col1 + ...
+expr = sum(F.col(f"col{i}") for i in range(n_cols))
+
+# Simply select the expression and show the output.
+df.select(expr.alias("sum")).show()
+<br>How long it took for you? For me is still running. Really, didn't have patience to let if finish. This <a data-href="Decode The Code" href="https://cheesebytes.com/the-cheese-cave/decode-the-code.html" class="internal-link" target="_self" rel="noopener nofollow">Decode The Code</a> exploits the inner workings of Spark and its optimization engine.<br>Note
+At the time of writing, I was using Spark version 3.4.1. This code might no longer be an issue in newer versions of Spark.
+<br><br>First think we need to understand is where is the code getting stuck. I wrote df.select(expr.alias("sum")).show() on purpose in the same line to make it less obvious for the reader. Our intuition says is the show action what is indeed blocking the code. We may even be tempted to run a df.explain() to understand the query plan, however it will never get executed. It is the select method the one that is blocking this code.<br>How is it possible that a lazy executed step not triggered by any Spark action is stucking the execution? It basically means that is not a problem in the execution but in the analysis/preparation of an expression. If we print(expr) we will get something like Column&lt;'((((((((((((((((((((((((((((((col0 + 0) + col1) + col2) + col3) + col4) + col5) + col6) + col7) + col8) + col9) + col10) + col11) + col12) + col13) + col14) + col15) + col16) + col17) + col18) + col19) + col20) + col21) + col22) + col23) + col24) + col25) + col26) + col27) + col28) + col29)'&gt;. &lt;-- Regenerate expression with col39<br>The first think that catches our attention is all those parenthesis at the beginning. Different sums are grouped by order of they appear, creating a nested expression.<br><br>I'm not sure if we can call it optimizer, but when a new expression is created, Spark somehow evaluates it using several rules. Some of those rules are applied recursively around the nodes and not all of them are simple to run. Some of them have a over linear complexity, maybe n^2 or even worse.<br><br>As the problem here is the depth of the expression, we can mitigate this problem simply breaking the expression in 2, so instead of having 40 nested parenthesis, we will have 2 groups of 20 nested parenthesis. Running complex analysis on this new expression is going to be faster becuase the expresion is shallow.<br>expr = sum(F.col(f"col{i}") for i in range(n_cols // 2))
+expr += sum(F.col(f"col{i}") for i in range(n_cols // 2, n_cols))
+<br>Try it! It should finish in probably less than a second. Of course, this solution can be improved, so instead of manually expliting this expression, we can use a shallow pyspark expressions that makes all this sum in just one step, instead of in 40 nested steps. We can use the transform high order function.<br>Code with hihg order funcctions here
+<br>Don't under estimate apparently simply operation, the power of high complexities can be devastated!]]></description><link>https://cheesebytes.com/the-cheese-cave/pyspark-issue-when-nesting-a-few-expressions.html</link><guid isPermaLink="false">The Cheese Cave/Pyspark Issue When Nesting A Few Expressions.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Python]]></title><description><![CDATA[<a class="tag" href="https://cheesebytes.com/?query=tag:TODO" style="background-color: rgb(4, 108, 116); color: white; font-weight: 700; border: none; border-radius: 1em; padding: 0.2em 0.5em;">#TODO</a> 
+ <br><a href="https://cheesebytes.com?query=tag:TODO" class="tag" target="_blank" rel="noopener nofollow">#TODO</a> <br>The best <a data-href="Programming Language" href="https://cheesebytes.com/Programming Language" class="internal-link" target="_self" rel="noopener nofollow">Programming Language</a> ever?<br>
+<img src="https://www.python.org/static/img/python-logo.png" referrerpolicy="no-referrer"><br>Read the <a data-href="The Zen of Python" href="https://cheesebytes.com/The Zen of Python" class="internal-link" target="_self" rel="noopener nofollow">The Zen of Python</a> to understand the philosophy under Python.]]></description><link>https://cheesebytes.com/the-cheese-cave/python.html</link><guid isPermaLink="false">The Cheese Cave/Python.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate><enclosure url="https://www.python.org/static/img/python-logo.png" length="0" type="image/png"/><content:encoded>&lt;figure&gt;&lt;img src=&quot;https://www.python.org/static/img/python-logo.png&quot;&gt;&lt;/figure&gt;</content:encoded></item><item><title><![CDATA[Example]]></title><description><![CDATA[ 
+ <br>The __closure__ attribute is a <a data-href="Python Dunder" href="https://cheesebytes.com/Python Dunder" class="internal-link" target="_self" rel="noopener nofollow">Python Dunder</a> that has a value only when a function is implemented with a <a data-href="Closure" href="https://cheesebytes.com/the-cheese-cave/closure.html" class="internal-link" target="_self" rel="noopener nofollow">Closure</a>. This attribute becomes particularly useful when you want to inspect the state of these enclosed variables.<br><br>def cheese_counter(cheese_name, count=0):
+    def taste_cheese():
+        nonlocal count
+        count += 1
+        return f"Tasted {cheese_name} {count} time(s)!"
+
+    return taste_cheese
+
+
+gouda_counter = cheese_counter("Gouda")
+assert gouda_counter.__closure__ is not None
+assert gouda_counter.__closure__[0].cell_contents == "Gouda"
+assert gouda_counter.__closure__[1].cell_contents == 0
+print(gouda_counter())  # Output: Tasted Gouda 1 time(s)!
+assert gouda_counter.__closure__[1].cell_contents == 1
+]]></description><link>https://cheesebytes.com/the-cheese-cave/python-`__closure__`-dunder.html</link><guid isPermaLink="false">The Cheese Cave/Python `__closure__` Dunder.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[The Great Python Lambda Loop Puzzle]]></title><description><![CDATA[ 
+ <br>Here is a very entertaining <a data-href="Decode The Code" href="https://cheesebytes.com/the-cheese-cave/decode-the-code.html" class="internal-link" target="_self" rel="noopener nofollow">Decode The Code</a> puzzle to analyze.<br>funs = []
+
+for i in range(4):
+    funs.append(lambda: i)
+
+for i in funs:
+    print(i())
+<br>What could be the result of such an&nbsp;innocent&nbsp;code? Or should I call it&nbsp;diabolical? GPT-o1, the most advanced model from OpenAI to date, has not been able to provide me with a valid explanation, even after showing it the output of the code. Will we, mere humans, be able to do better than an LLM?<br><br>Expand the following box to see the output of running the code above.<br>And the output is...
+&lt;function &lt;lambda&gt; at 0x108d0feb0&gt;
+&lt;function &lt;lambda&gt; at 0x108e3f2e0&gt;
+&lt;function &lt;lambda&gt; at 0x108e3f370&gt;
+&lt;function &lt;lambda&gt; at 0x108e3f400&gt;
+
+Four different lambda functions are being displayed on the screen. Everything seems to indicate that the second loop is actually printing the functions themselves and not the result of calling the lambda functions. How is that possible?
+Moreover, if we call&nbsp;funs[0]()&nbsp;after executing the second loop, we will not get the first lambda function (0x108d0feb0&nbsp;in my example), but rather the last one (0x108e3f400).
+<br><br>In the Python documentation, there is a section called&nbsp;<a data-tooltip-position="top" aria-label="https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result" rel="noopener nofollow" class="external-link" href="https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result" target="_blank">Why do lambdas defined in a loop with different values all return the same result?</a>&nbsp;on which this problem is based; this problem is indeed an extension of it. If we remove the second loop and simply call the first function from the list, we find that instead of getting a 0 as we might expect, it returns a 3.<br>funs = []
+
+for i in range(4):
+    funs.append(lambda: i)
+
+assert funs[0]() == 0  # AssertionError! 3 != 0
+<br>As clearly explained in the previously provided link,&nbsp;i&nbsp;is not local to the lambdas; it is declared in an outer scope. Furthermore, the value of&nbsp;i&nbsp;returned by the different lambda functions is accessed when the function is called. Therefore, by the end of the loop,&nbsp;i = 3, which is what it returns. All the four functions in funs are returning 3.<br>By adding a second loop that uses&nbsp;i&nbsp;again in the same scope, what is achieved is that each call to&nbsp;i()&nbsp;actually returns itself.<br><br><br>Now that we understand it, what is this other evilish variation going to output?<br>funs = []
+
+for i in range(4):
+    funs.append(lambda: i)
+
+def show():
+    for i in funs:
+        print(i())
+
+show()
+<br>What's the output?
+The output generated by the code above is:
+3
+3
+3
+3
+
+The&nbsp;i&nbsp;inside&nbsp;show&nbsp;is a local variable, so it does not replace the value of the global&nbsp;i, hence it returns the last value of the global&nbsp;i, which is 3.
+<br><br>What about?<br>funs = []
+
+def define():
+    for i in range(4):
+        funs.append(lambda: i)
+
+def show():
+    for i in funs:
+        print(i())
+
+define()
+show()
+<br>What's the output?
+The output generated by the code above is:
+3
+3
+3
+3
+
+Quite similar to the previous example,&nbsp;i&nbsp;in&nbsp;show&nbsp;is local and does not overwrite the value of the&nbsp;i&nbsp;in&nbsp;define. Unlike in the previous example, the&nbsp;i&nbsp;used in the lambda functions is local to&nbsp;define&nbsp;instead of being global. For practical purposes, this makes no difference; however, from Python's perspective, lambda functions are implemented with a&nbsp;<a data-href="Closure" href="https://cheesebytes.com/the-cheese-cave/closure.html" class="internal-link" target="_self" rel="noopener nofollow">Closure</a>. This can be verified with the following&nbsp;show&nbsp;function.
+def show():
+   for i in funs:
+       print(i())
+       assert i.__closure__ is not None
+
+In previous examples, a closure was not needed (<a data-href="Python `__closure__` dunder" href="https://cheesebytes.com/the-cheese-cave/python-`__closure__`-dunder.html" class="internal-link" target="_self" rel="noopener nofollow">Python `__closure__` dunder</a> was None) as the&nbsp;i&nbsp;variable was in the global context; now that&nbsp;i&nbsp;is local to&nbsp;define, Python somehow needs to keep a reference to it in order to get its value when the lambda functions are executed.
+<br><br>How can we modify the lambda function to return the value of&nbsp;i&nbsp;at the time of its definition, allowing us to obtain values from 0 to 3 when calling the functions in&nbsp;funs&nbsp;sequentially?<br>One solution is to add a parameter&nbsp;k, to the lambda function that defaults to the value of&nbsp;i&nbsp;at that iteration.<br>funs = []
+
+for i in range(4):
+    funs.append(lambda k=i: k)
+
+for i in funs:
+    print(i())
+
+# Output:
+# 0
+# 1
+# 2
+# 3
+<br>A function like lambda i=i: i would also work, but makes it a bit more difficult to understand.]]></description><link>https://cheesebytes.com/the-cheese-cave/the-great-python-lambda-loop-puzzle.html</link><guid isPermaLink="false">The Cheese Cave/The Great Python Lambda Loop Puzzle.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Why It Works]]></title><description><![CDATA[ 
+ <br>In this <a data-href="Decode The Code" href="https://cheesebytes.com/the-cheese-cave/decode-the-code.html" class="internal-link" target="_self" rel="noopener nofollow">Decode The Code</a> challenge, we explore the expression&nbsp;a, b = b, a, a powerful and concise method in <a data-href="Python" href="https://cheesebytes.com/the-cheese-cave/python.html" class="internal-link" target="_self" rel="noopener nofollow">Python</a> for swapping the values of two variables. But how does this work, and why does&nbsp;a&nbsp;not get assigned to&nbsp;b&nbsp;first, followed by&nbsp;b&nbsp;being reassigned to the new value of&nbsp;a&nbsp;(effectively assigning&nbsp;b&nbsp;to itself again)?<br><br>The magic behind&nbsp;a, b = b, a&nbsp;lies in Python's handling of tuple <a data-href="Packing And Unpacking In Python" href="https://cheesebytes.com/the-cheese-cave/packing-and-unpacking-in-python.html" class="internal-link" target="_self" rel="noopener nofollow">Packing And Unpacking In Python</a>. When you write&nbsp;a, b = b, a, Python internally performs the following steps:<br>
+<br>
+Tuple Packing: The right-hand side of the assignment&nbsp;b, a&nbsp;is evaluated first. This creates a temporary tuple containing the current values of&nbsp;b&nbsp;and&nbsp;a.
+
+<br>
+Tuple Unpacking: The left-hand side&nbsp;a, b&nbsp;is then assigned the values from the temporary tuple. This means&nbsp;a&nbsp;is assigned the value of&nbsp;b, and&nbsp;b&nbsp;is assigned the value of&nbsp;a.
+
+<br>This process of packing and unpacking ensures that both variables are updated simultaneously, preventing any overwriting of values during the swap.]]></description><link>https://cheesebytes.com/the-cheese-cave/the-magic-of-tuple-swapping.html</link><guid isPermaLink="false">The Cheese Cave/The Magic of Tuple Swapping.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Home]]></title><description><![CDATA[ 
+ <br>Imagine an ancient cheese cave. Even before crossing the threshold, you can sense the moisture in the air, cool and dense, infused with an earthy aroma that deepens with every step. In the shadows, small pieces of cheese rest patiently: some young, smooth, and delicate; others aged, complex, with veins that whisper stories.<br>In the same way, this virtual cave holds not bites for the palate but bites of knowledge. Each page in this cave is what I call a Cheese Byte. They are not necessarily complete essays or exhaustive treatises but pieces of information, brief and tasty, ready to be explored and savoured slowly, perhaps accompanied by a fine glass of wine.<br>Just like in a cheese cave, every corner holds a unique piece. Some notes remain isolated, still in the process of fermenting, waiting to blend with new ideas. A few, though modest, have already developed a distinct flavour, a clearer idea capable of standing on its own. Despite their differences, they all share the same purpose: to share and savour knowledge.<br>Binary code artisan, step inside! Let curiosity guide you and savour each piece. In this cave, as with cheese, the beauty lies not in perfection but in the small nuances that give each byte its character.<br>Where to go from here?<br>
+<br><a data-href="Programming Problems" href="https://cheesebytes.com/programming-problems.html" class="internal-link" target="_self" rel="noopener nofollow">Programming Problems</a>.
+<br>]]></description><link>https://cheesebytes.com/home.html</link><guid isPermaLink="false">Home.md</guid><dc:creator><![CDATA[Guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Programming Problems]]></title><description><![CDATA[ 
+ <br>In the beginning, all was chaos: convoluted statements, entangled conditions, undefined variables, disconnected ideas... But like an artist chiselling stone, The Programmer strips away the superfluous, connects the essential, and shapes, line by line, an algorithm so elegant that, when complete, it brings light where only darkness once ruled.<br>On this page, you will find programming problems with their solutions: from classic technical interview challenges and competitive programming puzzles to original Cheese Bytes creations.<br>]]></description><link>https://cheesebytes.com/programming-problems.html</link><guid isPermaLink="false">Programming Problems.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item></channel></rss>
