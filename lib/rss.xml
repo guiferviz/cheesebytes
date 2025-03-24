@@ -1,4 +1,15 @@
-<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Cheese 🧀 Bytes]]></title><description><![CDATA[Obsidian digital garden]]></description><link>https://cheesebytes.com/</link><image><url>https://cheesebytes.com/lib/media/favicon.png</url><title>Cheese 🧀 Bytes</title><link>https://cheesebytes.com/</link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Sun, 23 Mar 2025 19:11:32 GMT</lastBuildDate><atom:link href="https://cheesebytes.com/lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Sun, 23 Mar 2025 19:11:30 GMT</pubDate><copyright><![CDATA[guiferviz]]></copyright><ttl>60</ttl><dc:creator>guiferviz</dc:creator><item><title><![CDATA[A List That Contains Itself]]></title><description><![CDATA[ 
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Cheese 🧀 Bytes]]></title><description><![CDATA[Obsidian digital garden]]></description><link>https://cheesebytes.com/</link><image><url>https://cheesebytes.com/lib/media/favicon.png</url><title>Cheese 🧀 Bytes</title><link>https://cheesebytes.com/</link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Mon, 24 Mar 2025 09:10:11 GMT</lastBuildDate><atom:link href="https://cheesebytes.com/lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Mon, 24 Mar 2025 09:10:11 GMT</pubDate><copyright><![CDATA[guiferviz]]></copyright><ttl>60</ttl><dc:creator>guiferviz</dc:creator><item><title><![CDATA[Marimo Html]]></title><description><![CDATA[ 
+ <br>Hola!<br>
+				
+				
+				
+					Loading Marimo, please wait...
+					import%20marimo%20as%20mo%0Amo.md(%22Ejemplo!%22)
+				
+			<br>slider = mo.ui.slider(1, 100)
+slider
+<br>mo.md(f"The value is {slider.value}")
+]]></description><link>https://cheesebytes.com/the-cheese-cave/marimo-html.html</link><guid isPermaLink="false">The Cheese Cave/Marimo HTML.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Mon, 24 Mar 2025 09:06:11 GMT</pubDate></item><item><title><![CDATA[A List That Contains Itself]]></title><description><![CDATA[ 
  <br>I have been writing recently about <a data-href="Having Fun With Python Chained Assignments" href="https://cheesebytes.com/the-cheese-cave/having-fun-with-python-chained-assignments.html" class="internal-link" target="_self" rel="noopener nofollow">Having Fun With Python Chained Assignments</a>, and it turns out there is a well-known variation of a chained assignments puzzle. In this <a data-href="Decode The Code" href="https://cheesebytes.com/the-cheese-cave/decode-the-code.html" class="internal-link" target="_self" rel="noopener nofollow">Decode The Code</a>, I am going to show a surprising way of creating a list that contains itself. It is always fun to work with self-referencing!<br>a = a[0] = [0]
 print(a)  # Prints: [[...]]
 assert a != [[...]]
@@ -61,29 +72,7 @@ assert a == []
 assert a is b
 b.append(1)
 assert a == [1]
-]]></description><link>https://cheesebytes.com/the-cheese-cave/how-chained-assignments-work-in-python.html</link><guid isPermaLink="false">The Cheese Cave/How Chained Assignments Work In Python.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Marimo Html]]></title><description><![CDATA[ 
- <br>Hola!<br>
-				
-				
-				
-					Loading Marimo, please wait...
-					import%20marimo%20as%20mo%0Amo.md(%22Ejemplo!%22)
-				
-			<br>
-				
-				
-				
-					Loading Marimo, please wait...
-					slider%20%3D%20mo.ui.slider(1%2C%20100)%0Aslider
-				
-			<br>
-				
-				
-				
-					Loading Marimo, please wait...
-					mo.md(f%22The%20value%20is%20%7Bslider.value%7D%22)
-				
-			]]></description><link>https://cheesebytes.com/the-cheese-cave/marimo-html.html</link><guid isPermaLink="false">The Cheese Cave/Marimo HTML.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Marimo HTML MAUP]]></title><description><![CDATA[ 
+]]></description><link>https://cheesebytes.com/the-cheese-cave/how-chained-assignments-work-in-python.html</link><guid isPermaLink="false">The Cheese Cave/How Chained Assignments Work In Python.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Marimo HTML MAUP]]></title><description><![CDATA[ 
  <br>Hola! Esto es parecido a <a data-href="Marimo HTML" href="https://cheesebytes.com/the-cheese-cave/marimo-html.html" class="internal-link" target="_self" rel="noopener nofollow">Marimo HTML</a>.<br>import marimo as mo
 import anywidget
 import traitlets
@@ -723,10 +712,7 @@ Tuple Packing: The right-hand side of the assignment&nbsp;b, a&nbsp;is evaluated
 <br>
 Tuple Unpacking: The left-hand side&nbsp;a, b&nbsp;is then assigned the values from the temporary tuple. This means&nbsp;a&nbsp;is assigned the value of&nbsp;b, and&nbsp;b&nbsp;is assigned the value of&nbsp;a.
 
-<br>This process of packing and unpacking ensures that both variables are updated simultaneously, preventing any overwriting of values during the swap.]]></description><link>https://cheesebytes.com/the-cheese-cave/the-magic-of-tuple-swapping.html</link><guid isPermaLink="false">The Cheese Cave/The Magic of Tuple Swapping.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Home]]></title><description><![CDATA[ 
- <br>Imagine an ancient cheese cave. Even before crossing the threshold, you can sense the moisture in the air, cool and dense, infused with an earthy aroma that deepens with every step. In the shadows, small pieces of cheese rest patiently: some young, smooth, and delicate; others aged, complex, with veins that whisper stories.<br>In the same way, this virtual cave holds not bites for the palate but bites of knowledge. Each page in this cave is what I call a Cheese Byte. They are not necessarily complete essays or exhaustive treatises but pieces of information, brief and tasty, ready to be explored and savoured slowly, perhaps accompanied by a fine glass of wine.<br>Just like in a cheese cave, every corner holds a unique piece. Some notes remain isolated, still in the process of fermenting, waiting to blend with new ideas. A few, though modest, have already developed a distinct flavour, a clearer idea capable of standing on its own. Despite their differences, they all share the same purpose: to share and savour knowledge.<br>Binary code artisan, step inside! Let curiosity guide you and savour each piece. In this cave, as with cheese, the beauty lies not in perfection but in the small nuances that give each byte its character.<br>Where to go from here?<br>
-<br><a data-href="Programming Problems" href="https://cheesebytes.com/programming-problems.html" class="internal-link" target="_self" rel="noopener nofollow">Programming Problems</a>.
-<br>]]></description><link>https://cheesebytes.com/home.html</link><guid isPermaLink="false">Home.md</guid><dc:creator><![CDATA[Guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Index]]></title><description><![CDATA[ 
+<br>This process of packing and unpacking ensures that both variables are updated simultaneously, preventing any overwriting of values during the swap.]]></description><link>https://cheesebytes.com/the-cheese-cave/the-magic-of-tuple-swapping.html</link><guid isPermaLink="false">The Cheese Cave/The Magic of Tuple Swapping.md</guid><dc:creator><![CDATA[guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 18:42:54 GMT</pubDate></item><item><title><![CDATA[Index]]></title><description><![CDATA[ 
  <br>Imagine an ancient cheese cave. Even before crossing the threshold, you can sense the moisture in the air, cool and dense, infused with an earthy aroma that deepens with every step. In the shadows, small pieces of cheese rest patiently: some young, smooth, and delicate; others aged, complex, with veins that whisper stories.<br>In the same way, this virtual cave holds not bites for the palate but bites of knowledge. Each page in this cave is what I call a Cheese Byte. They are not necessarily complete essays or exhaustive treatises but pieces of information, brief and tasty, ready to be explored and savoured slowly, perhaps accompanied by a fine glass of wine.<br>Just like in a cheese cave, every corner holds a unique piece. Some notes remain isolated, still in the process of fermenting, waiting to blend with new ideas. A few, though modest, have already developed a distinct flavour, a clearer idea capable of standing on its own. Despite their differences, they all share the same purpose: to share and savour knowledge.<br>Binary code artisan, step inside! Let curiosity guide you and savour each piece. In this cave, as with cheese, the beauty lies not in perfection but in the small nuances that give each byte its character.<br>Where to go from here?<br>
 <br><a data-href="Programming Problems" href="https://cheesebytes.com/programming-problems.html" class="internal-link" target="_self" rel="noopener nofollow">Programming Problems</a>.
 <br>]]></description><link>https://cheesebytes.com/index.html</link><guid isPermaLink="false">Index.md</guid><dc:creator><![CDATA[Guiferviz]]></dc:creator><pubDate>Sun, 23 Mar 2025 19:10:35 GMT</pubDate></item><item><title><![CDATA[Programming Problems]]></title><description><![CDATA[ 
