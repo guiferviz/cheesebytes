@@ -1,0 +1,1 @@
+A company that provides an analytics platform, founded by the original creators of [[Apache Spark]].
