@@ -1,0 +1,71 @@
+<script
+  id="giscus-script"
+  src="https://giscus.app/client.js"
+  data-repo="guiferviz/cheesebytes"
+  data-repo-id="R_kgDOOMjuVA"
+  data-category="Comments"
+  data-category-id="DIC_kwDOOMjuVM4CpDXM"
+  data-mapping="pathname"
+  data-strict="1"
+  data-reactions-enabled="1"
+  data-emit-metadata="0"
+  data-input-position="bottom"
+  data-theme="light"
+  data-lang="en"
+  crossorigin="anonymous"
+  async
+></script>
+
+<script>
+  // Function to update Giscus theme
+  function updateGiscusTheme(isDark) {
+    const theme = isDark ? 'dark' : 'light';
+    const iframe = document.querySelector('iframe.giscus-frame');
+    
+    if (iframe) {
+      iframe.contentWindow.postMessage(
+        { giscus: { setConfig: { theme } } },
+        'https://giscus.app'
+      );
+    }
+  }
+
+  // Set initial theme based on current document state
+  document.addEventListener('DOMContentLoaded', () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    
+    // Update data-theme attribute on the script element
+    const giscusScript = document.getElementById('giscus-script');
+    if (giscusScript) {
+      giscusScript.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    }
+    
+    // Wait for iframe to load, then update its theme
+    const observer = new MutationObserver((mutations, obs) => {
+      const iframe = document.querySelector('iframe.giscus-frame');
+      if (iframe) {
+        updateGiscusTheme(isDark);
+        obs.disconnect();
+      }
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  });
+
+  // Listen for theme changes
+  document.addEventListener('themeChanged', (event) => {
+    const isDark = event.detail?.isDark || document.documentElement.classList.contains('dark');
+    updateGiscusTheme(isDark);
+  });
+  
+  // Also listen for storage events (in case theme is changed in another tab)
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'theme') {
+      const isDark = event.newValue === 'dark';
+      updateGiscusTheme(isDark);
+    }
+  });
+</script>

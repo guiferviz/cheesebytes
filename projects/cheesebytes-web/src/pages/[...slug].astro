@@ -1,0 +1,48 @@
+---
+import NoteLayout from "../layouts/NoteLayout.astro";
+import { type CollectionEntry, getCollection } from "astro:content";
+import { render } from "astro:content";
+import { normalizePathParts } from "../content.config";
+import fs from "fs";
+import path from "path";
+
+export async function getStaticPaths() {
+  const notes = await getCollection("notes");
+
+  return notes.map((note) => ({
+    params: { slug: note.id },
+    props: { note },
+  }));
+}
+
+type Props = {
+  note: CollectionEntry<"notes">;
+};
+
+const { note } = Astro.props;
+const Content = await render(note).then((result) => result.Content);
+// Note that rendered is undefined when using MDX files, so marimo won't be inyected on MDX if we don't include the second condition.
+const needsMarimo =
+  note.rendered?.html.includes("<marimo-island") ||
+  note.body?.includes("{.marimo}");
+---
+
+<NoteLayout note={note.data}>
+  {
+    needsMarimo && (
+      <>
+        <script
+          type="module"
+          src="https://cdn.jsdelivr.net/npm/@marimo-team/islands@0.13.11-dev10/dist/main.min.js"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@marimo-team/islands@0.13.11-dev10/dist/style.min.css"
+          crossorigin="anonymous"
+        />
+        <marimo-filename hidden />
+      </>
+    )
+  }
+  <Content />
+</NoteLayout>

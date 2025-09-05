@@ -1,0 +1,1 @@
+**Terraform** is an open-source [[Infrastructure as Code (IaC)]] tool that allows you to define and provision data center infrastructure using a declarative configuration language.

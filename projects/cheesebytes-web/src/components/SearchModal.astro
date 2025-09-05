@@ -1,0 +1,405 @@
+---
+// SearchModal.astro
+---
+
+<div id="search-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+  <div class="flex items-start justify-center min-h-screen pt-16 px-4">
+    <div
+      class="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden"
+    >
+      <!-- Header con input de búsqueda -->
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="relative">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search notes..."
+            class="w-full px-4 py-3 pl-10 text-lg bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500"
+          />
+          <svg
+            class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <button
+            id="close-search"
+            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Resultados -->
+      <div id="search-results" class="max-h-96 overflow-y-auto">
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+          <svg
+            class="mx-auto w-12 h-12 mb-4 opacity-50"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <p>Start typing to search notes...</p>
+        </div>
+      </div>
+
+      <!-- Footer con atajos de teclado -->
+      <div
+        class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+      >
+        <div
+          class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400"
+        >
+          <span>Type to search</span>
+          <div class="flex gap-4">
+            <span
+              ><kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded"
+                >↑↓</kbd
+              > Navigate</span
+            >
+            <span
+              ><kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded"
+                >↵</kbd
+              > Select</span
+            >
+            <span
+              ><kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded"
+                >ESC</kbd
+              > Close</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Inicialización temprana de funciones globales
+  (window as any).openSearchModal = () => {
+    const modal = document.getElementById("search-modal");
+    const searchInput = document.getElementById("search-input");
+
+    if (modal && searchInput) {
+      modal.classList.remove("hidden");
+      searchInput.focus();
+
+      if (typeof (window as any).loadSearchIndex === "function") {
+        (window as any).loadSearchIndex();
+      }
+    } else {
+      // Reintentar después de un breve delay
+      setTimeout(() => {
+        const retryModal = document.getElementById("search-modal");
+        const retryInput = document.getElementById("search-input");
+        if (retryModal && retryInput) {
+          retryModal.classList.remove("hidden");
+          retryInput.focus();
+          if (typeof (window as any).loadSearchIndex === "function") {
+            (window as any).loadSearchIndex();
+          }
+        }
+      }, 50);
+    }
+  };
+</script>
+
+<script>
+  import lunr from "lunr";
+
+  let searchIndex: lunr.Index | null = null;
+  let searchData: any[] = [];
+  let selectedIndex = -1;
+
+  // Cargar el índice de búsqueda
+  async function loadSearchIndex() {
+    if (searchIndex) return;
+
+    try {
+      const response = await fetch("/api/search-index.json");
+      searchData = await response.json();
+
+      // Crear índice Lunr
+      searchIndex = lunr(function (this: lunr.Builder) {
+        // Configurar para búsquedas más flexibles
+        this.pipeline.remove(lunr.stemmer);
+        this.searchPipeline.remove(lunr.stemmer);
+
+        this.ref("id");
+        this.field("title", { boost: 10 });
+        this.field("content", { boost: 1 });
+        this.field("noteType", { boost: 5 });
+
+        searchData.forEach((doc: any) => {
+          this.add(doc);
+        });
+      });
+    } catch (error) {
+      console.error("Error loading search index:", error);
+    }
+  }
+
+  // Realizar búsqueda
+  function performSearch(query: string) {
+    if (!searchIndex || !query.trim()) {
+      showEmptyState();
+      return;
+    }
+
+    try {
+      const cleanQuery = query.trim().toLowerCase();
+      let results: lunr.Index.Result[] = [];
+
+      // Estrategia de búsqueda múltiple para mejores resultados
+      try {
+        // 1. Búsqueda exacta con wildcards para coincidencias parciales
+        const wildcardQuery = cleanQuery
+          .split(" ")
+          .map((term) => `${term}*`)
+          .join(" ");
+        results = searchIndex.search(wildcardQuery);
+      } catch (e) {
+        // Si falla, intentar búsqueda con términos individuales
+        try {
+          const termQueries = cleanQuery.split(" ").map((term) => `${term}*`);
+          results = searchIndex.search(termQueries.join(" OR "));
+        } catch (e2) {
+          // Como último recurso, búsqueda simple
+          results = searchIndex.search(cleanQuery);
+        }
+      }
+
+      let searchResults = results.map((result: lunr.Index.Result) => {
+        const doc = searchData.find((d) => d.id === result.ref);
+        return { ...doc, score: result.score };
+      });
+
+      // Si no hay resultados con Lunr, hacer búsqueda manual fuzzy
+      if (searchResults.length === 0) {
+        const manualResults = searchData
+          .filter((doc) => {
+            const titleMatch = doc.title.toLowerCase().includes(cleanQuery);
+            const contentMatch = doc.content.toLowerCase().includes(cleanQuery);
+            const noteTypeMatch = doc.noteType
+              ?.toLowerCase()
+              .includes(cleanQuery);
+            return titleMatch || contentMatch || noteTypeMatch;
+          })
+          .map((doc) => ({ ...doc, score: 1 }));
+
+        searchResults = manualResults;
+      }
+
+      displayResults(searchResults, query);
+    } catch (error) {
+      console.error("Search error:", error);
+      showEmptyState();
+    }
+  }
+
+  // Mostrar resultados
+  function displayResults(results: any[], query: string) {
+    const resultsContainer = document.getElementById("search-results");
+    if (!resultsContainer) return;
+
+    if (results.length === 0) {
+      resultsContainer.innerHTML = `
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+          <p>No results found for "${query}"</p>
+        </div>
+      `;
+      return;
+    }
+
+    resultsContainer.innerHTML = results
+      .map((result, index) => {
+        // Resaltar matches en el título y snippet
+        const highlightedTitle = highlightText(result.title, query);
+        const highlightedSnippet = highlightText(result.snippet, query);
+
+        return `
+        <div class="search-result-item border-b border-gray-100 dark:border-gray-800 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${index === selectedIndex ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}" data-url="${result.url}">
+          <h3 class="font-semibold text-gray-900 dark:text-white mb-1">${highlightedTitle}</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">${highlightedSnippet}</p>
+          <div class="flex items-center mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded mr-2">${result.noteType}</span>
+            ${result.modified ? `<span>Modified: ${new Date(result.modified).toLocaleDateString()}</span>` : ""}
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    // Añadir event listeners a los resultados
+    const resultItems = resultsContainer.querySelectorAll(
+      ".search-result-item"
+    );
+    resultItems.forEach((item) => {
+      item.addEventListener("click", () => {
+        const url = item.getAttribute("data-url");
+        if (url) {
+          window.location.href = url;
+        }
+      });
+    });
+  }
+
+  // Resaltar texto
+  function highlightText(text: string, query: string): string {
+    if (!query.trim()) return text;
+
+    const regex = new RegExp(
+      `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi"
+    );
+    return text.replace(
+      regex,
+      '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>'
+    );
+  }
+
+  // Mostrar estado vacío
+  function showEmptyState() {
+    const resultsContainer = document.getElementById("search-results");
+    if (!resultsContainer) return;
+
+    resultsContainer.innerHTML = `
+      <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+        <svg class="mx-auto w-12 h-12 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <p>Start typing to search notes...</p>
+      </div>
+    `;
+  }
+
+  // Event listeners
+  document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById("search-modal");
+    const searchInput = document.getElementById(
+      "search-input"
+    ) as HTMLInputElement;
+    const closeButton = document.getElementById("close-search");
+
+    // Cerrar modal
+    const closeModal = () => {
+      modal?.classList.add("hidden");
+      if (searchInput) searchInput.value = "";
+      showEmptyState();
+      selectedIndex = -1;
+    };
+
+    // Función para abrir modal
+    const openModal = () => {
+      modal?.classList.remove("hidden");
+      searchInput?.focus();
+      loadSearchIndex();
+    };
+
+    // Exponer funciones globalmente
+    (window as any).loadSearchIndex = loadSearchIndex;
+    (window as any).openSearchModal = openModal;
+
+    closeButton?.addEventListener("click", closeModal);
+
+    // Cerrar con ESC o click fuera
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Atajo de teclado global Cmd+K / Ctrl+K
+    document.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        openModal();
+      }
+    });
+
+    // Búsqueda en tiempo real
+    searchInput?.addEventListener("input", (e) => {
+      const query = (e.target as HTMLInputElement).value;
+      performSearch(query);
+      selectedIndex = -1;
+    });
+
+    // Navegación con teclado
+    searchInput?.addEventListener("keydown", (e) => {
+      const results = document.querySelectorAll(".search-result-item");
+
+      switch (e.key) {
+        case "Escape":
+          closeModal();
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          selectedIndex = Math.min(selectedIndex + 1, results.length - 1);
+          updateSelectedResult();
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          selectedIndex = Math.max(selectedIndex - 1, -1);
+          updateSelectedResult();
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (selectedIndex >= 0 && results[selectedIndex]) {
+            const url = results[selectedIndex].getAttribute("data-url");
+            if (url) window.location.href = url;
+          }
+          break;
+      }
+    });
+
+    function updateSelectedResult() {
+      const results = document.querySelectorAll(".search-result-item");
+      results.forEach((result, index) => {
+        if (index === selectedIndex) {
+          result.classList.add("bg-yellow-50", "dark:bg-yellow-900/20");
+          result.scrollIntoView({ block: "nearest" });
+        } else {
+          result.classList.remove("bg-yellow-50", "dark:bg-yellow-900/20");
+        }
+      });
+    }
+  });
+</script>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  kbd {
+    font-family:
+      ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+      "Liberation Mono", "Courier New", monospace;
+    font-size: 0.75rem;
+  }
+</style>

@@ -1,0 +1,15 @@
+import { CheeseSizeSlider, CheeseSizeValue, CheeseCanvas } from '../../../components/cave/TestingAstroReactComponents.jsx';
+
+Let me introduce you to the **Tresviso cheese**, a traditional blue cheese originating from the small village of Tresviso in the Picos de Europa mountains, Cantabria, Spain. This cheese matures in natural caves where humidity and temperature craft its unique character.
+
+But today, we will not just talk about it — we will interact with it!
+
+**How much Tresviso do you want?** Use the slider below to choose the size of the cheese wedge you would like:
+
+<CheeseSizeSlider client:only="react" />
+
+You have chosen a size of: <CheeseSizeValue client:only="react" />. And this is what your cheese wedge looks like at that size:
+
+<CheeseCanvas client:only="react" />
+
+By integrating **React components into MDX**, we can create interactive, educational (and delicious!) visualizations right inside our content.

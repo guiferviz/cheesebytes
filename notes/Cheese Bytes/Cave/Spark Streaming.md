@@ -1,0 +1,1 @@
+**Spark Streaming** is an extension of [[Apache Spark]] that enables scalable and fault-tolerant stream processing of live data streams.

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador del Algoritmo de la Burbuja</title>
+    <!-- React Libraries -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <!-- Babel to transpile JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 p-4 sm:p-8">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+
+        // Since we are not using imports, we get React hooks from the global React object
+        const { useState, useEffect, useCallback } = React;
+
+        // --- Main Component ---
+        function BubbleSortViz() {
+            const [input, setInput] = useState('8, 3, 5, 1, 9, 2, 6, 7');
+            const [steps, setSteps] = useState([]);
+            const [hoveredStep, setHoveredStep] = useState(null);
+            const [randomCount, setRandomCount] = useState(10);
+            
+            // Playback state
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [currentStepIndex, setCurrentStepIndex] = useState(0);
+            const [animationSpeed, setAnimationSpeed] = useState(500); // Default speed in ms
+
+            // --- Bubble Sort Logic ---
+            const generateSteps = useCallback((s) => {
+                const initialArray = s.split(',')
+                    .map(item => parseInt(item.trim(), 10))
+                    .filter(item => !isNaN(item));
+
+                if (initialArray.length === 0) {
+                    setSteps([]);
+                    return;
+                }
+                
+                const arr = [...initialArray];
+                const n = arr.length;
+                const newSteps = [];
+                let sortedCount = 0;
+
+                newSteps.push({
+                    explanation: `Array inicial: [${arr.join(', ')}]`,
+                    arrayState: [...arr],
+                    highlights: { comparing: [], sorted: [] }
+                });
+
+                for (let i = 0; i < n - 1; i++) {
+                     newSteps.push({
+                        explanation: `--- Pasada ${i + 1} ---`,
+                        arrayState: [...arr],
+                        highlights: { comparing: [], sorted: Array.from({length: sortedCount}, (_, k) => n - 1 - k) },
+                        isHeader: true
+                    });
+
+                    let swapped = false;
+                    for (let j = 0; j < n - i - 1; j++) {
+                        newSteps.push({
+                            explanation: `Comparando arr[${j}] (${arr[j]}) y arr[${j+1}] (${arr[j+1]}).`,
+                            arrayState: [...arr],
+                            highlights: { comparing: [j, j+1], sorted: Array.from({length: sortedCount}, (_, k) => n - 1 - k) }
+                        });
+
+                        if (arr[j] > arr[j + 1]) {
+                            swapped = true;
+                            const temp = arr[j];
+                            arr[j] = arr[j + 1];
+                            arr[j + 1] = temp;
+                            newSteps.push({
+                                explanation: `Intercambio realizado. Nuevo orden: [..., ${arr[j]}, ${arr[j+1]}, ...]`,
+                                arrayState: [...arr],
+                                highlights: { comparing: [j, j+1], sorted: Array.from({length: sortedCount}, (_, k) => n - 1 - k), swap: true }
+                            });
+                        }
+                    }
+                    sortedCount++;
+                    newSteps.push({
+                        explanation: `Fin de la pasada ${i+1}. El elemento ${arr[n-i-1]} está en su posición final.`,
+                        arrayState: [...arr],
+                        highlights: { comparing: [], sorted: Array.from({length: sortedCount}, (_, k) => n - 1 - k) }
+                    });
+
+                    if (!swapped) {
+                        newSteps.push({
+                            explanation: `No hubo intercambios en esta pasada. El array está ordenado.`,
+                            arrayState: [...arr],
+                            highlights: { comparing: [], sorted: Array.from({length: n}, (_, k) => k) }
+                        });
+                        break;
+                    }
+                }
+                
+                newSteps.push({
+                    explanation: `--- Algoritmo finalizado ---`,
+                    arrayState: [...arr],
+                    highlights: { comparing: [], sorted: Array.from({length: n}, (_, k) => k) },
+                    isHeader: true
+                });
+
+                setSteps(newSteps);
+            }, []);
+            
+            // --- React Hooks ---
+            useEffect(() => {
+                generateSteps(input);
+                setCurrentStepIndex(0);
+                setIsPlaying(false);
+            }, [input, generateSteps]);
+
+            // Animation playback effect
+             useEffect(() => {
+                if (isPlaying && currentStepIndex < steps.length - 1) {
+                    const timer = setTimeout(() => {
+                        setCurrentStepIndex(currentStepIndex + 1);
+                    }, animationSpeed);
+                    return () => clearTimeout(timer);
+                } else if (isPlaying) {
+                    setIsPlaying(false); // Stop when animation ends
+                }
+            }, [isPlaying, currentStepIndex, steps.length, animationSpeed]);
+
+            
+            const handleGenerateRandom = () => {
+                const count = Math.max(1, Math.min(100, randomCount));
+                const randomArray = Array.from({ length: count }, () => Math.floor(Math.random() * 99) + 1);
+                setInput(randomArray.join(', '));
+            };
+
+            const handlePlayPause = () => {
+                if (currentStepIndex >= steps.length - 1) {
+                    setCurrentStepIndex(0);
+                }
+                setIsPlaying(!isPlaying);
+            };
+
+            const handleReset = () => {
+                setIsPlaying(false);
+                setCurrentStepIndex(0);
+            };
+
+            // --- Render ---
+            const finalState = steps.length > 0 ? steps[steps.length - 1] : { arrayState: [], highlights: { comparing: [], sorted: [] } };
+            // Display manual hover if not playing, otherwise display the current animation step
+            const displayStep = hoveredStep && !isPlaying ? hoveredStep : (steps[currentStepIndex] || finalState);
+            const displayState = displayStep;
+
+            const getBarColor = (index) => {
+                if (displayState.highlights.sorted.includes(index)) {
+                    return 'bg-green-400 dark:bg-green-600';
+                }
+                if (displayState.highlights.comparing.includes(index)) {
+                    return `bg-sky-400 dark:bg-sky-600 ${displayState.highlights.swap ? 'animate-pulse' : ''}`;
+                }
+                return 'bg-slate-300 dark:bg-slate-600';
+            };
+            
+            const maxVal = Math.max(...(displayState.arrayState || []), 1);
+
+            return (
+                <div className="w-full max-w-4xl mx-auto text-center font-sans">
+                    <h1 className="text-3xl md:text-4xl font-bold mb-2 text-slate-900 dark:text-slate-100">Visualizador del Algoritmo de la Burbuja</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6">
+                        Introduce números, genera una lista aleatoria o pulsa Play para ver la animación.
+                    </p>
+
+                    <div className="flex flex-wrap justify-center items-center gap-2 mb-8">
+                        {/* Input */}
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 text-lg w-full sm:w-auto focus:ring-2 focus:ring-sky-500 focus:outline-none text-slate-900 dark:text-slate-100"
+                            placeholder="Ej: 8, 3, 5, 1"
+                        />
+                        {/* Random Generator */}
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="number"
+                                value={randomCount}
+                                onChange={(e) => setRandomCount(parseInt(e.target.value, 10))}
+                                className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-2 text-lg w-20 focus:ring-2 focus:ring-sky-500 focus:outline-none text-slate-900 dark:text-slate-100"
+                                min="1"
+                                max="100"
+                            />
+                            <button
+                                onClick={handleGenerateRandom}
+                                className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
+                                aria-label="Generar lista aleatoria"
+                                title="Generar lista aleatoria"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
+                            </button>
+                        </div>
+                        {/* Playback Controls */}
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-200 dark:bg-slate-800">
+                             <button onClick={handleReset} className="p-2 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-full" title="Resetear">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/></svg>
+                            </button>
+                            <button onClick={handlePlayPause} className="p-2 bg-sky-500 hover:bg-sky-600 text-white rounded-full" title={isPlaying ? "Pausar" : "Reproducir"}>
+                                {isPlaying ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                )}
+                            </button>
+                            <input
+                                type="range"
+                                min="100"
+                                max="1000"
+                                value={animationSpeed}
+                                onChange={(e) => setAnimationSpeed(1100 - e.target.value)} // Invert so right is faster
+                                className="w-24 cursor-pointer"
+                                title="Velocidad de animación"
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Bar Chart Visualization */}
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 p-6 rounded-lg mb-8 h-[250px] flex items-end justify-center gap-2">
+                        {(displayState.arrayState || []).map((value, index) => (
+                            <div
+                                key={index}
+                                className={`w-full rounded-t-md transition-all duration-300 ${getBarColor(index)}`}
+                                style={{ height: `${(value / maxVal) * 100}%` }}
+                                title={`Valor: ${value}`}
+                            >
+                                <span className="text-xs sm:text-sm font-bold text-white mix-blend-difference">{value}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Steps Table */}
+                    <div className="w-full text-left">
+                         <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">Pasos del Algoritmo</h2>
+                         <div className="overflow-auto max-h-[40vh] border border-slate-200 dark:border-slate-700 rounded-lg">
+                            <table className="min-w-full text-sm">
+                                <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800">
+                                    <tr>
+                                        <th className="p-2 w-16 text-center font-semibold">Paso</th>
+                                        <th className="p-2 font-semibold">Explicación</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-slate-900">
+                                    {steps.map((step, index) => (
+                                        <tr 
+                                            key={index}
+                                            onMouseOver={() => {if(!isPlaying) setHoveredStep(step)}}
+                                            onMouseOut={() => {if(!isPlaying) setHoveredStep(null)}}
+                                            className={`transition-colors hover:bg-sky-100 dark:hover:bg-sky-900/50 ${currentStepIndex === index && isPlaying ? 'bg-sky-100 dark:bg-sky-900/50' : ''} ${step.isHeader ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
+                                        >
+                                            <td className={`p-2 text-center font-mono text-slate-500 dark:text-slate-400 ${step.isHeader ? 'font-bold' : ''}`}>{!step.isHeader && index + 1}</td>
+                                            <td className={`p-2 font-mono text-slate-700 dark:text-slate-300 ${step.isHeader ? 'font-bold text-slate-500 dark:text-slate-400' : ''}`}>{step.explanation}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                         </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<BubbleSortViz />, document.getElementById('root'));
+
+    </script>
+</body>
+</html>

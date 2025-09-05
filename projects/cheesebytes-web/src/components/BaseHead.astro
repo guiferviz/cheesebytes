@@ -1,0 +1,32 @@
+---
+import "../styles/global.css";
+
+export interface Props {
+  title?: string;
+  description?: string;
+}
+
+const isProd = process.env.NODE_ENV === "production";
+const { title = "Cheese Bytes", description = "Hey Bytes, say Cheese!" } =
+  Astro.props;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="icon" type="image/png" href="/favicon.png" />
+{isProd && (
+  <!-- Google tag (gtag.js) -->
+  <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-PCNM3BDQYX"
+  ></script>
+  <script is:inline >
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-PCNM3BDQYX");
+  </script>
+)}
