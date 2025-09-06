@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+import platform
 
 import sisifo
 
@@ -10,7 +11,17 @@ CHEESEBYTES_PUBLIC_REPO_SSH = "git@github.com:guiferviz/cheesebytes.git"
 def install_git_filter_repo():
     if shutil.which("git-filter-repo"):
         return sisifo.skip("git-filter-repo is already installed")
-    sisifo.shell("brew install git-filter-repo")
+    sysname = platform.system()
+    if sysname == "Darwin":
+        sisifo.shell("brew install git-filter-repo")
+    elif shutil.which("apt-get"):
+        sisifo.shell(
+            "sudo apt-get update -y && sudo apt-get install -y git-filter-repo"
+        )
+    else:
+        raise RuntimeError(
+            "Unsupported OS: need Homebrew (macOS) or apt-get (Ubuntu/Debian)"
+        )
 
 
 @sisifo.task
