@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+import shlex
 import platform
 
 import sisifo
@@ -28,7 +29,9 @@ def install_git_filter_repo():
 def publish_subtree_to_repo():
     install_git_filter_repo()
     dest_dir = "/tmp/cheesebytes-export"
-    export_paths = ["projects/cheesebytes-web", "'notes/Cheese Bytes'"]
+    root = sisifo.get_git_root()
+    assert root
+    export_paths = [root / "projects/cheesebytes-web", root / "notes/Cheese Bytes"]
     # Commit: adding cheesebytes web pointing to notes under `notes/Cheese Bytes`
     # Used to limit the export range and speed up the process.
     first_commit = "d221709c7dcf999f0e4ad66bb857b5feadb9198d"
@@ -37,9 +40,11 @@ def publish_subtree_to_repo():
     dest.mkdir(parents=True, exist_ok=True)
     if not (dest / ".git").exists():
         sisifo.shell(f"git -C {dest} init")
+        sisifo.shell(f"git -C {dest} branch -m main")
 
+    export_paths_str = " ".join(shlex.quote(str(p)) for p in export_paths)
     sisifo.shell(
-        f"git fast-export {first_commit}^..main -- {' '.join(export_paths)} | (cd {dest} && git fast-import)"
+        f"git fast-export {first_commit}^..main -- {export_paths_str} | (cd {dest} && git fast-import)"
     )
     sisifo.shell(f"git -C {dest} checkout -f")
     sisifo.shell(f"git -C {dest} branch -M main")
