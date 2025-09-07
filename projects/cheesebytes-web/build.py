@@ -36,7 +36,7 @@ def publish_subtree_to_repo():
     dest = Path(dest_dir)
     dest.mkdir(parents=True, exist_ok=True)
     if not (dest / ".git").exists():
-        sisifo.shell(f"cd {dest} && git init")
+        sisifo.shell(f"git -C {dest} init")
 
     sisifo.shell(
         f"git fast-export {first_commit}^..main -- {' '.join(export_paths)} | (cd {dest} && git fast-import)"
