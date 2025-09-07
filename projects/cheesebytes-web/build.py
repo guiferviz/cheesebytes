@@ -43,7 +43,8 @@ def publish_subtree_to_repo():
         sisifo.shell(f"git -C {dest} branch -m main")
 
     export_paths_str = " ".join(shlex.quote(str(p)) for p in export_paths)
-    if sisifo.shell_output(f"git branch --contains {first_commit}") == first_commit:
+    print(sisifo.shell_output(f"git branch --contains {first_commit}"))
+    if sisifo.shell_output(f"git branch --contains {first_commit}"):
         print("Commit exists")
     else:
         print("Commit does not exist")
