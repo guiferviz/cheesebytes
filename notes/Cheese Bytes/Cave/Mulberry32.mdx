@@ -1,24 +1,25 @@
-import dedent from 'dedent';
-import HistogramGenerator from '../../../components/cave/Mulberry32.tsx';
-import PyodideCodeRunner from '../../../components/PyodideCodeRunner.tsx';
+import dedent from "dedent";
+import HistogramGenerator from "../../../projects/cheesebytes-web/src/components/cave/Mulberry32.tsx";
+import PyodideCodeRunner from "../../../projects/cheesebytes-web/src/components/PyodideCodeRunner.tsx";
 
 export const mulberry32PythonCode = dedent`
 	from typing import Callable
 
-	def mulberry32(seed: int) -> Callable[[], float]:
-	    seed &= 0xFFFFFFFF
+    def mulberry32(seed: int) -> Callable[[], float]:
+        seed &= 0xFFFFFFFF
 
-	    def _aux() -> float:
-	        nonlocal seed
-	        seed = (seed + 0x6D2B79F5) & 0xFFFFFFFF
-	        t = seed
-	        t = ((t ^ (t >> 15)) * (t | 1)) & 0xFFFFFFFF
-	        t ^= (t + ((t ^ (t >> 7)) * (t | 61) & 0xFFFFFFFF)) & 0xFFFFFFFF
-	        return ((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296.0
+        def _aux() -> float:
+            nonlocal seed
+            seed = (seed + 0x6D2B79F5) & 0xFFFFFFFF
+            t = seed
+            t = ((t ^ (t >> 15)) * (t | 1)) & 0xFFFFFFFF
+            t ^= (t + ((t ^ (t >> 7)) * (t | 61) & 0xFFFFFFFF)) & 0xFFFFFFFF
+            return ((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296.0
 
-	    return _aux
+        return _aux
 
-	rng = mulberry32(124);
+    rng = mulberry32(124);
+
 `;
 
 <PyodideCodeRunner client:only="react" initialCode={mulberry32PythonCode} />
