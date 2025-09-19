@@ -1,8 +1,3 @@
----
-aliases:
-  - What Is a Cheese Byte?
----
-
 Imagine an ancient cheese cave. Even before crossing the threshold, you can
 sense the moisture in the air, cool and dense, infused with an earthy aroma that
 deepens with every step. In the shadows, small pieces of cheese rest patiently:
