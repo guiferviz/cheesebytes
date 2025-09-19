@@ -13,5 +13,3 @@ graph TD
   B --> D["a"]
   B --> E["b"]
 ```
-
-Test.
