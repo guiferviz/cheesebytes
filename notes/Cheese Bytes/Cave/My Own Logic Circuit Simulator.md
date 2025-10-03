@@ -1,10 +1,11 @@
-After doing some research, documented in [[Decide What Simulator to Use]], I
-decided to build my own computer simulator. And yes, I am going to do it in
-Python.
+After doing some research, documented in
+[[Decide What Computer Simulator to Use]], I decided to build my own computer
+simulator. And yes, I am going to do it in Python.
 
 This page is where I will document how that simulator is built, from its bare
 bones to the final working engine. Having this simulator is a requirement before
-I can move forward with the thrilling mission of building my own computer.
+I can move forward with the thrilling mission of building
+[[My Own Logical Computer|my own computer]].
 
 The simulator is based on a few fundamental concepts.
 
@@ -12,9 +13,9 @@ The simulator is based on a few fundamental concepts.
 
 In the simulator, the most basic concept is the **signal**. A signal is a
 logical entity that carries information; it can have a width of **1 bit**
-(simple on/off, 0 or 1) or **multiple bits**. This means that what traditional
-hardware terminology calls a _bus_ (a set of parallel wires) is, in our
-simulator, simply a multi-bit signal.
+(simple on/off, 0 or 1) or **multiple bits**. This is that what traditional
+hardware terminology calls a _bus_ (a set of parallel wires). In our simulator,
+simply a multi-bit signal.
 
 ## Practical Notes
 
@@ -30,28 +31,29 @@ simulator, simply a multi-bit signal.
 
 # Components
 
-The second fundamental element is the **circuit**. A circuit is any logical
+The second fundamental element is the **component**. A component is any logical
 construction made from input/output signals and other components. It can be as
 small as a Nand gate or as large as a CPU.
 
-## The Public Interface of a Circuit
+## The Public Interface of a Component
 
-In the simulator, a circuit is represented as a Python class that inherits from
-`Circuit`. Every circuit has the following public interface:
+In the simulator, a component is represented as a Python class that inherits
+from `Component`. Every component has the following public interface:
 
 - `inputs`: a dictionary mapping **input names** to `Signal` objects.
 - `outputs`: a dictionary mapping **output names** to `Signal` objects.
-- `subcomponents`: a list of other `Circuit` instances that this circuit is
+- `subcomponents`: a list of other `Component` instances that this component is
   built from.
-- `connect()`: a method where the internal structure of the circuit is declared
-  by creating and wiring subcomponents.
-- `simulate(state)`: a method that defines the explicit behavior of the circuit
-  at the software level. Not all components need to implement this — simple
-  gates can, but higher-level components might rely only on their subcomponents.
+- `connect()`: a method where the internal structure of the component is
+  declared by creating and wiring subcomponents.
+- `simulate(state)`: a method that defines the explicit behavior of the
+  component at the software level. Not all components need to implement this —
+  simple gates can, but higher-level components might rely only on their
+  subcomponents.
 
 ### Automatic Input/Output Detection
 
-To make circuit definition easier, you do **not** need to manually fill the
+To make component definition easier, you do **not** need to manually fill the
 `inputs` and `outputs` dictionaries. Instead, the simulator inspects the class
 annotations:
 
@@ -60,14 +62,14 @@ annotations:
 - Attributes annotated with `Output` are automatically added to the `outputs`
   dictionary.
 
-The "magic" of the `connect()` method is that when it is called during circuit
+The "magic" of the `connect()` method is that when it is called during component
 initialization, any subcomponent created inside it is automatically added to the
 `subcomponents` list.
 
 This means you do **not** write:
 
 ```python
-class Not(Circuit):
+class Not(Component):
     def __init__(self, a: Signal, q: Signal):
         self.inputs["a"] = a
         self.outputs["q"] = q
@@ -79,10 +81,10 @@ way. Here is a minimal example of how to define a Not gate:
 
 ```python
 from typing import Annotated
-from nandscape import Circuit, Signal, Input, Output
+from nandscape import Component, Signal, Input, Output
 
 
-class Not(Circuit):
+class Not(Component):
     a: Annotated[Signal, Input]
     q: Annotated[Signal, Output]
 
@@ -99,10 +101,10 @@ To make it a bit more easy to read and write, the `Annotated[Signal, Input]` and
 
 ```python
 from typing import Annotated
-from nandscape import Circuit, InSignal, OutSignal
+from nandscape import Component, InSignal, OutSignal
 
 
-class Not(Circuit):
+class Not(Component):
     a: InSignal
     q: OutSignal
 
@@ -116,17 +118,9 @@ class Not(Circuit):
 ## Fundamental Logic Gate
 
 The Nand gate is the fundamental building block of the simulator. It is the only
-circuit that does not connect to other components internally, so its `connect`
+component that does not connect to other components internally, so its `connect`
 method is empty. All other components will be built from Nand gates (or from
 other components that ultimately reduce to Nand gates).
-
-## Why "Circuit" and not "Component"?
-
-I chose to use the word "circuit" instead of "component" for the base class
-because "circuit" is more general. A circuit can be a unique, one-off design or
-a reusable block. A component usually implies a higher level of abstraction and
-reusability. In other words, every component is a circuit, but not every circuit
-is a component.
 
 # Logical Structure vs Layout
 
@@ -144,9 +138,9 @@ aesthetics.
 # Simulation Modes
 
 In this library, the logical design, the visual layout, and the simulation
-engine are completely independent. The `Circuit` class defines only the logical
-behavior of the circuit; how that behavior is actually simulated is the job of
-the simulator.
+engine are completely independent. The `Component` class defines only the
+logical behavior of the component; how that behavior is actually simulated is
+the job of the simulator.
 
 This separation makes it easy to implement different simulation strategies, such
 as:
@@ -155,13 +149,13 @@ as:
 - **Event-driven simulation**, where only components affected by a signal change
   are updated.
 
-For now, the simulator will use the event-driven approach. This approach lets me
-model propagation delays per gate and observe transient glitches when paths have
-different delays. It also scales better because only the parts of the circuit
-that actually change are reevaluated.
+For now, I am leaning towards using the event-driven approach. This approach
+lets me model propagation delays per gate and observe transient glitches when
+paths have different delays. It also scales better because only the parts of the
+circuit that actually change are reevaluated.
 
 # Conclusion
 
 With these foundations (clear separation between logic, layout, and simulation,
-a unified concept of `Signal`, and a consistent `Circuit` interface) the
+a unified concept of `Signal`, and a consistent `Component` interface) the
 simulator is ready to grow from the simplest Nand gate to complex components.
