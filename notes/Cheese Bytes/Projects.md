@@ -21,6 +21,9 @@ project yields distilled knowledge that makes the effort worthwhile.
 
 # Pending Projects
 
+See [[The Three E's of Project Selection]] to better understand how I choose in
+which projects to invest my time.
+
 - [[Simon Says Webcam Game]]: A game where players must mimic a sequence of
   colors using their webcams (raising their hands to press the virtual buttons
   on screen).
@@ -29,3 +32,4 @@ project yields distilled knowledge that makes the effort worthwhile.
 - Sisifo: A builder for my monorepo.
 - Cheese Bytes YouTube channels.
 - My own PKM implemented in a VSCode extension.
+- [[Automatic Video Editing with AI]]: Using AI to automate video editing tasks.
