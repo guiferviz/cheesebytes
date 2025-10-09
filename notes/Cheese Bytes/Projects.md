@@ -33,3 +33,5 @@ which projects to invest my time.
 - Cheese Bytes YouTube channels.
 - My own PKM implemented in a VSCode extension.
 - [[Automatic Video Editing with AI]]: Using AI to automate video editing tasks.
+- Experiment with small networks for reasoning, there are some that can be
+  trained on 1000 sudokus and have only 7 million parameters.
