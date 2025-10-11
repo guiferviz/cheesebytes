@@ -19,19 +19,18 @@ project yields distilled knowledge that makes the effort worthwhile.
 - April 2025 - [[Publishing Obsidian Notes in Astro]]: The birth of Cheese
   Bytes.
 
-# Pending Projects
+# Pending Projects and Ideas
 
 See [[The Three E's of Project Selection]] to better understand how I choose in
 which projects to invest my time.
 
-- [[Simon Says Webcam Game]]: A game where players must mimic a sequence of
-  colors using their webcams (raising their hands to press the virtual buttons
-  on screen).
-- Solve exact cover problems using backtracking and dancing links.
-- Guiferviz monorepo with project templates.
-- Sisifo: A builder for my monorepo.
-- Cheese Bytes YouTube channels.
-- My own PKM implemented in a VSCode extension.
-- [[Automatic Video Editing with AI]]: Using AI to automate video editing tasks.
-- Experiment with small networks for reasoning, there are some that can be
-  trained on 1000 sudokus and have only 7 million parameters.
+| Project                                                         | ✨ Excitement | 🌍 Effect | 💪 Effort |
+| --------------------------------------------------------------- | ------------- | --------- | --------- |
+| [[Experiment with Small Networks for Reasoning]]                | 3             | 3         | 2         |
+| Cheese Bytes YouTube channels                                   | 3             | 3         | 3         |
+| [[Simon Says Webcam Game]]                                      | 2             | 2         | 1         |
+| Solve exact cover problems using backtracking and dancing links | 3             | 2         | 3         |
+| Guiferviz monorepo with project templates                       | 1             | 1         | 1         |
+| Sisifo: A builder for my monorepo                               | 1             | 1         | 3         |
+| My own PKM implemented in a VSCode extension                    | 2             | 1         | 2         |
+| [[Automatic Video Editing with AI]]                             | 2             | 2         | 1         |
