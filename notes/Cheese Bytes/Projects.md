@@ -26,7 +26,7 @@ which projects to invest my time.
 
 | Project                                                         | ✨ Excitement | 🌍 Effect | 💪 Effort |
 | --------------------------------------------------------------- | ------------- | --------- | --------- |
-| [[Experiment with Small Networks for Reasoning]]                | 3             | 3         | 2         |
+| [[Solving Sudokus with Reasoning Networks]]                     | 3             | 3         | 2         |
 | Cheese Bytes YouTube channels                                   | 3             | 3         | 3         |
 | [[Simon Says Webcam Game]]                                      | 2             | 2         | 1         |
 | Solve exact cover problems using backtracking and dancing links | 3             | 2         | 3         |
