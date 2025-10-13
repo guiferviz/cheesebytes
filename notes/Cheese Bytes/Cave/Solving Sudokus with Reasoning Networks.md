@@ -38,3 +38,9 @@ Se utiliza el dataset de
 Creo un pytorch Dataset para cargar sudokus en forma de vector o de grid. El
 dataset tiene 3M de training examples y unos 400k de tests examples. La idea
 sería entrenar en solo 1k ejemplos, como en el paper.
+
+# Day 2
+
+Overfitting a small dataset of 1000 sudokus with a small feedforward NN.
+
+https://github.com/guiferviz/me/commit/816bb31b1543432062c3736b929fcc641dd5da80
