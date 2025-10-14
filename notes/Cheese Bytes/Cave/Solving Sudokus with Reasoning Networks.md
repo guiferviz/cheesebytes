@@ -41,6 +41,30 @@ sería entrenar en solo 1k ejemplos, como en el paper.
 
 # Day 2
 
-Overfitting a small dataset of 1000 sudokus with a small feedforward NN.
+Overfitting a small dataset of 1000 sudokus with a small feedforward NN. Zero
+error in training set.
 
 https://github.com/guiferviz/me/commit/816bb31b1543432062c3736b929fcc641dd5da80
+
+# Day 3
+
+Si uso redes más pequeñas que no llegan a memorizar los training examples, el
+test accuracy se queda en un 16%. After un overfitting de libro, me llama la
+atención que cuando hago overfitting el test accuracy sube a 25% aprox.
+
+El día 3 lo dedico a entender cuál es el baseline que debemos batir. Se puede
+considerar que un 25% ya es aprender algo?
+
+Creo un random model que simplemente llena los espacios vacíos con números
+aleatorios y evalúo su rendimiento en el conjunto de prueba. Respeta los números
+dados, solo rellena aleatoriamente los vacíos. Eso da un accuracy teórico de
+40%.
+
+Aprovecho también para crear una visualización en la terminal del sudoku, con
+colores que marcan los números correctos del intento de solución.
+
+Podríamos incluso crear un random model que devuelva permutaciones. En lugar de
+poder repetir 9 veces el mismo numero en una fila, columna o región, podríamos
+asegurarnos de que cada número solo aparezca una vez por fila, columna y región.
+Aunque no sé si eso mejoraría el baseline, creo que hasta lo empeoraría, porque
+la probabilidad de tener el numero correcto ya no sería de 1/9...
