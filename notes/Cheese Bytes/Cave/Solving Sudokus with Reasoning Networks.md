@@ -68,3 +68,18 @@ poder repetir 9 veces el mismo numero en una fila, columna o región, podríamos
 asegurarnos de que cada número solo aparezca una vez por fila, columna y región.
 Aunque no sé si eso mejoraría el baseline, creo que hasta lo empeoraría, porque
 la probabilidad de tener el numero correcto ya no sería de 1/9...
+
+# Day 4
+
+Modelos que toman embeddings como inputs y devuelven embeddings como outputs.
+También le añado un hidden state para que no tenga que codificar su pensamiento
+en el vector de la salida.
+
+Nada de esto hace que pueda superar el 25% de accuracy en test. En train hace
+overfitting muy fácilmente.
+
+El modelo consiste en 2 linear layers con ReLU en medio. Decido usar
+self-attention, add & norm, y un MLP con un ultimo add & norm, siguiendo el
+paper de TRM. Lo cierto es que con eso aprende a no tocar los numeros dados,
+pero colapsa y predice siempre el mismo numero en todas las celdas vacías (un 4,
+luego un 7...).
