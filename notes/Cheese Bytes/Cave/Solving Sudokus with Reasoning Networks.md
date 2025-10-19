@@ -138,3 +138,33 @@ atención + add & norm + feed-forward + add & norm.
 Con 2 pasadas consigo un 61% de accuracy en test tras 500 iteraciones. Sigo
 usando 10k. Hago una ejecución en google colab y me toma 11 minutos. El modelo
 en estos momentos tiene 56k parámetros.
+
+https://github.com/guiferviz/me/commit/d504d7661282ddde7d6302d3a328383aafecf6b8
+
+Con 4 pasadas prácticamente no mejora, se queda en 61%. Observando algunos de
+los ejemplos de test veo que el modelo pone números en las posiciones correctas
+cuando la lógica a usar es sencilla, como cuando solo hay un lugar posible para
+colocar un número en una fila. Incluso cuando hay dos sitios posibles donde
+poner un número, la salida dice que es en uno de esos lugares (acertando uno de
+ellos siempre). Sin embargo, la solución final está lejos de ser correcta, y hay
+salidas que no respetan las reglas básicas. Parece que tras varias iteraciones,
+el modelo simplemente se empeña en no cambiar su predicción inicial.
+
+![alt text](image.png)
+
+Pruebo con embeddings de 256 en lugar de 64 y consigo un 61% muy rápido y luego
+empieza a caer mientras el accuracy del train sube (overfitting).
+
+La única forma de conseguir mejorar el test accuracy es aumentando el número de
+ejemplos de training. Con 100k ejemplos consigo un 65% de accuracy en test. Lo
+consigo con embeddings de 256 y con 4 layers, pero sin razonamiento adicional (1
+iteración). También uso 8 attention heads.
+
+También conseguimos un hito con este modelo: el primer sudoku resuelto
+completamente por la red! Antes no había conseguido ninguno completo, solo
+números sueltos en posiciones correctas.
+
+En resumen, probando distintas configuraciones, el test accuracy máximo que
+consigo es de 65%, por lo que parece difícil que tocando algún hyperparámetro
+pueda mejorar mucho más. Quizás pueda llegar a 70% con suerte, pero no creo que
+pueda resolver el 80% de los sudokus sin nada más.
