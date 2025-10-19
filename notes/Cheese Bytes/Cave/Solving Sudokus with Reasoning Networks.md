@@ -168,3 +168,10 @@ En resumen, probando distintas configuraciones, el test accuracy máximo que
 consigo es de 65%, por lo que parece difícil que tocando algún hyperparámetro
 pueda mejorar mucho más. Quizás pueda llegar a 70% con suerte, pero no creo que
 pueda resolver el 80% de los sudokus sin nada más.
+
+https://github.com/guiferviz/me/commit/bb03e711d54f30986deff1ba88fc65bfe1521b65
+
+# Day 7
+
+Vamos a implementar algo similar a lo que propone el paper de TRM, que es usar
+un módulo de razonamiento separado que se aplique varias veces.
