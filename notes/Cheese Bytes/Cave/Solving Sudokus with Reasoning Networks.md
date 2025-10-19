@@ -82,4 +82,59 @@ El modelo consiste en 2 linear layers con ReLU en medio. Decido usar
 self-attention, add & norm, y un MLP con un ultimo add & norm, siguiendo el
 paper de TRM. Lo cierto es que con eso aprende a no tocar los numeros dados,
 pero colapsa y predice siempre el mismo numero en todas las celdas vacías (un 4,
-luego un 7...).
+luego un 7...). Le dedico un tiempo a aprender sobre los transformers y entender
+los conceptos de key, query, value, multi-head attention, etc. Escribo
+[[Understanding Query, Key, and Value in Attention Mechanisms]].
+
+# Day 5
+
+Dando un paseo se me ocurre que la manera en la que le estoy pasando los datos a
+la red hace que le sea difícil aprender información espacial. Es decir, si hay
+un 7 en la casilla (0, 0) yo le paso a la red un embedding del número 7. Ese
+mismo embedding se le pasará a todos los 7 que haya en el sudoku,
+independientemente de su posición. Digamos que yo estoy dejando a la red que
+aprenda que la primera entrada que le paso es siempre la casilla (0, 0), pero
+claro, llegar a aprender eso es muy difícil solo multiplicando inputs por pesos.
+Si le pasáramos esa información de posición directamente sería mucho más fácil.
+Se me ocurre pasarle un embedding de posición junto con el embedding del número.
+De manera que aprenda embeddings de posición y se los sume o concatene a los
+embeddings de los números. También se me ocurre que podría pasarle simplemente
+unos valores fijos en función de la fila y columna que nos encontremos, como
+unos desplazamientos fijos que la red aprendería a interpretar correctamente.
+
+Resulta que esto existe y es clave en las arquitecturas actuales. Existe de
+distintas formas: totalmente aprendibles como lo que propongo, fijos para
+indicar posiciones absolutas o transformaciones de las matrices Q y K para
+indicar posiciones relativas (RoPE). Muy interesante este mundo.
+
+Decido por simplicidad empezar con aprender embeddings de posición, la parte
+negativa es que no extiende a problemas mas grandes. Por ejemplo, si quiero
+resolver sudokus de 12x12, tendría que aprender nuevos embeddings de posición.
+Pero bueno, para empezar está bien.
+
+También pienso que si el sudoku tuviera restricciones como "las celdas en
+posiciones pares deben ser números menores que la casilla central", entonces la
+red le sería difícil aprender esto con posiciones relativas. Le sería más fácil
+con posiciones absolutas (embeddings aprendidos de cero). Esto no es un problema
+por ahora, pero si en el futuro quiero aplicar esto a otros problemas de
+razonamiento, puede ser relevante.
+
+El día 5 termina con esta investigación.
+
+# Day 6
+
+Toca implementar lo averiguado durante el día 5.
+
+Añado el embedding de posición en el modelo InEmbeddingsOutLogitModel y no veo
+diferencia. Luego creo un nuevo modelo PositionalEmbeddingsModel que usa
+self-attention, add & norm, y feed-forward con add & norm. Este modelo, con una
+sola pasada, es capaz de conseguir un 56% de accuracy en test. También es cierto
+que estoy usando 10k ejemplos de training, no 1k como en los experimentos
+anteriores. Pero bueno, es un gran avance.
+
+Ahora toca ver que pasa si hago múltiples pasadas por el mismo módulo de
+atención + add & norm + feed-forward + add & norm.
+
+Con 2 pasadas consigo un 61% de accuracy en test tras 500 iteraciones. Sigo
+usando 10k. Hago una ejecución en google colab y me toma 11 minutos. El modelo
+en estos momentos tiene 56k parámetros.
