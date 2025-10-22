@@ -175,3 +175,45 @@ https://github.com/guiferviz/me/commit/bb03e711d54f30986deff1ba88fc65bfe1521b65
 
 Vamos a implementar algo similar a lo que propone el paper de TRM, que es usar
 un módulo de razonamiento separado que se aplique varias veces.
+
+> igual que los humanos tienen un conjunto de train y test y se dan cuenta que
+> cuando baja el error en train están haciendo overfitting, podemos pasarle un
+> conjunto de test al modelo para que el mismo se de cuenta y se auto ajuste?
+> que paper trabajos hay en esa linea?
+
+> Podemos hacer que dado el error de train y test, el modelo aprenda cómo
+> descender los parámetros para minimizar ambos errores pero sin ver ejemplos de
+> tests?
+
+> Podemos crear un decoder que genere tokens sobre los que razonar y luego
+> convertir eso en salidas?
+
+> Una nueva cabeza que diga lo seguro que está. Cuanto más seguro y erróneo, más
+> penalización. Menos penalización si no está tan seguro. No penalización si
+> acierta.
+
+> Dejar que piense sobre los tokens del tablero, pero romper el proceso. Es
+> decir, después de cada iteración, olvidar lo que se pensó y volver a
+> inyectarle a la red la solución anterior convertida en embeddings. O sea,
+> tablero a embeddings, embeddings a transformer, transformer a logits, logits a
+> tablero, tablero a embeddings... así sucesivamente hasta que el modelo nos
+> diga que está resuelto.
+>
+> Creo que esto tiene mucho sentido porque en sudoku, al menos yo, razono sobre
+> el propio tablero. No necesito un scratchpad para pensar. En otros problemas
+> seguramente sí, pero aquí se trata de ir refinando las posibilidades de cada
+> casilla.
+
+> Aprendizaje guiado. Podemos decirle que cierto número está mal porque debe
+> prestar atención a la celda X e Y, por ejemplo. O sea, no le decimos el porqué
+> pero le indicamos dónde tiene que atender.
+
+> podriamos hacer que el modelo explore qué otras opciones tiene para llegar a
+> la conclusión a la que llegó? es decir, que en cierto modo evalue distinta
+> logica y elija la mas probable. Por ejemplo, si sabe que hay un 1 en la
+> casilla de arriba al a izquierda, que considere el porqué va ahí, no solo
+> usando lo que su atención actual le ha dicho, pero evaluando que otras cosas
+> puede atender que le den la misma solución. o sea no es CoT o ToT, es, estoy
+> hablando en tiempo de entrenamiento. que el modelo se pregunte si atender a
+> ciertos tokens tiene sentido y si eso le ayuda en otros casos u mejor cambiar
+> su atencion, ves la diferencia?
