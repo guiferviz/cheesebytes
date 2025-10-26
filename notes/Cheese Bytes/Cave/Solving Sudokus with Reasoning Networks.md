@@ -177,9 +177,7 @@ https://github.com/guiferviz/me/commit/bb03e711d54f30986deff1ba88fc65bfe1521b65
 
 # Day 7
 
-Vamos a implementar algo similar a lo que propone el paper de TRM, que es usar
-un módulo de razonamiento separado que se aplique varias veces. Sin embargo,
-antes de ponerme a ello me dedico a pensar. Cada idea que tiene un mínimo de
+Antes de seguir, decido ponerme a pensar. Cada idea que tiene un mínimo de
 sentido la apunto aquí.
 
 > igual que los humanos tienen un conjunto de train y test y se dan cuenta que
@@ -197,7 +195,7 @@ sentido la apunto aquí.
 
 > Una nueva cabeza que diga lo seguro que está. Cuanto más seguro y erróneo, más
 > penalización. Menos penalización si no está tan seguro. No penalización si
-> acierta.
+> acierta. Esto se puede hacer con los logits del softmax, sin una cabeza extra.
 
 > Dejar que piense sobre los tokens del tablero, pero romper el proceso. Es
 > decir, después de cada iteración, olvidar lo que se pensó y volver a
@@ -227,5 +225,57 @@ sentido la apunto aquí.
 
 Después de tantas ideas cuál es más interesante de explorar? Probar si puedo
 replicar el rendimiento de las TRN o probar alguna de las ideas anteriores de mi
-propia cosecha? Es importante ver que el que sean de mi propia cosecha no quiere
-decir que no se hayan hecho antes.
+propia cosecha? Es importante señalar que el que sean de mi propia cosecha no
+quiere decir que no se hayan hecho antes.
+
+# Day 8
+
+Decido mejorar el dataset para que esté más limpio y optimizado. También creo un
+anywidget que me permita visualizar fácilmente los sudokus, las celdas
+iniciales, los errores y el valor de confianza de cada celda.
+
+Después entreno varios modelos, probando con distintas funciones de loss. La
+función final combina tres términos: la pérdida de entropía cruzada estándar que
+guía al modelo hacia las respuestas correctas, una penalización cuadrática por
+exceso de confianza en errores (lambda*over * (confidence*on_errors²).mean())
+que castiga duramente cuando el modelo se equivoca con alta seguridad, y una
+penalización general por falta de confianza (lambda_confidence * (1 -
+max_probs).mean()) que empuja al modelo a estar seguro en todas sus
+predicciones. El equilibrio entre estos términos hace que el modelo aprenda a
+ser confiado cuando acierta (recompensa) y cauto cuando falla (doble castigo),
+evitando que colapse hacia predicciones uniformes o tímidas para minimizar
+pérdidas.
+
+```
+TrainingSettings(
+    device="cuda",
+    embedding_dim=256,
+    reasoning_layers=4,
+    block_iterations=1,
+    attention_heads=8,
+    hidden_dim=256,
+    dataset=dataset_config,
+    batch_size = 1000,
+    example_interval=1,
+    learning_rate=0.001,
+    lambda_over=1.5,
+    lambda_under=0.5,
+)
+```
+
+Después pruebo a hacer predicciones step by step, hago que tras una pasada de la
+red, me quedo solo con el valor con el que está más seguro y lo fijo en la
+siguiente iteración. De esta manera, la red no puede dudar, una vez elige un
+valor, ese valor se queda. Esto hace que pase de resolver un 0.2% de los sudokus
+de test enteros a resolver un 4.4%. Algo es algo.
+
+Seguramente sea capaz de resolver sudokus fáciles, pero no los difíciles.
+Explorando los resultados me doy cuenta de que está muy seguro en celdas donde
+solo hay un numero que se puede poner (naked single), o porque es el único sitio
+donde se puede poner dicho número en la fila, columna o región (hidden single).
+El dataset tiene un score de dificultad que no estoy usando, y sería interesante
+incorporar para entender dónde está fallando más.
+
+# Day 9
+
+Neuro-Symbolic Sudoku Solver: https://arxiv.org/abs/2307.00653
