@@ -278,4 +278,12 @@ incorporar para entender dónde está fallando más.
 
 # Day 9
 
-Neuro-Symbolic Sudoku Solver: https://arxiv.org/abs/2307.00653
+El objetivo es hacer que la red neuronal lo haga todo, end to end, que se apañe
+con lo que le pasamos sin nosostros proporcionarle knowledge extra (expert
+knowledge). Sin embargo, durante las fases iniciales del proyecto podemos probar
+con data augmentation, especialmente porque no queremos que los dígitos tengan
+más importancia de la que realmente tienen. Que haya un 1 en una casilla no
+significa nada, lo que es importante ese que ese mismo símbono no se repita en
+la fila, columna o región. Por lo tanto, podemos hacer data augmentation
+permutando los dígitos del 1 al 9 en el sudoku. Esto ayuda a que la red no se
+fije en patrones específicos de los dígitos.
