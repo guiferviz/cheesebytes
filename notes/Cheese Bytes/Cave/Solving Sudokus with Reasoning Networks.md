@@ -311,3 +311,6 @@ TrainingSettings(
     use_digit_permutation=True,
 )
 ```
+
+Using code in this commit:
+https://github.com/guiferviz/me/commit/e02581bb212f4897a853e6792ce9168242b5562c
