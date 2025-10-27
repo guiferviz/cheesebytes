@@ -287,3 +287,27 @@ significa nada, lo que es importante ese que ese mismo símbono no se repita en
 la fila, columna o región. Por lo tanto, podemos hacer data augmentation
 permutando los dígitos del 1 al 9 en el sudoku. Esto ayuda a que la red no se
 fije en patrones específicos de los dígitos.
+
+Con esto conseguimos mejorar el accuracy en test de 65% a 67%. El porcentaje de
+sudokus de test acertados a la primera sube al 1% y, si los resolvemos paso a
+paso llegamos a un 14.6%. El accuracy en celdas individuales no representa un
+gran salto, sin embargo, el accuracy de step by step es realmente una mejora
+sustancial.
+
+```
+TrainingSettings(
+    device="cuda",
+    embedding_dim=256,
+    reasoning_layers=4,
+    block_iterations=1,
+    attention_heads=8,
+    hidden_dim=256,
+    dataset=dataset_config,
+    batch_size=1000,
+    example_interval=1,
+    learning_rate=0.001,
+    lambda_over=2,
+    lambda_confidence=0,
+    use_digit_permutation=True,
+)
+```
