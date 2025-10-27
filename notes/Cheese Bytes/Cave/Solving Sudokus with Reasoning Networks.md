@@ -154,7 +154,30 @@ ellos siempre). Sin embargo, la solución final está lejos de ser correcta, y h
 salidas que no respetan las reglas básicas. Parece que tras varias iteraciones,
 el modelo simplemente se empeña en no cambiar su predicción inicial.
 
-![alt text](image.png)
+Por ejemplo, abajo vemos la solución de uno de los problemas, marcando con un
+`*` las predicciones erróneas. Vemos que el 2 de arriba a la izquierda es
+incorrecto. En esa misma fila hay un 2 ya colocado, pero el modelo no respeta
+esa regla básica porque parece ser que no está del todo seguro. Vemos también
+tres 7s en el último cuadrante. En lugar de decidirse por uno, el modelo opta
+por dejar los tres 7s en sus posiciones más probables. Respeta las casillas
+iniciales proporcionadas, pero no logra devolver una solución que cumpla las
+restricciones.
+
+```
++----------+----------+----------+
+| 2* 5  1  | 8  7  3  | 2  4  9  |
+| 3* 7  3  | 5  2  4  | 8* 6  8  |
+| 4* 4  8  | 1  9  9* | 7  3* 5  |
++----------+----------+----------+
+| 9  6  9* | 3  7* 1  | 5  7  2  |
+| 5  2  7  | 9  5* 8  | 3  1  4  |
+| 3  1  4  | 2  5  7  | 9  7* 6  |
++----------+----------+----------+
+| 1  8  5  | 6  3 9*  | 4  7* 7* |
+| 7  9  6  | 4  1  5  | 3* 8* 7* |
+| 4  3  2  | 7  8  9  | 4* 5  1  |
++----------+----------+----------+
+```
 
 Pruebo con embeddings de 256 en lugar de 64 y consigo un 61% muy rápido y luego
 empieza a caer mientras el accuracy del train sube (overfitting).
@@ -294,6 +317,12 @@ paso llegamos a un 14.6%. El accuracy en celdas individuales no representa un
 gran salto, sin embargo, el accuracy de step by step es realmente una mejora
 sustancial.
 
+Parece que es útil empezar con lambda_over a 0 para no castigar especialmente
+ningun error y, tras llegar a un accuracy de 66% o así, aumentarlo a 1 o a 2
+para castigar bien esos errores de los que la red está tan segura. Esto es
+crítico porque luego, al resolver paso a pasa, no queremos que haya errores. Un
+error en el primer paso ya nos fastidia el sudoku entero.
+
 ```
 TrainingSettings(
     device="cuda",
@@ -302,7 +331,9 @@ TrainingSettings(
     block_iterations=1,
     attention_heads=8,
     hidden_dim=256,
-    dataset=dataset_config,
+    dataset=SudokuDatasetSettings(
+        processing=SudokuProcessingConfig(max_train_samples=100_000, max_test_samples=1000)
+    ),
     batch_size=1000,
     example_interval=1,
     learning_rate=0.001,
@@ -314,3 +345,6 @@ TrainingSettings(
 
 Using code in this commit:
 https://github.com/guiferviz/me/commit/e02581bb212f4897a853e6792ce9168242b5562c
+
+Hice una prueba doblando la dimensión de los embeddings (512) y parece que
+mejora el rendimiento en general.
