@@ -394,3 +394,47 @@ train_config = TRMSettings(
 # Day 11
 
 Aprendo some EMA (Exponential Moving Average) para suavizar los pesos de la red.
+Lo implemento usando `timm` pero no veo mejora, tampoco estoy entrenando tanto
+mis modelos como para verlo. Lo voy a desactivar en el resto de mis experimentos
+por el momento.
+
+# Day 12 - Deep Supervision
+
+Llegó el momento de implementar deep supervision en el modelo que ya sabemos que
+funciona.
+
+Tras unos 13 minutos, con 10k examples, en test obtenemos: Test Acc: 67.27% |
+Solved: 23/1000 (2.30%). Y eso lo hicimos con solo 2 iteraciones de deep
+supervision.
+
+Tras 17 min Test Acc: 68.62% | Solved: 43/1000 (4.30%). A los 20 min:
+
+    Train Loss: 30.4786 | Train Acc: 69.74% | Solved: 668/10000 (6.68%)
+    Test Loss: 0.6876 | Test Acc: 69.02% | Solved: 50/1000 (5.00%)
+
+```
+dataset_config = SudokuDatasetSettings(
+    processing=SudokuProcessingConfig(max_train_samples=10_000, max_test_samples=1000)
+)
+train_config = TRMSettings(
+    # Model hyperparameters
+    embedding_dim = 128,
+    attention_heads = 8,
+    reasoning_hidden_dim = 256,
+    reasoning_layers = 1,
+    reasoning_passes = 6,
+    max_answer_updates = 3,
+    combine_method="add",
+    # Training parameters
+    deep_supervision_iterations=2,
+    batch_size=100,
+    device="cuda",
+    dataset=dataset_config,
+    example_interval=1,
+    use_digit_permutation=True,
+    # Exponential Moving Average
+    use_ema=False,
+    ema_decay=0.999,
+    ema_update_after_step=0,
+)
+```
