@@ -260,14 +260,14 @@ iniciales, los errores y el valor de confianza de cada celda.
 Después entreno varios modelos, probando con distintas funciones de loss. La
 función final combina tres términos: la pérdida de entropía cruzada estándar que
 guía al modelo hacia las respuestas correctas, una penalización cuadrática por
-exceso de confianza en errores (lambda*over * (confidence*on_errors²).mean())
+exceso de confianza en errores (`lambda_over * (confidence*on_errors²).mean()`)
 que castiga duramente cuando el modelo se equivoca con alta seguridad, y una
-penalización general por falta de confianza (lambda_confidence * (1 -
-max_probs).mean()) que empuja al modelo a estar seguro en todas sus
-predicciones. El equilibrio entre estos términos hace que el modelo aprenda a
-ser confiado cuando acierta (recompensa) y cauto cuando falla (doble castigo),
-evitando que colapse hacia predicciones uniformes o tímidas para minimizar
-pérdidas.
+penalización general por falta de confianza
+(`lambda_confidence * (1 - max_probs).mean()`) que empuja al modelo a estar
+seguro en todas sus predicciones. El equilibrio entre estos términos hace que el
+modelo aprenda a ser confiado cuando acierta (recompensa) y cauto cuando falla
+(doble castigo), evitando que colapse hacia predicciones uniformes o tímidas
+para minimizar pérdidas.
 
 ```
 TrainingSettings(
@@ -347,4 +347,50 @@ Using code in this commit:
 https://github.com/guiferviz/me/commit/e02581bb212f4897a853e6792ce9168242b5562c
 
 Hice una prueba doblando la dimensión de los embeddings (512) y parece que
-mejora el rendimiento en general.
+mejora el rendimiento en general, pero por mucho que lo aumente no va a ser
+suficiente para resolver muchos más sudokus.
+
+# Day 10
+
+Halting head in the TRM paper is outputting 2 values. By predicting Q(CONTINUE)
+and Q(HALT) separately, the model can learn to evaluate each action on its own
+merits. It might learn, for example, that even if the current answer is mediocre
+(Q(HALT) is low), the potential for improvement is even lower (Q(CONTINUE) is
+even lower), so it's better to halt and cut its losses.
+
+It takes as input only one embedding from the hidden space of embeddings. If we
+flatten all the embeddings and we pass that long vector to the Q head we will
+end up creating a high number of params, adding a lot of noise and increase the
+probability of overfitting.
+
+Mi primera resoning network no tiene ni deep supervision ni tampoco halting.
+Pero ya demuestra signos de que algo magico pasa en esa recurrencia. Con la
+configuración mostrada abajo, consigo un 66% de acierto en training y en test. 6
+reasoning y 2 answer updates son poco comparado con el paper. También es cierto
+que estoy usando muchos datos.
+
+```
+dataset_config = SudokuDatasetSettings(
+    processing=SudokuProcessingConfig(max_train_samples=100_000, max_test_samples=1000)
+)
+train_config = TRMSettings(
+    # Model hyperparameters
+    embedding_dim = 256,
+    attention_heads = 8,
+    reasoning_hidden_dim = 256,
+    reasoning_layers = 1,
+    reasoning_passes = 6,
+    max_answer_updates = 2,
+    # Training parameters
+    batch_size=1000,
+    device="cuda",
+    dataset=dataset_config,
+    example_interval=1,
+    combine_method="add",
+    use_digit_permutation=True,
+)
+```
+
+# Day 11
+
+Aprendo some EMA (Exponential Moving Average) para suavizar los pesos de la red.
