@@ -412,6 +412,11 @@ Tras 17 min Test Acc: 68.62% | Solved: 43/1000 (4.30%). A los 20 min:
     Train Loss: 30.4786 | Train Acc: 69.74% | Solved: 668/10000 (6.68%)
     Test Loss: 0.6876 | Test Acc: 69.02% | Solved: 50/1000 (5.00%)
 
+Tras algunos experimentos más, con varios "continue training from checkpoints",
+veo como mucho Test Acc: 68.25% | Solved: 101/1000 (10.10%) con las settings que
+muestro abajo. En training ya hay un 73%, por lo que parece que está empezando a
+hacer overfit.
+
 ```
 dataset_config = SudokuDatasetSettings(
     processing=SudokuProcessingConfig(max_train_samples=10_000, max_test_samples=1000)
@@ -438,3 +443,13 @@ train_config = TRMSettings(
     ema_update_after_step=0,
 )
 ```
+
+Si paro y continúo el entrenamiento desde el checkpoint aumentando en número de
+deep supervision observo un aumento de accuracy, creo que porque el learning
+rate se "reinicia" también, porque volvemos a crear el optimizer. Al final, con
+32 iteraciones consigo un 93% en training, pero es muy lento y no generaliza
+bien, básicamente aceleramos el overfit.
+
+# Day 13
+
+Concat tests. Loss with cross attention.
