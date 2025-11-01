@@ -452,4 +452,37 @@ bien, básicamente aceleramos el overfit.
 
 # Day 13
 
+Aunque puedo conseguir un 11% de acierto en tests, no me parece que esto vaya
+del todo bien... creo que estoy cometiendo algún error en el proceso.
+Seguramente haya algún detalle de la arquitectura que se me esté pasando por
+alto.
+
 Concat tests. Loss with cross attention.
+
+```
+TinyRecursiveReasoningModel_ACTV1(
+  (inner): TinyRecursiveReasoningModel_ACTV1_Inner(
+    (embed_tokens): CastedEmbedding()
+    (lm_head): CastedLinear()
+    (q_head): CastedLinear()
+    (puzzle_emb): CastedSparseEmbedding()
+    (rotary_emb): RotaryEmbedding()
+    (L_level): TinyRecursiveReasoningModel_ACTV1ReasoningModule(
+      (layers): ModuleList(
+        (0-1): 2 x TinyRecursiveReasoningModel_ACTV1Block(
+          (self_attn): Attention(
+            (qkv_proj): CastedLinear()
+            (o_proj): CastedLinear()
+          )
+          (mlp): SwiGLU(
+            (gate_up_proj): CastedLinear()
+            (down_proj): CastedLinear()
+          )
+        )
+      )
+    )
+  )
+)
+```
+
+Puzzles embedding.
