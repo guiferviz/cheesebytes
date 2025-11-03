@@ -457,32 +457,80 @@ del todo bien... creo que estoy cometiendo algún error en el proceso.
 Seguramente haya algún detalle de la arquitectura que se me esté pasando por
 alto.
 
-Concat tests. Loss with cross attention.
+Decido descargarme el código del paper y probar a imprimir el modelo por
+pantalla y buscar diferencias. Resulta que llama mi atención un puzzle embedding
+que no estoy usando. Soy consciente de que yo no uso rotatory embeddings sino
+que los aprendo, pero no creo que eso sea un gran problema. Sin embargo,
+necesito investigar ese puzzle embedding.
 
 ```
-TinyRecursiveReasoningModel_ACTV1(
-  (inner): TinyRecursiveReasoningModel_ACTV1_Inner(
-    (embed_tokens): CastedEmbedding()
-    (lm_head): CastedLinear()
-    (q_head): CastedLinear()
-    (puzzle_emb): CastedSparseEmbedding()
-    (rotary_emb): RotaryEmbedding()
-    (L_level): TinyRecursiveReasoningModel_ACTV1ReasoningModule(
-      (layers): ModuleList(
-        (0-1): 2 x TinyRecursiveReasoningModel_ACTV1Block(
-          (self_attn): Attention(
-            (qkv_proj): CastedLinear()
-            (o_proj): CastedLinear()
-          )
-          (mlp): SwiGLU(
-            (gate_up_proj): CastedLinear()
-            (down_proj): CastedLinear()
-          )
+(model): TinyRecursiveReasoningModel_ACTV1(
+    (inner): TinyRecursiveReasoningModel_ACTV1_Inner(
+        (embed_tokens): CastedEmbedding()
+        (lm_head): CastedLinear()
+        (q_head): CastedLinear()
+        (puzzle_emb): CastedSparseEmbedding()
+        (L_level): TinyRecursiveReasoningModel_ACTV1ReasoningModule(
+            (layers): ModuleList(
+                (0-1): 2 x TinyRecursiveReasoningModel_ACTV1Block(
+                    (mlp_t): SwiGLU(
+                        (gate_up_proj): CastedLinear()
+                        (down_proj): CastedLinear()
+                    )
+                    (mlp): SwiGLU(
+                        (gate_up_proj): CastedLinear()
+                        (down_proj): CastedLinear()
+                    )
+                )
+            )
         )
-      )
     )
-  )
 )
 ```
 
-Puzzles embedding.
+Sizes
+
+- embed_tokens: 11, 512
+- puzzle_emb: 1, 512
+- lm_head: 512, 11
+- q_head: 512, 2
+
+Some other interesting parameters:
+
+- Reasoning steps (L_cycles): 6
+- Answer updates (H_cycles): 3
+- Batch size: 768
+- puzzle_emb_ndim: 512
+- puzzle_emb_len: 16
+- num_puzzle_identifiers: 1
+- vocab_size: 11 (why 11 and not 10?)
+- pos_encodings: "none"
+- num_heads: 8
+- L_layers: 2
+- hidden_size: 512
+- expansion: 4.0
+- halt_exploration_prob: 0.1
+- halt_max_steps: 16
+
+Aprendo sobre [[Sparse Embedding Layer]] y
+[[Distributed Data Parallel (DDP) vs Fully Sharded Data Parallel (FSDP)]].
+
+I noticed that my implementation of the halting head didn't include the negative
+bias used in the Tiny Reasoning Models codebase. I hadn't paid much attention to
+it before, since the halting mechanism isn't active yet in my setup, but I
+decided to align both versions for consistency. To match the TRM behavior, I
+added a negative bias initialization (bias = -5) and set the weights to zero at
+startup. This way, the halting output starts very low (around sigmoid(-5) ≈
+0.0067), meaning the model will initially keep reasoning for several steps
+before learning when to stop.
+
+So far, the most important finding is that the puzzle embedding are extra tokens
+appended to the input embeddings. This means that the size of the input after
+applying embeddings is `[batch_size, 97, 512]` where 81 sudoku cells and 16
+puzzle embeddings = 97 total input embeddings. This is usually called context
+embeddings, and it serves as a working memory for the model to store information
+about it outside the input/output representations. They are set to zero
+initially.
+
+truatadevmadefadls truatapreprodmadefadls truataprodmadefadls
+truatapreprodmacatdefadls
