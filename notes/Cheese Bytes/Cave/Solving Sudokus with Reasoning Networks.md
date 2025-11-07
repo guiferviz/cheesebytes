@@ -531,6 +531,3 @@ puzzle embeddings = 97 total input embeddings. This is usually called context
 embeddings, and it serves as a working memory for the model to store information
 about it outside the input/output representations. They are set to zero
 initially.
-
-truatadevmadefadls truatapreprodmadefadls truataprodmadefadls
-truatapreprodmacatdefadls
