@@ -1,0 +1,566 @@
+---
+import FileTree from "./FileTree.astro";
+import SearchButton from "./SearchButton.astro";
+---
+
+<!-- Header móvil -->
+<div
+  id="mobile-header"
+  class="fixed top-0 left-0 w-full flex items-center justify-between bg-yellow-50 dark:bg-black z-40 lg:hidden"
+>
+  <div class="flex items-center">
+    <a
+      href="/"
+      class="flex items-center gap-2 text-left font-extrabold uppercase text-lg p-4 overflow-hidden whitespace-nowrap hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-200"
+    >
+      Cheese <img src="/favicon.png" alt="" class="h-10 w-10 -m-1" /> Bytes
+    </a>
+  </div>
+  <div class="flex items-center">
+    <SearchButton />
+    <button
+      id="theme-toggle-mobile"
+      class="p-2 rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors duration-200 mr-1 ml-2"
+      aria-label="Cambiar tema"
+    >
+      <svg
+        class="w-6 h-6 sun-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+      <svg
+        class="w-6 h-6 moon-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </button>
+    <button
+      id="toggle-sidebar-mobile-header"
+      class="p-2 rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors duration-200 z-50 bg-yellow-50 dark:bg-black mr-2"
+      aria-label="Toggle sidebar"
+    >
+      <svg
+        class="w-7 h-7"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- Overlay para móvil -->
+<div
+  id="sidebar-overlay"
+  class="fixed inset-0 z-40 bg-black bg-opacity-50 hidden"
+>
+</div>
+
+<!-- Layout principal -->
+<div id="layout" class="h-screen flex">
+  <!-- Sidebar con resizer integrado -->
+  <div id="sidebar-container" class="flex h-full">
+    <div
+      id="sidebar"
+      class="bg-yellow-50 dark:bg-black flex flex-col overflow-hidden w-0 min-w-0 lg:w-[300px] lg:min-w-[300px]"
+    >
+      <!-- Header -->
+      <div
+        class="flex-none sticky top-0 z-10 border-b border-gray-300 dark:border-gray-700 flex justify-between items-center bg-yellow-50 dark:bg-black min-h-[64px]"
+      >
+        <a
+          href="/"
+          class="flex items-center gap-2 text-left font-extrabold uppercase text-lg xs:text-sm sm:text-base md:text-xl lg:text-xl p-4 xs:p-2 sm:p-3 overflow-hidden whitespace-nowrap hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-200"
+        >
+          Cheese <img
+            src="/favicon.png"
+            alt=""
+            class="h-10 w-10 xs:h-6 xs:w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 -m-1"
+          /> Bytes
+        </a>
+        <div class="flex items-center gap-1">
+          <button
+            id="theme-toggle-sidebar"
+            class="p-2 rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors duration-200"
+            aria-label="Cambiar tema"
+          >
+            <svg
+              class="w-6 h-6 sun-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg
+              class="w-6 h-6 moon-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+          <button
+            id="toggle-sidebar"
+            class="p-2 rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors duration-200"
+            aria-label="Toggle sidebar"
+          >
+            <svg
+              class="w-7 h-7"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de búsqueda fija -->
+      <div
+        class="flex-none p-3 border-b border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-black"
+      >
+        <SearchButton />
+      </div>
+
+      <!-- Contenido con scroll -->
+      <div class="flex-1 overflow-y-auto min-h-0 visible">
+        <FileTree />
+      </div>
+    </div>
+
+    <!-- Resizer integrado -->
+    <div
+      id="resizer"
+      class="w-1 bg-gray-300 dark:bg-gray-700 hover:bg-yellow-500 cursor-col-resize hidden transition-colors duration-150"
+    >
+    </div>
+  </div>
+
+  <!-- Botón para reabrir -->
+  <button
+    id="reopen-sidebar"
+    class="fixed top-4 left-4 p-2 rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors duration-200 z-50 bg-yellow-50 dark:bg-black hidden lg:block"
+    aria-label="Abrir menú lateral"
+  >
+    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+</div>
+
+<style>
+  /* Estilos para los iconos de tema */
+  .sun-icon,
+  .moon-icon {
+    position: absolute;
+    transition:
+      transform 0.3s ease,
+      opacity 0.3s ease;
+  }
+
+  .sun-icon {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .moon-icon {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  /* Para el modo oscuro */
+  :global(.dark) .sun-icon {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  :global(.dark) .moon-icon {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Ajustes para alinear correctamente el botón de tema */
+  #theme-toggle-sidebar,
+  #theme-toggle-mobile {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 36px;
+    height: 36px;
+    position: relative;
+  }
+
+  #toggle-sidebar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 36px;
+    height: 36px;
+  }
+
+  #sidebar {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  #toggle-sidebar,
+  #theme-toggle-sidebar,
+  #theme-toggle-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+  }
+
+  #sidebar-resizer {
+    cursor: col-resize;
+  }
+</style>
+
+<script is:inline>
+  // Ejecutar inmediatamente para evitar flashes de contenido
+  (function () {
+    const layout = document.getElementById("layout");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarContainer = document.getElementById("sidebar-container");
+    const resizer = document.getElementById("resizer");
+    const toggleBtn = document.getElementById("toggle-sidebar");
+    const reopenBtn = document.getElementById("reopen-sidebar");
+    const mobileHeader = document.getElementById("mobile-header");
+    const mobileToggle = document.getElementById(
+      "toggle-sidebar-mobile-header"
+    );
+    const overlay = document.getElementById("sidebar-overlay");
+
+    // Estado inicial - debe ser false para móvil
+    let isOpen = false;
+    let wasMobile = isMobile();
+    let isInitialLoad = true;
+
+    // Función simple para determinar si estamos en móvil
+    function isMobile() {
+      return window.innerWidth < 1024; // lg breakpoint
+    }
+
+    // Función para emitir evento de redimensionamiento
+    function emitSidebarResizedEvent() {
+      document.dispatchEvent(new CustomEvent("sidebar-resized"));
+    }
+
+    // Actualizar visibilidad del resizer
+    function updateResizerVisibility(immediate = false) {
+      const mobile = isMobile();
+
+      // Si es necesario esperar la transición y no es inmediato
+      if (!immediate && !isResizing && !isInitialLoad) {
+        // Esperar a que termine la transición antes de posicionar
+        setTimeout(() => {
+          if (!mobile && isOpen) {
+            resizer.style.display = "block";
+          } else {
+            resizer.style.display = "none";
+          }
+          // Emitir evento de redimensionamiento
+          emitSidebarResizedEvent();
+        }, 300); // Mismo tiempo que la duración de la transición
+      } else {
+        // Actualización inmediata (sin esperar)
+        if (!mobile && isOpen) {
+          resizer.style.display = "block";
+        } else {
+          resizer.style.display = "none";
+        }
+        // Emitir evento de redimensionamiento
+        emitSidebarResizedEvent();
+      }
+    }
+
+    // Toggle del sidebar
+    function toggleSidebar(open, animate = false) {
+      // Guardar estado anterior para comparar
+      const wasOpen = isOpen;
+      isOpen = open;
+      const mobile = isMobile();
+
+      if (mobile) {
+        // MODO MÓVIL: SIN ANIMACIONES
+        // Aseguramos que no hay transiciones
+        sidebar.style.transition = "none";
+
+        // Ocultar siempre el botón del escritorio en móvil
+        reopenBtn.style.display = "none";
+
+        if (open) {
+          // Si abrimos, primero configuramos todo y luego mostramos
+          sidebar.style.width = "100%";
+          sidebar.style.minWidth = "100%";
+          sidebarContainer.style.position = "fixed";
+          sidebarContainer.style.inset = "0";
+          sidebarContainer.style.zIndex = "50";
+
+          // Mostrar sidebar y overlay
+          overlay.classList.remove("hidden");
+          mobileHeader.style.display = "none";
+          document.body.style.overflow = "hidden";
+        } else {
+          // Si cerramos, primero ocultamos y luego reposicionamos
+          sidebar.style.width = "0";
+          sidebar.style.minWidth = "0";
+
+          // Mostrar header móvil y ocultar overlay
+          overlay.classList.add("hidden");
+          mobileHeader.style.display = "flex";
+
+          // Reposicionar
+          sidebarContainer.style.position = "relative";
+          sidebarContainer.style.inset = "auto";
+          sidebarContainer.style.zIndex = "auto";
+          document.body.style.overflow = "";
+        }
+
+        // Asegurar que el header móvil tenga suficiente altura y sea visible
+        const headerHeight = mobileHeader.offsetHeight || 64; // 64px como fallback
+        if (!open) {
+          // Aplicar un margen superior al layout para reservar espacio para el header móvil
+          layout.style.marginTop = `${headerHeight}px`;
+        } else {
+          // Cuando el sidebar está abierto, el margen no es necesario
+          layout.style.marginTop = "0";
+        }
+
+        // Actualizar resizer inmediatamente en móvil (sin animaciones)
+        updateResizerVisibility(true);
+      } else {
+        // MODO ESCRITORIO: CON ANIMACIONES
+        // Asegurar que el header móvil esté oculto en desktop
+        mobileHeader.style.display = "none";
+        overlay.classList.add("hidden");
+        layout.style.marginTop = "0"; // Eliminar cualquier margen en modo escritorio
+
+        // En escritorio sí usamos animaciones
+        sidebar.style.transition = animate
+          ? "width 0.3s ease, min-width 0.3s ease"
+          : "none";
+
+        if (open) {
+          sidebar.style.width = "300px";
+          sidebar.style.minWidth = "300px";
+          reopenBtn.style.display = "none";
+        } else {
+          sidebar.style.width = "0";
+          sidebar.style.minWidth = "0";
+          reopenBtn.style.display = isOpen ? "none" : "block";
+        }
+
+        document.body.style.overflow = "";
+
+        // Actualizar resizer (inmediato solo si no hay animación)
+        updateResizerVisibility(!animate);
+      }
+    }
+
+    // Resizer sin animación
+    let isResizing = false;
+
+    resizer.addEventListener("mousedown", (e) => {
+      if (isMobile()) return;
+      isResizing = true;
+
+      // Desactivar animación durante el resize
+      sidebar.style.transition = "none";
+
+      document.body.style.cursor = "col-resize";
+      e.preventDefault();
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!isResizing) return;
+
+      // Movimiento inmediato sin animación
+      const newWidth = Math.max(300, Math.min(700, e.clientX));
+      sidebar.style.width = `${newWidth}px`;
+      sidebar.style.minWidth = `${newWidth}px`;
+
+      // Actualizar resizer inmediatamente durante el resize manual
+      updateResizerVisibility(true);
+
+      // Emitir evento de redimensionamiento durante el resize
+      emitSidebarResizedEvent();
+    });
+
+    document.addEventListener("mouseup", () => {
+      isResizing = false;
+      document.body.style.cursor = "";
+
+      // Actualizar resizer inmediatamente al terminar el resize manual
+      updateResizerVisibility(true);
+
+      // Emitir evento final de redimensionamiento
+      emitSidebarResizedEvent();
+    });
+
+    // Event listeners
+    toggleBtn.addEventListener("click", () => toggleSidebar(false, true));
+    reopenBtn.addEventListener("click", () => toggleSidebar(true, true));
+    if (mobileToggle) {
+      mobileToggle.addEventListener("click", () => toggleSidebar(true, true));
+    }
+    overlay.addEventListener("click", () => toggleSidebar(false, true));
+
+    // Manejo del resize de ventana
+    let resizeTimeout;
+    window.addEventListener("resize", () => {
+      if (isResizing) return;
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        const mobile = isMobile();
+
+        // Solo cambiar configuración si hubo un cambio entre móvil/desktop
+        if (wasMobile !== mobile) {
+          wasMobile = mobile;
+          toggleSidebar(mobile ? false : true, false);
+        } else {
+          // Actualizar visibilidad del resizer sin cambiar el estado del sidebar
+          updateResizerVisibility(true);
+        }
+
+        // Emitir evento de redimensionamiento
+        emitSidebarResizedEvent();
+      }, 100);
+    });
+
+    // Aplicar estado inicial inmediatamente
+    const mobile = isMobile();
+    toggleSidebar(mobile ? false : true, false);
+
+    // Asegurar que el header móvil esté visible inicialmente en móvil
+    if (mobile) {
+      mobileHeader.style.display = "flex";
+      reopenBtn.style.display = "none";
+
+      // Aplicar el margen inicial para reservar espacio para el header móvil
+      const headerHeight = mobileHeader.offsetHeight || 64; // 64px como fallback
+      layout.style.marginTop = `${headerHeight}px`;
+    } else {
+      mobileHeader.style.display = "none";
+      layout.style.marginTop = "0";
+    }
+
+    // Marcar que la carga inicial ha terminado
+    setTimeout(() => {
+      isInitialLoad = false;
+
+      // Emitir evento inicial después de cargar
+      emitSidebarResizedEvent();
+    }, 500);
+  })();
+</script>
+
+<script is:inline>
+  // Script para el toggle de tema claro/oscuro
+  document.addEventListener("DOMContentLoaded", () => {
+    const sidebarThemeToggle = document.getElementById("theme-toggle-sidebar");
+    const mobileThemeToggle = document.getElementById("theme-toggle-mobile");
+    const htmlElement = document.documentElement;
+
+    // Verificar si ya hay un tema guardado en localStorage
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+
+    // Aplicar tema guardado o preferencia del sistema
+    if (savedTheme === "dark" || (savedTheme === null && prefersDark)) {
+      htmlElement.classList.add("dark");
+    } else if (
+      savedTheme === "light" ||
+      (savedTheme === null && !prefersDark)
+    ) {
+      htmlElement.classList.remove("dark");
+    }
+
+    // Función para cambiar el tema
+    function toggleTheme() {
+      const isDark = htmlElement.classList.toggle("dark");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+
+      // Emitir un evento para que otros componentes puedan reaccionar al cambio de tema
+      document.dispatchEvent(
+        new CustomEvent("themeChanged", {
+          detail: { isDark },
+        })
+      );
+    }
+
+    // Agregar event listeners a ambos botones
+    if (sidebarThemeToggle) {
+      sidebarThemeToggle.addEventListener("click", toggleTheme);
+    }
+
+    if (mobileThemeToggle) {
+      mobileThemeToggle.addEventListener("click", toggleTheme);
+    }
+
+    // También emitir un evento de tema al cargar la página para que los componentes se inicialicen correctamente
+    document.dispatchEvent(
+      new CustomEvent("themeChanged", {
+        detail: { isDark: htmlElement.classList.contains("dark") },
+      })
+    );
+  });
+</script>

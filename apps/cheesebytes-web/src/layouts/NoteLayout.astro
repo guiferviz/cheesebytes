@@ -1,0 +1,194 @@
+---
+import Giscus from "../components/Giscus.astro";
+import { format } from "date-fns";
+import BaseLayout from "./BaseLayout.astro";
+import CheeseRain from "../components/CheeseRain.tsx";
+
+const { note } = Astro.props;
+const cheeseImage = note.cheeseImage || "/favicon.png";
+const noteType = note.noteType || "white-wedge";
+
+// Función para obtener la descripción del tooltip basada en el noteType
+function getCheeseTooltip(noteType: string): {
+  title: string;
+  description: string;
+} {
+  switch (noteType) {
+    case "white-full":
+      return {
+        title: "White Cheese (Burgos) - Stable",
+        description:
+          "Simple but stable note, unlikely to change significantly.",
+      };
+    case "white-wedge":
+      return {
+        title: "White Cheese (Burgos) - Developing",
+        description: "Very new or simple note, likely to evolve and change.",
+      };
+    case "emmental-full":
+      return {
+        title: "Cheese with Holes (Emmental) - Stable",
+        description:
+          "Useful note with good structure, stable and unlikely to change.",
+      };
+    case "emmental-wedge":
+      return {
+        title: "Cheese with Holes (Emmental) - Developing",
+        description:
+          "Useful note with basic structure, but still has holes to fill.",
+      };
+    case "parmigiano-full":
+      return {
+        title: "Aged Cheese (Parmesan) - Stable",
+        description: "Well-worked note, deep and structured, stable content.",
+      };
+    case "parmigiano-wedge":
+      return {
+        title: "Aged Cheese (Parmesan) - Developing",
+        description: "Well-worked note with detailed content, still evolving.",
+      };
+    case "cabrales-full":
+      return {
+        title: "Blue Cheese (Cabrales) - Stable",
+        description:
+          "Advanced note, complex and very connected, stable content.",
+      };
+    case "cabrales-wedge":
+      return {
+        title: "Blue Cheese (Cabrales) - Developing",
+        description: "Advanced note with complex ideas, still being refined.",
+      };
+    default:
+      return {
+        title: "Cheese Note",
+        description: "A note in the Cheese Bytes system.",
+      };
+  }
+}
+
+const tooltipInfo = getCheeseTooltip(noteType);
+---
+
+<BaseLayout title={note.title} description={note.description}>
+  <CheeseRain client:only="react" />
+  <main class="p-4 max-w-4xl mx-auto lg:pt-4 pt-16">
+    <header class="prose dark:prose-invert max-w-3xl mx-auto pb-4">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="relative group">
+          <a href="/cave/type-of-notes" class="block">
+            <div class="w-8 h-8 lg:w-12 lg:h-12 flex-shrink-0 -mt-8">
+              <img
+                src={cheeseImage}
+                alt={tooltipInfo.title}
+                class="w-full h-full object-contain cursor-pointer hover:opacity-80 transition-opacity"
+              />
+            </div>
+          </a>
+          <!-- Tooltip -->
+          <div
+            class="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 w-72 shadow-lg"
+          >
+            <div class="font-semibold">{tooltipInfo.title}</div>
+            <div class="text-xs opacity-90 mt-1">{tooltipInfo.description}</div>
+            <div class="text-xs opacity-75 mt-1">
+              Click the cheese icon to learn more
+            </div>
+            <!-- Flecha del tooltip -->
+            <div
+              class="absolute right-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-gray-900 dark:border-r-gray-100"
+            >
+            </div>
+          </div>
+        </div>
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl mb-1 leading-tight">
+          {note.title}
+        </h1>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+        Author: guiferviz
+      </p>
+      {
+        note.created && (
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-1">
+            Created:{" "}
+            <time datetime={note.created}>
+              {format(new Date(note.created), "yyyy-MM-dd")}
+            </time>
+          </p>
+        )
+      }
+
+      {
+        note.modified && (
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Last Modified:{" "}
+            <time datetime={note.modified}>
+              {format(new Date(note.modified), "yyyy-MM-dd")}
+            </time>
+          </p>
+        )
+      }
+    </header>
+    <article
+      class="prose prose-base dark:prose-invert max-w-3xl mx-auto
+              prose-h1:mt-[0.8888889em]
+              prose-a:hover:underline prose-a:no-underline prose-a:text-yellow-500
+              prose-code:after:content-none prose-code:before:content-none"
+    >
+      <slot />
+    </article>
+    <footer class="max-w-3xl mx-auto pt-6">
+      {
+        (note.inboundLinks?.length > 0 || note.outboundLinks?.length > 0) && (
+          <section class="mb-8 p-4 bg-gray-50 dark:bg-[#161b22] rounded-lg">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+              🔗 Note Connections
+            </h3>
+            <div class="grid gap-4 md:grid-cols-2">
+              {note.inboundLinks?.length > 0 && (
+                <div>
+                  <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Linked from ({note.inboundLinks.length})
+                  </h4>
+                  <ul class="space-y-1">
+                    {note.inboundLinks.map((link: any) => (
+                      <li class="text-sm">
+                        <a
+                          href={`/${link.id}`}
+                          class="text-yellow-600 dark:text-yellow-400 hover:underline hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors"
+                        >
+                          {link.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {note.outboundLinks?.length > 0 && (
+                <div>
+                  <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Links to ({note.outboundLinks.length})
+                  </h4>
+                  <ul class="space-y-1">
+                    {note.outboundLinks.map((link: any) => (
+                      <li class="text-sm">
+                        <a
+                          href={`/${link.id}`}
+                          class="text-yellow-600 dark:text-yellow-400 hover:underline hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors"
+                        >
+                          {link.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )
+      }
+      <Giscus />
+      <p class="pt-4">© {new Date().getFullYear()} Cheese 🧀 Bytes</p>
+    </footer>
+  </main>
+</BaseLayout>

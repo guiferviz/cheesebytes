@@ -1,0 +1,190 @@
+---
+import "../styles/reveal.css";
+import BaseHead from "../components/BaseHead.astro";
+
+export interface Props {
+  title?: string;
+  description?: string;
+  theme?: string;
+}
+
+const {
+  title = "Cheese Bytes Presentation",
+  description = "Hey Bytes, say Cheese!",
+  theme = "dark",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es" class={theme}>
+  <head>
+    <BaseHead title={title} description={description} />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/reveal.min.css"
+    />
+    <!-- Apply a built-in theme.
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/theme/black.css" />
+        -->
+    <script
+      is:inline
+      src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/reveal.min.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/atom-one-dark.min.css"
+    />
+    <script
+      is:inline
+      src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/plugin/highlight/highlight.min.js"
+    ></script>
+    <script is:inline>
+      window.addEventListener("DOMContentLoaded", function () {
+        // Script to move the custom cursor.
+        const customCursor = document.getElementById("customCursor");
+        // Guardar el scale actual en window
+        window._customCursorScale = 1;
+        document.addEventListener("mousemove", function (e) {
+          const scale = window._customCursorScale || 1;
+          customCursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) scale(${scale})`;
+        });
+        document.addEventListener("pointermove", function (e) {
+          const scale = window._customCursorScale || 1;
+          customCursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) scale(${scale})`;
+        });
+        // Initialize Reveal.js.
+        Reveal.initialize({
+          controls: false,
+          progress: false,
+          //center: true,
+          //disableLayout: false,
+          minScale: 0.01,
+          maxScale: 5.0,
+          transition: "fade",
+          //width: 1080,
+          //height: 720,
+          //view: "scroll",
+          //scrollProgress: true,
+          plugins: [RevealHighlight],
+          keyboard: {
+            // '84' es el keyCode de 't'/'T'
+            // Cambiar entre el modo claro y oscuro.
+            84: function () {
+              const html = document.documentElement;
+              if (html.classList.contains("dark")) {
+                html.classList.remove("dark");
+              } else {
+                html.classList.add("dark");
+              }
+            },
+            // '67' es el keyCode de 'c'/'C'
+            // Cambiar la visibilidad del cursor personalizado.
+            67: function () {
+              if (customCursor) {
+                customCursor.style.opacity =
+                  customCursor.style.opacity === "0" ? "1" : "0";
+              }
+            },
+            // '68' es el keyCode de 'd'/'D'
+            // Agrandar el cursor personalizado.
+            68: function () {
+              if (customCursor) {
+                const current = window._customCursorScale || 1;
+                const newScale = Math.min(current + 0.2, 3);
+                window._customCursorScale = newScale;
+                // Obtener la posición actual
+                const match =
+                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
+                const translate = match ? `translate(${match[1]})` : "";
+                customCursor.style.transform = `${translate} scale(${newScale})`;
+              }
+            },
+            // '83' es el keyCode de 's'/'S'
+            // Disminuir el tamaño del cursor personalizado.
+            83: function () {
+              if (customCursor) {
+                const current = window._customCursorScale || 1;
+                const newScale = Math.max(current - 0.2, 0.4);
+                window._customCursorScale = newScale;
+                const match =
+                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
+                const translate = match ? `translate(${match[1]})` : "";
+                customCursor.style.transform = `${translate} scale(${newScale})`;
+              }
+            },
+            // '69' es el keyCode de 'e'/'E'
+            // Agranda y luego encoge el cursor rápidamente (animación "boing").
+            69: function () {
+              if (customCursor) {
+                const match =
+                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
+                const translate = match ? `translate(${match[1]})` : "";
+                customCursor.style.transform = `${translate} scale(2)`;
+                setTimeout(() => {
+                  const scale = window._customCursorScale || 1;
+                  customCursor.style.transform = `${translate} scale(${scale})`;
+                }, 200);
+              }
+            },
+            // '82' es el keyCode de 'r'/'R'
+            // Resetear el tamaño del cursor personalizado a su valor original (1)
+            82: function () {
+              if (customCursor) {
+                window._customCursorScale = 1;
+                const match =
+                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
+                const translate = match ? `translate(${match[1]})` : "";
+                customCursor.style.transform = `${translate} scale(1)`;
+              }
+            },
+          },
+        });
+      });
+    </script>
+    <style is:inline>
+      html,
+      body,
+      *,
+      *:hover,
+      *:active,
+      *:focus,
+      *:focus-visible,
+      *:focus-within,
+      *::before,
+      *::after {
+        cursor: none;
+      }
+
+      #customCursor {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none; /* Crucial so clicks pass through to elements below */
+        z-index: 9999; /* Ensures the cursor is always on top */
+        transition:
+          transform 0.1s linear,
+          opacity 0.5s linear; /* Smooth movement and fade */
+        transform-origin: top left;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- SVG image for the custom cursor, loaded from a URL.
+        The CSS cursor property is not used because it does not work well in Chrome.
+        It works in Safari, but the image quality is very low. -->
+    <img
+      id="customCursor"
+      src="/cursors/cursor_64.svg"
+      alt="Custom Cheese Cursor"
+      width="48"
+      height="48"
+    />
+    <div
+      class="reveal prose dark:prose-invert !max-w-none w-full h-full bg-yellow-50 dark:bg-black text-gray-700 dark:text-gray-100"
+    >
+      <div class="slides">
+        <slot />
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,151 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import PeriodicTableContainer from "../../components/cave/PeriodicTable.tsx";
+import ElementTree from "../../components/cave/ElementalNamesTree.jsx";
+import ArrayVisualizer from "../../components/cave/ElementalNamesSingleChar.jsx";
+import ElementalNamesAllPossibilities from "../../components/cave/ElementalNamesAllPossibilities.tsx";
+---
+
+<RevealLayout
+  title="Nombres Elementales"
+  description="Forma nombres con las iniciales de los elementos químicos"
+  theme="dark"
+>
+  <section>
+    <ArrayVisualizer client:visible />
+  </section>
+  <section>
+    <PeriodicTableContainer client:load />
+  </section>
+  <section style={{ height: "60vh" }}>
+    <ElementalNamesAllPossibilities initialText="Coco" client:load />
+  </section>
+  <section>
+    <div style={{ height: "70vh" }}>
+      <ElementTree showInput={true} client:load />
+    </div>
+  </section>
+  <section data-auto-animate class="text-left not-prose">
+    <pre
+      data-id="code-animation">
+      <code data-trim data-line-numbers is:raw class="language-python">
+        ELEMENTS = {
+            'H','He',
+            'Li','Be','B','C','N','O','F','Ne',
+            'Na','Mg','Al','Si','P','S','Cl','Ar',
+            'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+            'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
+            'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
+            'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
+            'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+            'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Fl','Lv','Ts','Og'
+        }
+
+        def is_elemental(name: str) -> bool:
+            return False
+      </code>
+    </pre>
+  </section>
+  <section data-auto-animate class="text-left not-prose">
+    <pre
+      data-id="code-animation">
+      <code data-trim data-line-numbers is:raw class="language-python">
+        ELEMENTS = {
+            'H','He',
+            'Li','Be','B','C','N','O','F','Ne',
+            'Na','Mg','Al','Si','P','S','Cl','Ar',
+            'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+            'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
+            'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
+            'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
+            'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+            'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Fl','Lv','Ts','Og'
+        }
+
+        def is_elemental(name: str) -> bool:
+            if name == "":
+                return True
+
+            return False
+      </code>
+    </pre>
+  </section>
+  <section data-auto-animate class="text-left not-prose">
+    <pre
+      data-id="code-animation">
+      <code data-trim data-line-numbers is:raw class="language-python">
+        ELEMENTS = {
+            'H','He',
+            'Li','Be','B','C','N','O','F','Ne',
+            'Na','Mg','Al','Si','P','S','Cl','Ar',
+            'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+            'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
+            'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
+            'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
+            'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+            'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Fl','Lv','Ts','Og'
+        }
+
+        def is_elemental(name: str) -> bool:
+            if name == "":
+                return True
+
+            if name[:1] in ELEMENTS:
+                return is_elemental(name[1:])
+
+            return False
+      </code>
+    </pre>
+  </section>
+  <section data-auto-animate class="text-left not-prose">
+    <pre
+      data-id="code-animation">
+      <code data-trim data-line-numbers is:raw class="language-python">
+        ELEMENTS = {
+            'H','He',
+            'Li','Be','B','C','N','O','F','Ne',
+            'Na','Mg','Al','Si','P','S','Cl','Ar',
+            'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+            'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
+            'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
+            'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
+            'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+            'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Fl','Lv','Ts','Og'
+        }
+
+        def is_elemental(name: str) -> bool:
+            if name == "":
+                return True
+
+            if name[:1] in ELEMENTS:
+                return is_elemental(name[1:])
+
+            if len(name) >= 2 and name[:2] in ELEMENTS:
+                return is_elemental(name[2:])
+
+            return False
+      </code>
+    </pre>
+  </section>
+  <section class="text-3xl" data-auto-animate>
+    <h1>I want to use</h1>
+
+    <p>lista los documentos en elementos il:</p>
+
+    <ul>
+      <li class="fragment">Markdown</li>
+      <li class="fragment">React</li>
+    </ul>
+  </section>
+  <section class="text-3xl" data-auto-animate>
+    <h1>I want to use</h1>
+
+    <p>lista los documentos en elementos il:</p>
+
+    <ul>
+      <li>Markdown</li>
+      <li>Missing</li>
+      <li>React</li>
+    </ul>
+  </section>
+</RevealLayout>

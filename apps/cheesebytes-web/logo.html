@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cheese Bytes Animation</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Definición de la fuente personalizada */
+    @font-face {
+      font-family: 'IosevkaTermSlabNerdFontPropo-Bold';
+      src: url('https://cheesebytes.com/fonts/IosevkaTermSlabNerdFontPropo-Bold.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    body {
+      font-family: 'IosevkaTermSlabNerdFontPropo-Bold', monospace;
+      /* Aplicación de la fuente personalizada */
+      background-color: #000000;
+      /* Fondo negro sólido inicial */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      /* Evita barras de desplazamiento debido a la animación */
+      position: relative;
+      /* Necesario para el posicionamiento absoluto de los elementos del fondo */
+    }
+
+    .cheese-byte-text {
+      z-index: 10;
+      /* Asegura que el texto esté por encima del fondo */
+      position: relative;
+      /* Para que el z-index sea efectivo */
+      /* Efecto de brillo amarillo sutil para las letras */
+      text-shadow: 0 0 8px rgba(255, 255, 0, 0.7), 0 0 15px rgba(255, 255, 0, 0.4), 0 0 25px rgba(255, 255, 0, 0.2);
+      display: flex;
+      /* Usar flexbox para alinear el texto y la imagen */
+      align-items: center;
+      /* Centrar verticalmente */
+      justify-content: center;
+      /* Centrar horizontalmente */
+      flex-wrap: nowrap;
+      /* Evitar que el texto se envuelva en pantallas pequeñas */
+      opacity: 1;
+      /* La opacidad de las letras individuales se maneja con GSAP */
+    }
+
+    .cheese-byte-text span {
+      display: inline-block;
+      /* Esencial para la animación individual de cada letra */
+      cursor: default;
+      /* Cambia el cursor a default para el texto */
+      opacity: 0;
+      /* Oculta las letras inicialmente para el efecto de escritura */
+      /* Asegura que los transform se apliquen correctamente a cada span */
+      transform-origin: center bottom;
+      /* El punto de origen para el "aplastamiento" */
+    }
+
+    /* Las palabras se solapan inicialmente usando una variable CSS */
+    #cheese-word {
+      margin-right: var(--initial-overlap-margin);
+    }
+
+    #bytes-word {
+      margin-left: var(--initial-overlap-margin);
+    }
+
+    #center-image {
+      width: 9rem;
+      /* Controla el ancho de la imagen */
+      height: 9rem;
+      /* Controla la altura de la imagen */
+      display: block;
+      /* Asegura que se comporte como un bloque */
+      z-index: 10;
+      /* Asegura que la imagen esté por encima del fondo */
+      object-fit: contain;
+      /* Asegura que la imagen no se recorte y se ajuste */
+      opacity: 0;
+      /* Oculta la imagen inicialmente para el efecto de caída */
+      transform: translateY(-500px);
+      /* Posición inicial muy por encima para la caída */
+      transform-origin: center bottom;
+      /* El punto de origen para el "aplastamiento" */
+    }
+
+    #background-animation {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* Fondo con gradiente radial que se moverá para un efecto sutil */
+      background: radial-gradient(circle at 50% 50%, #222222 0%, #111111 40%, #000000 80%);
+      z-index: 1;
+      /* Detrás del texto */
+    }
+  </style>
+</head>
+
+<body>
+  <div id="background-animation"></div> <!-- Capa de fondo animado -->
+
+  <div class="cheese-byte-text text-center text-6xl md:text-8xl lg:text-9xl font-extrabold text-yellow-300">
+    <!-- Contenedor para las letras "Cheese" -->
+    <div class="flex" id="cheese-word">
+      <span>C</span><span>h</span><span>e</span><span>e</span><span>s</span><span>e</span>
+    </div>
+    <!-- Imagen animada en el centro -->
+    <img id="center-image" src="https://cheesebytes.com/favicon.png" alt="Cheese Bytes Logo Icon"
+      class="filter drop-shadow-lg"
+      onerror="this.onerror=null; this.src='https://placehold.co/128x128/000000/FFFFFF?text=CB'">
+    <!-- Contenedor para las letras "Bytes" -->
+    <div class="flex" id="bytes-word">
+      <span>B</span><span>y</span><span>t</span><span>e</span><span>s</span>
+    </div>
+  </div>
+
+  <!-- GSAP CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+  <script>
+    window.onload = function () {
+      // Selecciona los elementos
+      const cheeseLetters = document.querySelectorAll('#cheese-word span');
+      const bytesLetters = document.querySelectorAll('#bytes-word span');
+      const cheeseWordContainer = document.getElementById('cheese-word'); // Contenedor de "Cheese"
+      const bytesWordContainer = document.getElementById('bytes-word');   // Contenedor de "Bytes"
+      const centerImage = document.getElementById('center-image');
+      const background = document.getElementById('background-animation');
+
+      // Combina todas las letras para el efecto de escritura y derretimiento
+      const allLetters = [...cheeseLetters, ...bytesLetters];
+
+      // --- Controla la cercanía inicial y la separación final con una sola variable ---
+      // Ajusta este valor para controlar AMBOS aspectos:
+      // - Un valor MÁS ALTO (ej. -40, -50): Las palabras estarán MÁS juntas inicialmente (mayor solapamiento CSS)
+      //                                    y se separarán MÁS después de la caída del logo (mayor desplazamiento X).
+      // - Un valor MÁS BAJO (ej. -10, -20): Las palabras estarán MENOS juntas inicialmente (menor solapamiento CSS)
+      //                                   y se separarán MENOS después de la caída del logo (menor desplazamiento X).
+      const gapControlValue = -45; // Valor por defecto, experimenta ajustándolo. Un valor más negativo = más juntas.
+
+      // Aplica el solapamiento inicial a través de una variable CSS personalizada
+      document.documentElement.style.setProperty('--initial-overlap-margin', `${gapControlValue}px`);
+
+      // Calcula el desplazamiento final en X basado en gapControlValue
+      const logoHalfWidth = centerImage.offsetWidth / 2;
+      const finalXSeparation = logoHalfWidth + (Math.abs(gapControlValue) * 0.7); // Usa valor absoluto para el cálculo de separación
+
+      // --- Línea de tiempo principal para la secuencia de entrada (escritura y caída del logo) ---
+      const masterEntranceTl = gsap.timeline({repeat: -1, yoyo: true, repeatDelay: 1}); // Repite toda la secuencia para el video
+
+      // 1. Efecto de escritura para "Cheese Bytes" (las letras aparecen juntas)
+      masterEntranceTl.fromTo(allLetters,
+        {opacity: 0}, // Inicia con opacidad 0
+        {opacity: 1, duration: 0.05, stagger: 0.03, ease: "none"}
+      );
+
+      // 2. Caída del logo Y separación del texto (simultáneamente)
+      masterEntranceTl.to(centerImage, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        ease: "bounce.out"
+      }, ">");
+
+      masterEntranceTl.to(cheeseWordContainer, {
+        x: -finalXSeparation * 0.5, // Mueve "Cheese" a la izquierda (ajusta multiplicador para separación final)
+        duration: 0.8,
+        ease: "bounce.out"
+      }, "<");
+
+      masterEntranceTl.to(bytesWordContainer, {
+        x: finalXSeparation * 0.5, // Mueve "Bytes" a la derecha (ajusta multiplicador para separación final)
+        duration: 0.8,
+        ease: "bounce.out"
+      }, "<");
+
+      // 3. Animación continua de flotación para todo el logo (texto + imagen)
+      masterEntranceTl.to(".cheese-byte-text", {
+        y: "+=10", // Flota 10px hacia arriba
+        duration: 3, // Duración de la flotación
+        ease: "sine.inOut"
+      }, ">-0.5");
+
+      // --- 4. Efecto de "derretimiento" del título (texto y logo) ---
+      masterEntranceTl.to(allLetters, { // Animación de derretimiento para cada letra
+        opacity: 0,
+        y: "random(50, 150)", // Gotea hacia abajo
+        scaleY: 0.1, // Se aplasta mucho verticalmente
+        scaleX: "random(1.2, 1.8)", // Se expande horizontalmente de forma irregular
+        rotation: "random(-45, 45)", // Pequeñas rotaciones aleatorias
+        duration: 1.5,
+        ease: "power2.in", // Acelera al final para simular derretimiento rápido
+        stagger: {
+          each: 0.03,
+          from: "random" // Derretimiento aleatorio por letra
+        }
+      }, "+=0.5"); // Comienza 0.5 segundos después de que la flotación haya avanzado
+
+      masterEntranceTl.to(centerImage, { // Animación de derretimiento para la imagen
+        opacity: 0,
+        y: "+=120", // Gotea la imagen un poco más
+        scaleY: 0.2, // Se aplasta
+        scaleX: 1.5, // Se expande
+        rotation: "random(-20, 20)", // Pequeña rotación
+        duration: 1.5,
+        ease: "power2.in",
+      }, "<0.1"); // Comienza la imagen ligeramente después de las letras para variar el efecto
+
+      // --- Línea de tiempo para la animación de fondo: ondas sutiles y toque dorado ---
+      const bgTl = gsap.timeline({repeat: -1, yoyo: true, duration: 15});
+
+      bgTl.to(background, {
+        background: "radial-gradient(circle at 70% 30%, #333333 0%, #111111 40%, #000000 80%)",
+        duration: 7.5,
+        ease: "power1.inOut",
+      })
+        .to(background, {
+          background: "radial-gradient(circle at 30% 70%, #444444 0%, #181818 40%, #000000 80%)",
+          duration: 7.5,
+          ease: "power1.inOut",
+        }, "<");
+    }
+  </script>
+</body>
+
+</html>

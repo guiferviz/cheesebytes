@@ -1,0 +1,179 @@
+---
+import { getCollection } from "astro:content";
+import { normalizePathParts } from "../content.config";
+
+type FileNode = {
+  name: string;
+  path: string;
+  type: "file" | "folder";
+  children?: FileNode[];
+  cheeseImage?: string;
+};
+
+// Normalizar la ruta actual eliminando trailing slashes y asegurando que empiece con /
+const currentPath = new URL(Astro.request.url).pathname.replace(/\/+$/, '');
+
+const folderDisplayMapping: Record<string, string> = {
+  cave: "The Cheese Cave",
+};
+
+function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
+  // Añadir manualmente la página Home al inicio del árbol
+  const tree: FileNode[] = [
+    {
+      name: "Home",
+      path: "",  // La ruta raíz (/)
+      type: "file",
+      cheeseImage: "/favicon.png"
+    }
+  ];
+
+  for (const node of nodes) {
+    // Los IDs ya deberían estar normalizados desde content.config.ts
+    const parts = node.id.split("/").filter(Boolean);
+    const fileName = parts[parts.length - 1];
+    const cheeseImage = node.data.cheeseImage || "/favicon.png";
+
+    if (parts.length === 1) {
+      tree.push({
+        name: node.data.title || fileName,
+        path: node.id,
+        type: "file",
+        cheeseImage: cheeseImage
+      });
+    } else {
+      let current = tree;
+      let currentPath = "";
+
+      for (let i = 0; i < parts.length - 1; i++) {
+        const folderSlug = parts[i];
+        currentPath += "/" + folderSlug;
+        let folder = current.find(
+          (node) => node.type === "folder" && node.path === currentPath
+        );
+        if (!folder) {
+          folder = {
+            name: folderDisplayMapping[folderSlug] || folderSlug,
+            path: currentPath,
+            type: "folder",
+            children: [],
+          };
+          current.push(folder);
+        }
+        current = folder.children!;
+      }
+
+      current.push({
+        name: node.data.title || fileName,
+        path: node.id,
+        type: "file",
+        cheeseImage: cheeseImage
+      });
+    }
+  }
+
+  return tree;
+}
+
+const nodes = await getCollection("notes");
+const tree = buildFileTree(nodes);
+
+function renderTree(files: FileNode[]): string[] {
+  return files.map((file) => {
+    // Manejar caso especial para Home
+    const filePath = file.path === "" ? "/" : "/" + file.path;
+    const isActive = currentPath === filePath || (currentPath === "" && filePath === "/");
+    
+    // Clases base para el contenedor
+    const containerClass = `
+      w-full
+      block
+      rounded
+      transition-colors
+      duration-150
+      ${isActive ? 'bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-300 font-medium' : 'hover:bg-yellow-500/10 dark:hover:bg-yellow-500/20'}
+    `.trim();
+
+    if (file.type === "folder") {
+      return `
+        <details class="group mb-1">
+          <summary class="${containerClass} cursor-pointer">
+            <div class="w-full flex items-center gap-2 py-1 px-2">
+              <svg class="w-4 h-4 shrink-0 text-yellow-500 transition-transform duration-200 group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+              <span class="whitespace-nowrap">${file.name}</span>
+            </div>
+          </summary>
+          <div class="border-l-2 border-yellow-500/60 dark:border-yellow-500/40 ml-[0.9375rem] pl-4">
+            ${renderTree(file.children!).join("")}
+          </div>
+        </details>
+      `;
+    } else {
+      return `
+        <a href="${filePath}" class="${containerClass}">
+          <div class="w-full flex items-center gap-2 py-1 px-2">
+            <img src="${file.cheeseImage || '/favicon.png'}" alt="" class="w-4 h-4 shrink-0" />
+            <span class="whitespace-nowrap">${file.name}</span>
+          </div>
+        </a>
+      `;
+    }
+  });
+}
+
+const uniqueId = `file-tree-${Math.random().toString(36).substring(2, 8)}`;
+---
+
+<nav id={uniqueId} 
+     class="w-full p-2 text-sm overflow-x-auto"
+     set:html={renderTree(tree).join("")} />
+
+<script type="module" define:vars={{ uniqueId, currentPath }}>
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById(uniqueId);
+  if (!container) return;
+
+  const activeLink = container.querySelector(`a[href="${currentPath}"]`);
+  if (activeLink) {
+    let parentDetails = activeLink.closest("details");
+    while (parentDetails) {
+      parentDetails.open = true;
+      parentDetails = parentDetails.parentElement?.closest("details");
+    }
+    activeLink.scrollIntoView({ behavior: "auto", block: "center" });
+  }
+});
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const currentPath = new URL(window.location.href).pathname.replace(/\/+$/, '') || '/';
+    
+    // Función para expandir carpetas padres y hacer scroll hasta el link activo
+    const expandParents = () => {
+      // Encontrar el enlace activo o el Home si estamos en la página principal
+      const activeLink = 
+        (currentPath === '/' || currentPath === '')
+          ? document.querySelector('a[href="/"]')
+          : document.querySelector(`a[href="${currentPath}"]`);
+      
+      if (activeLink) {
+        // Expandir todos los details padres
+        let parent = activeLink.closest('details');
+        while (parent) {
+          parent.open = true;
+          parent = parent.parentElement?.closest('details');
+        }
+        
+        // Scroll hacia el elemento activo
+        setTimeout(() => {
+          activeLink.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    };
+    
+    expandParents();
+  });
+</script>
