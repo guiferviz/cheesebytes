@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@v4
-      - name: Prepare node_modules symlink for imports outside project
-        run: ln -sfn apps/cheesebytes-web/node_modules node_modules
       - name: Install, build, and upload your site
         uses: withastro/action@v3
         with:

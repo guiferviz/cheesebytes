@@ -9,6 +9,30 @@ import rehypeMermaid from 'rehype-mermaid';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const resolveExternalDependencies = {
+  name: 'resolve-external-dependencies',
+  async resolveId(source, importer, options) {
+    // Si el import es una dependencia (no relativa/absoluta) y viene de fuera del proyecto (ej: notes)
+    if (importer && !source.startsWith('.') && !source.startsWith('/') && !source.startsWith('\0')) {
+      // Si el archivo que importa NO está dentro de la carpeta del proyecto
+      if (!importer.startsWith(__dirname)) {
+        // Intentamos resolver la dependencia como si la estuviéramos importando desde este mismo archivo de configuración
+        // Usamos 'astro.config.mjs' como base para asegurar que busque en los node_modules de este proyecto
+        const resolution = await this.resolve(source, path.join(__dirname, 'astro.config.mjs'), { 
+          skipSelf: true, 
+          ...options 
+        });
+        
+        if (resolution) return resolution;
+      }
+    }
+  }
+};
 
 function normalizeUrl(path) {
   if (!path) return '';
@@ -84,7 +108,7 @@ export default defineConfig({
     },
   },
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), resolveExternalDependencies],
   },
   integrations: [mdx(), react()],
 });
