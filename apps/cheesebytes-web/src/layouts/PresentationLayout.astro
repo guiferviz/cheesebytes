@@ -1,6 +1,7 @@
 ---
 import "../styles/reveal.css";
 import BaseHead from "../components/BaseHead.astro";
+import DrawingOverlay from "../components/DrawingOverlay.tsx";
 
 export interface Props {
   title?: string;
@@ -169,6 +170,8 @@ const {
     </style>
   </head>
   <body>
+    <!-- Drawing overlay for annotations -->
+    <DrawingOverlay client:load />
     <!-- SVG image for the custom cursor, loaded from a URL.
         The CSS cursor property is not used because it does not work well in Chrome.
         It works in Safari, but the image quality is very low. -->
