@@ -83,12 +83,12 @@ have **multiple types**?
 
 ---
 
-## Slide 4 — Multiple Types: T-Shirt, Hoodie, Jacket
+## Slide 4 — Multiple Types: T-Shirt, Sweater, Jacket
 
 Now we introduce **different garment types**. Each has a different shape:
 
 - **T** - T-Shirt (basic)
-- **H** - Hoodie (with hood)
+- **S** - Sweater (long sleeves)
 - **J** - Jacket (open front)
 
 <div class="max-h-[80vh] flex flex-col items-center">
@@ -97,10 +97,10 @@ Now we introduce **different garment types**. Each has a different shape:
     title="Multiple Types - Valid Nesting"
     actions={[
       { type: "PUT", garment: "T" },
-      { type: "PUT", garment: "H" },
+      { type: "PUT", garment: "S" },
       { type: "PUT", garment: "J" },
       { type: "TAKE_OFF", garment: "J" },
-      { type: "TAKE_OFF", garment: "H" },
+      { type: "TAKE_OFF", garment: "S" },
       { type: "TAKE_OFF", garment: "T" },
     ]}
     displayMode="stack"
@@ -126,7 +126,7 @@ is **impossible**.
     title="Counters look fine... but is it?"
     actions={[
       { type: "PUT", garment: "T" },
-      { type: "PUT", garment: "H" },
+      { type: "PUT", garment: "S" },
       { type: "TAKE_OFF", garment: "T" },
     ]}
     displayMode="both"
@@ -136,9 +136,9 @@ is **impossible**.
   />
 </div>
 
-❌ **You can't remove the T-Shirt when the Hoodie is on top!**
+❌ **You can't remove the T-Shirt when the Sweater is on top!**
 
-The counters say everything is fine (1 T, 1 H on), but **order matters**.
+The counters say everything is fine (1 T, 1 S on), but **order matters**.
 
 ---
 
@@ -152,10 +152,10 @@ Now watch the labels transform...
     title="Balanced Parentheses = Dressing in Layers"
     actions={[
       { type: "PUT", garment: "T" },
-      { type: "PUT", garment: "H" },
+      { type: "PUT", garment: "S" },
       { type: "PUT", garment: "J" },
       { type: "TAKE_OFF", garment: "J" },
-      { type: "TAKE_OFF", garment: "H" },
+      { type: "TAKE_OFF", garment: "S" },
       { type: "TAKE_OFF", garment: "T" },
     ]}
     displayMode="stack"
@@ -165,11 +165,11 @@ Now watch the labels transform...
   />
 </div>
 
-**The sequence `([{}])` is the same as putting on T-Shirt, Hoodie, Jacket and
+**The sequence `([{}])` is the same as putting on T-Shirt, Sweater, Jacket and
 taking them off in reverse!**
 
 - `(` = PUT T-Shirt → `)` = TAKE OFF T-Shirt
-- `[` = PUT Hoodie → `]` = TAKE OFF Hoodie
+- `[` = PUT Sweater → `]` = TAKE OFF Sweater
 - `{` = PUT Jacket → `}` = TAKE OFF Jacket
 
 ---
