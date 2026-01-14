@@ -8,7 +8,7 @@ interface Point {
 }
 
 interface DrawingOverlayProps {
-  activationKey?: string; // Tecla para activar (default: 'p')
+  activationKey?: string; // Key to activate (default: 'p')
 }
 
 const COLORS = [
@@ -34,12 +34,30 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState<Point | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   
   // Store all drawings to redraw on resize
   const drawingsRef = useRef<ImageData | null>(null);
   
-  // Para líneas suaves - guardar último punto
+  // For smooth lines - store last point
   const lastPointRef = useRef<Point | null>(null);
+
+  // Detect theme changes
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+    
+    // Initial check
+    checkTheme();
+    
+    // Observe class changes on html element
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    
+    return () => observer.disconnect();
+  }, []);
 
   // Resize canvas to window size
   const resizeCanvas = useCallback(() => {
@@ -300,7 +318,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
           isActive && !isToolbarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
         }`}
         style={{ cursor: 'pointer' }}
-        title="Abrir herramientas de dibujo"
+        title="Open drawing tools"
       >
         <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 19l7-7 3 3-7 7-3-3z" />
@@ -316,11 +334,19 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
         }`}
       >
         {/* Main toolbar container */}
-        <div className="flex items-center gap-3 p-3 bg-gray-900/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700/50">
+        <div className={`flex items-center gap-3 p-3 backdrop-blur-sm rounded-2xl shadow-2xl border transition-colors duration-300 ${
+          isDarkMode 
+            ? 'bg-gray-900/95 border-gray-700/50' 
+            : 'bg-white/95 border-gray-200'
+        }`}>
           {/* Close button */}
           <button
             onClick={() => setIsToolbarOpen(false)}
-            className="w-10 h-10 rounded-xl bg-gray-800 text-gray-400 flex items-center justify-center hover:bg-gray-700 hover:text-white transition-all duration-200"
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              isDarkMode
+                ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+            }`}
             title="Close toolbar"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -329,10 +355,10 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
             </svg>
           </button>
 
-          <div className="w-px h-8 bg-gray-700" />
+          <div className={`w-px h-8 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
 
           {/* Tools section */}
-          <div className="flex items-center gap-1.5 pr-3 border-r border-gray-700">
+          <div className={`flex items-center gap-1.5 pr-3 border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             {(['pen', 'rectangle', 'circle', 'eraser'] as Tool[]).map((tool) => (
               <button
                 key={tool}
@@ -340,7 +366,9 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
                 className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${
                   currentTool === tool
                     ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+                    : isDarkMode
+                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                 }`}
                 title={tool.charAt(0).toUpperCase() + tool.slice(1)}
               >
@@ -350,8 +378,8 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
           </div>
 
           {/* Colors section */}
-          <div className="flex items-center gap-2 px-3 border-r border-gray-700">
-            <span className="text-xs text-gray-400 font-medium">Color</span>
+          <div className={`flex items-center gap-2 px-3 border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Color</span>
             <div className="flex items-center gap-1.5">
               {COLORS.map((color) => (
                 <button
@@ -359,8 +387,12 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
                   onClick={() => setStrokeColor(color)}
                   className={`w-7 h-7 rounded-full transition-all duration-200 hover:scale-110 ${
                     strokeColor === color 
-                      ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900 scale-110' 
-                      : 'ring-1 ring-gray-600'
+                      ? isDarkMode
+                        ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900 scale-110'
+                        : 'ring-2 ring-gray-800 ring-offset-2 ring-offset-white scale-110'
+                      : isDarkMode
+                        ? 'ring-1 ring-gray-600'
+                        : 'ring-1 ring-gray-300'
                   }`}
                   style={{ backgroundColor: color }}
                   title={color}
@@ -370,8 +402,8 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
           </div>
 
           {/* Stroke width section */}
-          <div className="flex items-center gap-2 px-3 border-r border-gray-700">
-            <span className="text-xs text-gray-400 font-medium">Size</span>
+          <div className={`flex items-center gap-2 px-3 border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Size</span>
             <div className="flex items-center gap-1">
               {STROKE_WIDTHS.map((width) => (
                 <button
@@ -379,8 +411,8 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
                   onClick={() => setStrokeWidth(width)}
                   className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 ${
                     strokeWidth === width
-                      ? 'bg-gray-700'
-                      : 'hover:bg-gray-800'
+                      ? isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                      : isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                   }`}
                   title={`${width}px`}
                 >
@@ -416,11 +448,13 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
 
       {/* Indicator when drawing mode is active */}
       <div
-        className={`fixed top-4 left-1/2 -translate-x-1/2 z-[10001] px-4 py-2 rounded-full bg-black/70 text-white text-sm font-medium transition-all duration-300 ${
+        className={`fixed top-4 left-1/2 -translate-x-1/2 z-[10001] px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+          isDarkMode ? 'bg-black/70 text-white' : 'bg-white/90 text-gray-800 shadow-lg border border-gray-200'
+        } ${
           isActive ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
         }`}
       >
-        🎨 Drawing mode · <kbd className="px-1.5 py-0.5 bg-white/20 rounded text-xs">P</kbd> to exit
+        🎨 Drawing mode · <kbd className={`px-1.5 py-0.5 rounded text-xs ${isDarkMode ? 'bg-white/20' : 'bg-gray-200'}`}>P</kbd> to exit
       </div>
     </>
   );
