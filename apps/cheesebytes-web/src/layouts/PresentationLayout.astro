@@ -161,17 +161,16 @@ const {
         top: 0;
         left: 0;
         pointer-events: none; /* Crucial so clicks pass through to elements below */
-        z-index: 9999; /* Ensures the cursor is always on top */
-        transition:
-          transform 0.1s linear,
-          opacity 0.5s linear; /* Smooth movement and fade */
+        z-index: 10002; /* Above everything including drawing overlay */
+        transition: opacity 0.3s linear; /* Only animate opacity, not position */
         transform-origin: top left;
+        will-change: transform; /* Optimize for animations */
       }
     </style>
   </head>
   <body>
-    <!-- Drawing overlay for annotations -->
-    <DrawingOverlay client:load />
+    <!-- Drawing overlay for annotations (cursor disabled because we use custom cheese cursor) -->
+    <DrawingOverlay client:load disableCursorStyles={true} />
     <!-- SVG image for the custom cursor, loaded from a URL.
         The CSS cursor property is not used because it does not work well in Chrome.
         It works in Safari, but the image quality is very low. -->

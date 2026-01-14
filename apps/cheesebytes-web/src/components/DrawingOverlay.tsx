@@ -9,6 +9,7 @@ interface Point {
 
 interface DrawingOverlayProps {
   activationKey?: string; // Key to activate (default: 'p')
+  disableCursorStyles?: boolean; // Disable cursor changes (useful when using custom cursor)
 }
 
 const COLORS = [
@@ -25,7 +26,7 @@ const COLORS = [
 
 const STROKE_WIDTHS = [2, 4, 8, 12, 20];
 
-const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) => {
+const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p', disableCursorStyles = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isActive, setIsActive] = useState(false);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
@@ -295,11 +296,13 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
           isActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         style={{ 
-          cursor: isActive 
-            ? currentTool === 'eraser' 
-              ? 'cell' 
-              : 'crosshair' 
-            : 'default',
+          cursor: disableCursorStyles 
+            ? 'none'
+            : isActive 
+              ? currentTool === 'eraser' 
+                ? 'cell' 
+                : 'crosshair' 
+              : 'default',
           touchAction: 'none',
         }}
         onMouseDown={startDrawing}
@@ -317,7 +320,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
         className={`fixed bottom-6 right-6 z-[10001] w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 bg-gradient-to-br from-yellow-400 to-orange-500 text-white hover:scale-105 ${
           isActive && !isToolbarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
         }`}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: disableCursorStyles ? 'none' : 'pointer' }}
         title="Open drawing tools"
       >
         <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
