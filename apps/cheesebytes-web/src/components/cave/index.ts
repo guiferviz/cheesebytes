@@ -4,4 +4,5 @@
 // Re-export subcarpetas
 export * from "./nombres-elementales";
 export * from "./the-apartment-that-never-sleeps";
+export * from "./balanced-dressing-room";
 export * from "./shared";

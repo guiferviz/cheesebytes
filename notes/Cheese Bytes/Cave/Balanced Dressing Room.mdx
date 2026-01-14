@@ -1,0 +1,186 @@
+import { Probador } from "../../../apps/cheesebytes-web/src/components/cave/balanced-dressing-room";
+
+Ever wondered why computers need a **stack** to check if parentheses are
+balanced? Let's see it in action with a metaphor that makes it impossible to
+forget.
+
+---
+
+## Slide 1 — The Dressing Room Rule
+
+**You try on clothes in layers. You can only take off the last one you put on.**
+
+<div class="max-h-[80vh] flex flex-col items-center">
+  <Probador
+    client:load
+    title="The Basic Rule"
+    actions={[
+      { type: "PUT", garment: "T", color: "#86efac" },
+      { type: "PUT", garment: "T", color: "#fde047" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="counter"
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+With a **single type** of clothing, a simple **counter** tells us if the
+sequence is valid: just track how many items are on.
+
+---
+
+## Slide 2 — A Valid Sequence
+
+All garments come on and off in the correct order. Notice the counter going up
+and down.
+
+<div class="max-h-[80vh] flex flex-col items-center">
+  <Probador
+    client:load
+    title="Valid Sequence"
+    actions={[
+      { type: "PUT", garment: "T", color: "#86efac" },
+      { type: "PUT", garment: "T", color: "#fde047" },
+      { type: "TAKE_OFF", garment: "T" },
+      { type: "PUT", garment: "T", color: "#93c5fd" },
+      { type: "TAKE_OFF", garment: "T" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="counter"
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+✅ **We never try to remove a garment that wasn't on top.**
+
+---
+
+## Slide 3 — The Impossible Sequence
+
+What happens when we try to remove a garment that's **not** on top?
+
+<div class="max-h-[80vh] flex flex-col items-center">
+  <Probador
+    client:load
+    title="Is this possible?"
+    actions={[
+      { type: "PUT", garment: "T", color: "#86efac" },
+      { type: "PUT", garment: "T", color: "#fde047" },
+      { type: "TAKE_OFF", garment: "T" },
+      { type: "TAKE_OFF", garment: "T" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="counter"
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+With only one type, the counter catches this: we go negative! But what if we
+have **multiple types**?
+
+---
+
+## Slide 4 — Multiple Types: T-Shirt, Hoodie, Jacket
+
+Now we introduce **different garment types**. Each has a different shape:
+
+- **T** - T-Shirt (basic)
+- **H** - Hoodie (with hood)
+- **J** - Jacket (open front)
+
+<div class="max-h-[80vh] flex flex-col items-center">
+  <Probador
+    client:load
+    title="Multiple Types - Valid Nesting"
+    actions={[
+      { type: "PUT", garment: "T" },
+      { type: "PUT", garment: "H" },
+      { type: "PUT", garment: "J" },
+      { type: "TAKE_OFF", garment: "J" },
+      { type: "TAKE_OFF", garment: "H" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="stack"
+    showTypeCounters={false}
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+With multiple types, **we need to remember WHAT was put on last**, not just
+count!
+
+---
+
+## Slide 5 — The Tricky Example
+
+Here's the catch: the **count per type** might look balanced, but the sequence
+is **impossible**.
+
+<div class="max-h-[80vh] flex flex-col items-center">
+  <Probador
+    client:load
+    title="Counters look fine... but is it?"
+    actions={[
+      { type: "PUT", garment: "T" },
+      { type: "PUT", garment: "H" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="both"
+    showTypeCounters={true}
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+❌ **You can't remove the T-Shirt when the Hoodie is on top!**
+
+The counters say everything is fine (1 T, 1 H on), but **order matters**.
+
+---
+
+## Slide 6 — The Final Reveal: Parentheses!
+
+Now watch the labels transform...
+
+<div class="max-h-[80vh] flex flex-col items-center">
+  <Probador
+    client:load
+    title="Balanced Parentheses = Dressing in Layers"
+    actions={[
+      { type: "PUT", garment: "T" },
+      { type: "PUT", garment: "H" },
+      { type: "PUT", garment: "J" },
+      { type: "TAKE_OFF", garment: "J" },
+      { type: "TAKE_OFF", garment: "H" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="stack"
+    showParentheses={true}
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+**The sequence `([{}])` is the same as putting on T-Shirt, Hoodie, Jacket and
+taking them off in reverse!**
+
+- `(` = PUT T-Shirt → `)` = TAKE OFF T-Shirt
+- `[` = PUT Hoodie → `]` = TAKE OFF Hoodie
+- `{` = PUT Jacket → `}` = TAKE OFF Jacket
+
+---
+
+## The Insight
+
+> **Balancing parentheses is exactly like getting dressed in layers without
+> breaking the laws of physics.**
+
+A **counter** works for a single type, but with multiple types (like `()`, `[]`,
+`{}`), you need a **stack** to remember the order.
+
+That's why the classic "balanced parentheses" algorithm uses a stack: it's
+simulating a dressing room! 🧥

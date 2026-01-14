@@ -1,0 +1,381 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import {
+  Probador,
+  GarmentIcon,
+  DEFAULT_GARMENT_COLORS,
+} from "../../components/cave/balanced-dressing-room";
+---
+
+<RevealLayout
+  title="The Balanced Dressing Room"
+  description="Why parentheses need a stack, not a counter"
+  theme="dark"
+>
+  <!-- Slide 1: Title -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-8">
+      <h1 class="text-5xl font-bold">🧥 The Dressing Room</h1>
+      <p class="text-2xl text-gray-300">
+        Why balancing parentheses needs a <strong>stack</strong>
+      </p>
+      <p class="text-lg text-gray-400 mt-8">
+        Press <kbd class="px-2 py-1 bg-gray-700 rounded">→</kbd> or <kbd
+          class="px-2 py-1 bg-gray-700 rounded">Space</kbd
+        > to continue
+      </p>
+    </div>
+  </section>
+
+  <!-- Slide 2: The Rule -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <h2 class="text-4xl font-bold mb-4">The Dressing Room Rule</h2>
+      <div class="text-2xl text-gray-300 max-w-2xl text-center space-y-4">
+        <p class="fragment">👕 You try on clothes in <strong>layers</strong></p>
+        <p class="fragment">
+          🔄 You can only take off the <strong>last one you put on</strong>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 3: Basic Demo -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <Probador
+        client:load
+        title="The Basic Rule"
+        actions={[
+          { type: "PUT", garment: "T", color: "#86efac" },
+          { type: "PUT", garment: "T", color: "#fde047" },
+          { type: "TAKE_OFF", garment: "T" },
+        ]}
+        displayMode="counter"
+        autoPlay={false}
+        showControls={true}
+      />
+    </div>
+  </section>
+
+  <!-- Slide 4: Counter insight -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <h2 class="text-3xl font-bold">With ONE type of clothing...</h2>
+      <p class="text-2xl text-gray-300 fragment">
+        A simple <strong class="text-amber-400">counter</strong> tells us if the sequence
+        is valid
+      </p>
+      <p class="text-xl text-gray-400 fragment">
+        Just track: how many items are on?
+      </p>
+    </div>
+  </section>
+
+  <!-- Slide 5: Valid Sequence -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <Probador
+        client:load
+        title="Valid Sequence"
+        actions={[
+          { type: "PUT", garment: "T", color: "#86efac" },
+          { type: "PUT", garment: "T", color: "#fde047" },
+          { type: "TAKE_OFF", garment: "T" },
+          { type: "PUT", garment: "T", color: "#93c5fd" },
+          { type: "TAKE_OFF", garment: "T" },
+          { type: "TAKE_OFF", garment: "T" },
+        ]}
+        displayMode="counter"
+        autoPlay={false}
+        showControls={true}
+      />
+    </div>
+  </section>
+
+  <!-- Slide 6: Valid sequence insight -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <div class="text-6xl">✅</div>
+      <p class="text-2xl text-gray-300">
+        We <strong>never</strong> tried to remove a garment that wasn't on top
+      </p>
+    </div>
+  </section>
+
+  <!-- Slide 7: Impossible sequence intro -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <h2 class="text-4xl font-bold">What if we try too many times?</h2>
+      <p class="text-2xl text-gray-300 fragment">
+        Let's try to remove more than we put on...
+      </p>
+    </div>
+  </section>
+
+  <!-- Slide 8: Impossible sequence demo -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <Probador
+        client:load
+        title="Is this possible?"
+        actions={[
+          { type: "PUT", garment: "T", color: "#86efac" },
+          { type: "PUT", garment: "T", color: "#fde047" },
+          { type: "TAKE_OFF", garment: "T" },
+          { type: "TAKE_OFF", garment: "T" },
+          { type: "TAKE_OFF", garment: "T" },
+        ]}
+        displayMode="counter"
+        autoPlay={false}
+        showControls={true}
+      />
+    </div>
+  </section>
+
+  <!-- Slide 9: Counter catches it -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <p class="text-2xl text-gray-300">
+        With one type, the counter catches this: <strong class="text-red-400"
+          >we go negative!</strong
+        >
+      </p>
+      <p class="text-3xl font-bold fragment mt-8">
+        But what if we have <strong class="text-amber-400"
+          >multiple types</strong
+        >?
+      </p>
+    </div>
+  </section>
+
+  <!-- Slide 10: Multiple types intro -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <h2 class="text-4xl font-bold">Multiple Types</h2>
+      <div class="grid grid-cols-3 gap-12 mt-8 text-center">
+        <div class="fragment flex flex-col items-center">
+          <GarmentIcon
+            client:load
+            type="T"
+            color={DEFAULT_GARMENT_COLORS.T}
+            size={100}
+            showLabel={true}
+          />
+          <p class="text-xl mt-4"><strong>T</strong> - T-Shirt</p>
+        </div>
+        <div class="fragment flex flex-col items-center">
+          <GarmentIcon
+            client:load
+            type="S"
+            color={DEFAULT_GARMENT_COLORS.S}
+            size={100}
+            showLabel={true}
+          />
+          <p class="text-xl mt-4"><strong>S</strong> - Sweater</p>
+        </div>
+        <div class="fragment flex flex-col items-center">
+          <GarmentIcon
+            client:load
+            type="J"
+            color={DEFAULT_GARMENT_COLORS.J}
+            size={100}
+            showLabel={true}
+          />
+          <p class="text-xl mt-4"><strong>J</strong> - Jacket</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 11: Valid nested sequence -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <Probador
+        client:load
+        title="Multiple Types - Valid Nesting"
+        actions={[
+          { type: "PUT", garment: "T" },
+          { type: "PUT", garment: "S" },
+          { type: "PUT", garment: "J" },
+          { type: "TAKE_OFF", garment: "J" },
+          { type: "TAKE_OFF", garment: "S" },
+          { type: "TAKE_OFF", garment: "T" },
+        ]}
+        displayMode="stack"
+        showTypeCounters={false}
+        autoPlay={false}
+        showControls={true}
+      />
+    </div>
+  </section>
+
+  <!-- Slide 12: Stack insight -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <p class="text-2xl text-gray-300">
+        With multiple types, we need to remember
+      </p>
+      <p class="text-4xl font-bold text-amber-400">WHAT was put on last</p>
+      <p class="text-2xl text-gray-300 fragment mt-4">Not just count!</p>
+    </div>
+  </section>
+
+  <!-- Slide 13: The tricky example intro -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <h2 class="text-4xl font-bold">The Tricky Example</h2>
+      <p class="text-2xl text-gray-300 fragment">
+        The <strong>count per type</strong> might look balanced...
+      </p>
+      <p class="text-2xl text-red-400 fragment">
+        ...but the sequence is <strong>impossible</strong>
+      </p>
+    </div>
+  </section>
+
+  <!-- Slide 14: Tricky example demo -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <Probador
+        client:load
+        title="Counters look fine... but is it?"
+        actions={[
+          { type: "PUT", garment: "T" },
+          { type: "PUT", garment: "S" },
+          { type: "TAKE_OFF", garment: "T" },
+        ]}
+        displayMode="both"
+        showTypeCounters={true}
+        autoPlay={false}
+        showControls={true}
+      />
+    </div>
+  </section>
+
+  <!-- Slide 15: Tricky insight -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <div class="text-6xl">❌</div>
+      <p class="text-2xl text-gray-300">
+        You can't remove the <strong>T-Shirt</strong> when the <strong
+          >Sweater</strong
+        > is on top!
+      </p>
+      <p class="text-xl text-gray-400 fragment mt-4">
+        The counters say everything is fine (1 T, 1 S on)
+      </p>
+      <p class="text-3xl font-bold text-amber-400 fragment">ORDER MATTERS</p>
+    </div>
+  </section>
+
+  <!-- Slide 16: The reveal intro -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <h2 class="text-4xl font-bold">The Final Reveal</h2>
+      <p class="text-2xl text-gray-300 fragment">
+        Watch the labels transform...
+      </p>
+    </div>
+  </section>
+
+  <!-- Slide 17: Parentheses reveal -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <Probador
+        client:load
+        title="Balanced Parentheses = Dressing in Layers"
+        actions={[
+          { type: "PUT", garment: "T" },
+          { type: "PUT", garment: "S" },
+          { type: "PUT", garment: "J" },
+          { type: "TAKE_OFF", garment: "J" },
+          { type: "TAKE_OFF", garment: "S" },
+          { type: "TAKE_OFF", garment: "T" },
+        ]}
+        displayMode="stack"
+        showParentheses={true}
+        autoPlay={false}
+        showControls={true}
+      />
+    </div>
+  </section>
+
+  <!-- Slide 18: Mapping explanation -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <h2 class="text-3xl font-bold mb-4">The Mapping</h2>
+      <div class="grid grid-cols-2 gap-x-12 gap-y-4 text-2xl">
+        <div class="text-right">
+          <code class="text-green-400">(</code> = PUT T-Shirt
+        </div>
+        <div><code class="text-green-400">)</code> = TAKE OFF T-Shirt</div>
+        <div class="text-right fragment">
+          <code class="text-blue-400">[</code> = PUT Sweater
+        </div>
+        <div class="fragment">
+          <code class="text-blue-400">]</code> = TAKE OFF Sweater
+        </div>
+        <div class="text-right fragment">
+          <code class="text-purple-400">{`{`}</code> = PUT Jacket
+        </div>
+        <div class="fragment">
+          <code class="text-purple-400">{`}`}</code> = TAKE OFF Jacket
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 19: The insight -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-8">
+      <blockquote
+        class="text-2xl text-gray-300 max-w-3xl text-center italic border-l-4 border-amber-400 pl-6"
+      >
+        "Balancing parentheses is exactly like getting dressed in layers without
+        breaking the laws of physics."
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- Slide 20: Counter vs Stack -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-8">
+      <h2 class="text-3xl font-bold">Counter vs Stack</h2>
+      <div class="grid grid-cols-2 gap-12 text-xl mt-4">
+        <div class="text-center fragment">
+          <p class="text-amber-400 font-bold text-2xl mb-4">Single type</p>
+          <p class="text-gray-300">Just count!</p>
+          <code class="text-green-400 text-3xl block mt-4">( ( ) ( ) )</code>
+        </div>
+        <div class="text-center fragment">
+          <p class="text-amber-400 font-bold text-2xl mb-4">Multiple types</p>
+          <p class="text-gray-300">Need a stack!</p>
+          <code class="text-3xl block mt-4">
+            <span class="text-green-400">(</span>
+            <span class="text-blue-400">[</span>
+            <span class="text-purple-400">{`{`}</span>
+            <span class="text-purple-400">{`}`}</span>
+            <span class="text-blue-400">]</span>
+            <span class="text-green-400">)</span>
+          </code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 21: Final message -->
+  <section>
+    <div class="flex flex-col items-center justify-center h-full gap-8">
+      <p class="text-3xl text-gray-300">
+        That's why the classic algorithm uses a <strong class="text-amber-400"
+          >stack</strong
+        >
+      </p>
+      <p class="text-2xl text-gray-400 fragment">
+        It's simulating a dressing room!
+      </p>
+      <div class="text-6xl fragment mt-8">🧥</div>
+    </div>
+  </section>
+</RevealLayout>
