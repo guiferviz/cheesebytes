@@ -3,8 +3,18 @@ import * as d3 from 'd3';
 import { elementsData } from './PeriodicTable';
 
 const ELEMENT_SYMBOLS = new Set(elementsData.map(e => e.symbol));
-const ELEMENT_NAMES = Object.fromEntries(elementsData.map(e => [e.symbol, e.name]));
+const ELEMENT_NAMES: Record<string, string> = Object.fromEntries(elementsData.map(e => [e.symbol, e.name]));
 const DEAD_END_NODE = { status: 'dead_end', name: 'dead_end', text: '✗' };
+
+interface TreeNode {
+  id: string;
+  text: string;
+  children: TreeNode[];
+  status: 'intermediate' | 'success' | 'dead_end';
+  depth: number;
+  symbol?: string;
+  _children?: TreeNode[];
+}
 
 interface ElementalTreeProps {
   initialText?: string;
@@ -36,9 +46,9 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
   const zoomEnabled = enableZoom !== undefined ? enableZoom : showInput;
 
   // --- Build tree data up to maxDepth ---
-  const buildTreeData = useCallback((word: string, depth = 0, parentId = 'root'): any => {
+  const buildTreeData = useCallback((word: string, depth = 0, parentId = 'root'): TreeNode | null => {
     if (depth > maxDepth) return null;
-    const node: any = {
+    const node: TreeNode = {
       id: parentId + '-' + word,
       text: word,
       children: [],
@@ -57,18 +67,18 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
     const symbol1 = word.substring(0, 1).toUpperCase();
     if (ELEMENT_SYMBOLS.has(symbol1)) {
       const child = buildTreeData(word.substring(1), depth + 1, node.id + '-' + symbol1);
-      node.children.push(child ? { ...child, symbol: symbol1 } : { ...DEAD_END_NODE, symbol: symbol1 });
+      node.children.push(child ? { ...child, symbol: symbol1 } : { ...DEAD_END_NODE, symbol: symbol1 } as TreeNode);
     } else {
-      node.children.push({ ...DEAD_END_NODE, symbol: symbol1 });
+      node.children.push({ ...DEAD_END_NODE, symbol: symbol1 } as TreeNode);
     }
     // 2-letter symbol
     if (word.length >= 2) {
       const symbol2 = word.charAt(0).toUpperCase() + word.charAt(1);
       if (ELEMENT_SYMBOLS.has(symbol2)) {
         const child = buildTreeData(word.substring(2), depth + 1, node.id + '-' + symbol2);
-        node.children.push(child ? { ...child, symbol: symbol2 } : { ...DEAD_END_NODE, symbol: symbol2 });
+        node.children.push(child ? { ...child, symbol: symbol2 } : { ...DEAD_END_NODE, symbol: symbol2 } as TreeNode);
       } else {
-        node.children.push({ ...DEAD_END_NODE, symbol: symbol2 });
+        node.children.push({ ...DEAD_END_NODE, symbol: symbol2 } as TreeNode);
       }
     }
     return node;
@@ -80,7 +90,7 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
     if (maxDepth < 99) {
       const treeData = buildTreeData((showInput ? name : initialText).toLowerCase());
       const collapsedAtDepth: { [id: string]: boolean } = {};
-      function markCollapse(node: any) {
+      function markCollapse(node: TreeNode) {
         if (node.depth === maxDepth && node.children && node.children.length > 0) {
           collapsedAtDepth[node.id] = true;
         }
@@ -100,14 +110,6 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
   // Memoiza highlightBranchIds para que solo cambie si el contenido cambia realmente
-  function arraysEqual(a: string[] = [], b: string[] = []) {
-    if (a === b) return true;
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
-    }
-    return true;
-  }
   const stableHighlightBranchIds = useMemo(() => highlightBranchIds, [JSON.stringify(highlightBranchIds)]);
 
   useEffect(() => {
@@ -124,7 +126,7 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
     }
     // Busca los nodos y sus descendientes
     const ids = new Set<string>();
-    function findAndCollect(node: any, targets: Set<string>) {
+    function findAndCollect(node: TreeNode, targets: Set<string>) {
       if (targets.has(node.id)) {
         collectAll(node);
         return;
@@ -135,7 +137,7 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
         }
       }
     }
-    function collectAll(node: any) {
+    function collectAll(node: TreeNode) {
       ids.add(node.id);
       if (node.children) node.children.forEach(collectAll);
     }
@@ -177,7 +179,7 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
           .scaleExtent([0.05, 10])
           .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
             zoomTransformRef.current = event.transform;
-            d3.select(gRef.current).attr('transform', event.transform);
+            d3.select(gRef.current).attr('transform', event.transform.toString());
           });
         svg.call(zoom as any);
         svg.call(zoom.transform, zoomTransformRef.current);
@@ -232,7 +234,7 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
           .scaleExtent([0.05, 10])
           .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
             zoomTransformRef.current = event.transform;
-            d3.select(gRef.current).attr('transform', event.transform);
+            d3.select(gRef.current).attr('transform', event.transform.toString());
           });
         svg.call(zoom as any);
         svg.call(zoom.transform, d3.zoomIdentity);
@@ -346,14 +348,14 @@ export const ElementalTree: React.FC<ElementalTreeProps> = ({
         const o = prevPos.current[d.target.id] || d.target;
         return d3.linkHorizontal()
           .x(() => o.y)
-          .y(() => o.x)({ source: o, target: o });
+          .y(() => o.x)({ source: o, target: o } as any);
       })
       .style('stroke-dasharray', (d: any) => d.target.data.status === 'dead_end' ? '3,4' : 'none');
     // Sin animación: solo setear el path directamente
     linkSel.merge(linkEnter as any)
       .attr('d', d3.linkHorizontal()
         .x((d: any) => d.y)
-        .y((d: any) => d.x)
+        .y((d: any) => d.x) as any
       );
     linkSel.exit().remove();
 

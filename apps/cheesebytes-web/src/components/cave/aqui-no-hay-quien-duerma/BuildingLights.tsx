@@ -29,12 +29,12 @@ interface BuildingLightsProps {
   cols: number;
 }
 
-function getRandomLights(rows: number, cols: number) {
+function getRandomLights(rows: number, cols: number): number[][] {
   // Usar una semilla fija para evitar hydration mismatch
   const seed = rows * cols * 42; // semilla determinística
   let random = seed;
   
-  const seededRandom = () => {
+  const seededRandom = (): number => {
     random = (random * 9301 + 49297) % 233280;
     return random / 233280;
   };
@@ -48,7 +48,7 @@ const BuildingLights: React.FC<BuildingLightsProps> = ({
   rows,
   cols,
 }) => {
-  const [lights, setLights] = useState(() => getRandomLights(rows, cols));
+  const [lights, setLights] = useState<number[][]>(() => getRandomLights(rows, cols));
 
   // Calcula offsets dinámicos basados en ratios
   const WINDOWS_TOP_OFFSET = BUILDING_HEIGHT * WINDOWS_TOP_OFFSET_RATIO;
@@ -98,11 +98,11 @@ const BuildingLights: React.FC<BuildingLightsProps> = ({
     startY = WINDOWS_TOP_OFFSET + (availableHeight - totalWindowsHeight) / 2;
   }
 
-  function toggleLight(r: number, c: number) {
+  function toggleLight(r: number, c: number): void {
     setLights((prev) => {
       const next = prev.map((row) => [...row]);
       
-      const toggle = (i: number, j: number) => {
+      const toggle = (i: number, j: number): void => {
         if (i >= 0 && i < rows && j >= 0 && j < cols) {
           next[i][j] = next[i][j] === 1 ? 0 : 1;
         }

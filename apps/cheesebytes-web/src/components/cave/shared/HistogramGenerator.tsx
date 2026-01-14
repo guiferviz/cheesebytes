@@ -1,8 +1,13 @@
-// src/components/HistogramGenerator.jsx
+// src/components/cave/shared/HistogramGenerator.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import pyodideContext from '../../utils/pyodideContext.js';
-import { mulberry32 as jsMulberry32 } from '../../utils/random.js';
+import pyodideContext from '../../../utils/pyodideContext.js';
+import { mulberry32 as jsMulberry32 } from '../../../utils/random';
+
+interface BinData {
+  value: number;
+  count: number;
+}
 
 const HistogramGenerator: React.FC = () => {
   // Dimensions and margins
@@ -85,9 +90,9 @@ const HistogramGenerator: React.FC = () => {
       .selectAll('text').style('font-size', '14px');
 
     // Bars data join
-    const bins = counts.map((c, i) => ({ value: i, count: c }));
+    const bins: BinData[] = counts.map((c, i) => ({ value: i, count: c }));
     const bars = g.select<SVGGElement>('.bars')
-      .selectAll<SVGRectElement, typeof bins[0]>('rect')
+      .selectAll<SVGRectElement, BinData>('rect')
       .data(bins, d => String(d.value));
 
     // Enter

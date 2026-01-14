@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // --- Constantes y datos de elementos (fuera del componente para evitar re-creación) ---
 const ELEMENT_SYMBOLS = new Set([
@@ -10,25 +10,39 @@ const ELEMENT_SYMBOLS = new Set([
     'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
 ]);
 
+interface Step {
+    explanation: string;
+    dpState: boolean[];
+    highlights: { dp: number[]; word: number[] };
+    isHeader?: boolean;
+}
+
+interface TooltipContent {
+    text: string;
+    x: number;
+    y: number;
+    visible: boolean;
+}
+
 // --- Componente principal ---
-function DPWordBreakViz() {
-    const [word, setWord] = useState('Erica');
-    const [debouncedWord, setDebouncedWord] = useState(word);
-    const [steps, setSteps] = useState([]);
-    const [hoveredStep, setHoveredStep] = useState(null);
-    const [tooltipContent, setTooltipContent] = useState({ text: '', x: 0, y: 0, visible: false });
+const DPWordBreakViz: React.FC = () => {
+    const [word, setWord] = useState<string>('Erica');
+    const [debouncedWord, setDebouncedWord] = useState<string>(word);
+    const [steps, setSteps] = useState<Step[]>([]);
+    const [hoveredStep, setHoveredStep] = useState<Step | null>(null);
+    const [tooltipContent, setTooltipContent] = useState<TooltipContent>({ text: '', x: 0, y: 0, visible: false });
 
     // --- Lógica de Programación Dinámica ---
-    const generateSteps = useCallback((s) => {
+    const generateSteps = useCallback((s: string) => {
         if (!s) {
             setSteps([]);
             return;
         }
 
         const n = s.length;
-        const dp = Array(n + 1).fill(false);
+        const dp: boolean[] = Array(n + 1).fill(false);
         dp[0] = true;
-        const newSteps = [];
+        const newSteps: Step[] = [];
 
         newSteps.push({
             explanation: `Inicializamos 'dp' de tamaño n+1 (${n + 1}). dp[0] es 'true', porque una cadena vacía siempre se puede formar.`,
@@ -151,10 +165,10 @@ function DPWordBreakViz() {
     }, [debouncedWord, generateSteps]);
 
     // --- Handlers de Tooltip ---
-    const handleMouseOver = (event, text) => {
+    const handleMouseOver = (event: React.MouseEvent, text: string) => {
         setTooltipContent({ text, x: event.pageX, y: event.pageY, visible: true });
     };
-    const handleMouseMove = (event) => {
+    const handleMouseMove = (event: React.MouseEvent) => {
         setTooltipContent(prev => ({ ...prev, x: event.pageX, y: event.pageY }));
     };
     const handleMouseOut = () => {

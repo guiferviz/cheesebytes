@@ -170,15 +170,6 @@ interface PeriodicTableSVGProps {
   highlightFilter: 'one-letter' | 'two-letters' | null;
 }
 
-// --- PROPS PARA LOS COMPONENTES ---
-
-interface ElementTileProps {
-  el: ElementData;
-  activeElement: number | null;
-  setActiveElement: (id: number | null) => void;
-  isMuted: boolean;
-}
-
 // --- COMPONENTE DE LA TABLA PERIÓDICA (SVG) ---
 const PeriodicTableSVG: React.FC<PeriodicTableSVGProps> = ({ highlightFilter }) => {
   const [activeElement, setActiveElement] = useState<number | null>(null);

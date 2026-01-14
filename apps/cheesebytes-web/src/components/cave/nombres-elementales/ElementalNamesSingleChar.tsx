@@ -1,24 +1,30 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { ElementTileSVG, elementsData, categoryColors } from './PeriodicTable';
+import { ElementTileSVG, elementsData } from './PeriodicTable';
 
 // Crear un map para búsqueda rápida por símbolo
 const elementMap = Object.fromEntries(elementsData.map(e => [e.symbol.toUpperCase(), e]));
 
-/**
- * @param {Object} props
- * @param {string=} props.initialText
- * @param {boolean=} props.showInput
- */
-const ArrayVisualizer = ({
+interface AnalyzedChar {
+  char: string;
+  isElement: boolean;
+  elementInfo: typeof elementsData[0] | undefined;
+}
+
+interface ArrayVisualizerProps {
+  initialText?: string;
+  showInput?: boolean;
+}
+
+const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   initialText = 'Whisky',
   showInput = true,
-} = {}) => {
+}) => {
   // Si es interactivo, usa estado; si no, usa solo la prop
-  const [text, setText] = useState(initialText);
+  const [text, setText] = useState<string>(initialText);
   const effectiveText = showInput ? text : initialText;
-  const [debouncedText, setDebouncedText] = useState(effectiveText);
-  const containerRef = useRef(null);
+  const [debouncedText, setDebouncedText] = useState<string>(effectiveText);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const TILE_SIZE = 95;
   const GAP = 16;
@@ -33,7 +39,7 @@ const ArrayVisualizer = ({
     return () => clearTimeout(handler);
   }, [text, effectiveText, showInput]);
 
-  const analyzedText = debouncedText.split('').map(char => ({
+  const analyzedText: AnalyzedChar[] = debouncedText.split('').map(char => ({
     char,
     isElement: !!elementMap[char.toUpperCase()],
     elementInfo: elementMap[char.toUpperCase()],

@@ -1,15 +1,20 @@
 import { create } from 'zustand';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 // --- STORE ---
-const useSliderStore = create((set) => ({
+interface SliderStore {
+    value: number;
+    setValue: (v: number) => void;
+}
+
+const useSliderStore = create<SliderStore>((set) => ({
     value: 50,
-    setValue: (v) => set({ value: v }),
+    setValue: (v: number) => set({ value: v }),
 }));
 
 // --- COMPONENTS ---
 
-export function CheeseSizeSlider() {
+export const CheeseSizeSlider: React.FC = () => {
     const value = useSliderStore((state) => state.value);
     const setValue = useSliderStore((state) => state.setValue);
 
@@ -25,17 +30,17 @@ export function CheeseSizeSlider() {
             <span style={{ marginLeft: '0.5rem' }}>Size: {value}</span>
         </div>
     );
-}
+};
 
-export function CheeseSizeValue() {
+export const CheeseSizeValue: React.FC = () => {
     const value = useSliderStore((state) => state.value);
     return <strong>{value}</strong>;
-}
+};
 
-export function CheeseCanvas() {
+export const CheeseCanvas: React.FC = () => {
     const value = useSliderStore((state) => state.value);
-    const canvasRef = useRef(null);
-    const img = useRef(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const img = useRef<HTMLImageElement | null>(null);
 
     // Precargar la imagen una vez
     useEffect(() => {
@@ -52,6 +57,7 @@ export function CheeseCanvas() {
         if (!canvas || !img.current) return;
 
         const ctx = canvas.getContext("2d");
+        if (!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (!img.current.complete) return;
@@ -81,5 +87,4 @@ export function CheeseCanvas() {
             }}
         ></canvas>
     );
-}
-
+};

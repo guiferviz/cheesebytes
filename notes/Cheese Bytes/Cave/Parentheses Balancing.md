@@ -6,6 +6,9 @@ marimo-version: 0.13.15
 Given an expression formed only with parentheses, return whether they are
 balanced.
 
+This is also a Leetcode problem:
+[20. Valid Parentheses](https://leetcode.com/problems/valid-parentheses/).
+
 ```python {.marimo}
 import marimo as mo
 
