@@ -67,16 +67,13 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
     window.addEventListener('resize', resizeCanvas);
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Activar con la tecla configurada
+      // Toggle with activation key
       if (e.key.toLowerCase() === activationKey.toLowerCase() && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
-        setIsActive(prev => !prev);
-      }
-      // Escape para ocultar
-      if (e.key === 'Escape' && isActive) {
-        e.preventDefault();
-        setIsActive(false);
-        setIsToolbarOpen(false);
+        setIsActive(prev => {
+          if (prev) setIsToolbarOpen(false); // Close toolbar when deactivating
+          return !prev;
+        });
       }
     };
     
@@ -324,7 +321,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
           <button
             onClick={() => setIsToolbarOpen(false)}
             className="w-10 h-10 rounded-xl bg-gray-800 text-gray-400 flex items-center justify-center hover:bg-gray-700 hover:text-white transition-all duration-200"
-            title="Cerrar barra de herramientas"
+            title="Close toolbar"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18" />
@@ -374,7 +371,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
 
           {/* Stroke width section */}
           <div className="flex items-center gap-2 px-3 border-r border-gray-700">
-            <span className="text-xs text-gray-400 font-medium">Grosor</span>
+            <span className="text-xs text-gray-400 font-medium">Size</span>
             <div className="flex items-center gap-1">
               {STROKE_WIDTHS.map((width) => (
                 <button
@@ -404,7 +401,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
           <button
             onClick={clearCanvas}
             className="w-11 h-11 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/30 hover:text-red-300 transition-all duration-200"
-            title="Limpiar todo"
+            title="Clear all"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18" />
@@ -423,7 +420,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({ activationKey = 'p' }) 
           isActive ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
         }`}
       >
-        🎨 Modo dibujo · <kbd className="px-1.5 py-0.5 bg-white/20 rounded text-xs">ESC</kbd> salir
+        🎨 Drawing mode · <kbd className="px-1.5 py-0.5 bg-white/20 rounded text-xs">P</kbd> to exit
       </div>
     </>
   );
