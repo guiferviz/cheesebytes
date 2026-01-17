@@ -68,6 +68,8 @@ const {
           //scrollProgress: true,
           plugins: [RevealHighlight],
           keyboard: {
+            // 80 es la tecla 'p'/'P' y queremos evitar que se vaya a la "previous" slide.
+            80: null,
             // '84' es el keyCode de 't'/'T'
             // Cambiar entre el modo claro y oscuro.
             84: function () {
