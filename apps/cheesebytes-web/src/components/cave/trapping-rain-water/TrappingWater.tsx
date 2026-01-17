@@ -4,7 +4,6 @@ import { DEFAULT_HEIGHTS } from './types';
 import { 
   CheeseSlideContainer, 
   CheeseControlBar, 
-  CheeseTitleBadge,
   CheeseCard,
   CheeseStat,
   CheeseStepLog,
@@ -24,7 +23,6 @@ interface TrappingWaterProps {
   showRain?: boolean;
   showWaterPreview?: boolean;
   showControls?: boolean;
-  title?: string;
   autoPlay?: boolean;
   autoPlayDelay?: number;
   highlightColumn?: number;
@@ -68,7 +66,6 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
   showRain = false,
   showWaterPreview = false,
   showControls = true,
-  title = null,
   autoPlay = false,
   autoPlayDelay = 800,
   highlightColumn,
@@ -261,11 +258,6 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
 
   return (
     <CheeseSlideContainer>
-      {/* Title - using compact mode for Reveal slides */}
-      {title && (
-        <CheeseTitleBadge compact>{title}</CheeseTitleBadge>
-      )}
-      
       <div className="flex gap-4 items-start justify-center">
         {/* Main sprite world visualization */}
         <div className="relative flex-shrink-0">

@@ -307,16 +307,11 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
         parent: containerRef.current!,
         width,
         height,
-        pixelArt: true,
-        antialias: false,
-        roundPixels: true,
         scene: TrappingWaterScene,
         render: {
           pixelArt: true,
-          antialias: false,
-          roundPixels: true,
+          antialias: true,
         },
-        backgroundColor: 0x000000,
       });
     });
 

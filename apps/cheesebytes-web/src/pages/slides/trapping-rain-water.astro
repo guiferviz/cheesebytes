@@ -11,25 +11,6 @@ import {
   description="Two-pointer algorithm visualization with pixel art sprites"
   theme="dark"
 >
-  <!-- Slide 1: Title -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-8">
-      <h1 class="text-5xl font-bold">🎮 Trapping Rain Water</h1>
-      <p class="text-2xl text-amber-300">
-        <strong>Pixel Art Edition</strong>
-      </p>
-      <p class="text-xl text-gray-300 mt-4">
-        A visual guide to the <strong>two-pointer</strong> algorithm
-      </p>
-      <p class="text-lg text-gray-400 mt-8">
-        Press <kbd class="px-2 py-1 bg-gray-700 rounded">→</kbd> or <kbd
-          class="px-2 py-1 bg-gray-700 rounded">Space</kbd
-        > to continue
-      </p>
-    </div>
-  </section>
-
-  <!-- Slide 2: The World -->
   <section>
     <TrappingWater
       client:load
@@ -42,24 +23,28 @@ import {
     />
   </section>
 
-  <!-- Slide 3: Rain Preview -->
   <section>
-    <div class="flex flex-col items-center justify-center h-full gap-4">
-      <h2 class="text-3xl font-bold mb-2">When It Rains...</h2>
-      <TrappingWater
-        client:load
-        title="💧 Water fills the gaps!"
-        heights={DEFAULT_HEIGHTS}
-        showAlgorithm={false}
-        showWaterPreview={true}
-        showControls={false}
-        showRain={true}
-        scale={0.375}
-      />
-      <p class="text-xl text-gray-300 mt-4 fragment">
-        Water <span class="text-blue-400">fills</span> the spaces between blocks
-      </p>
-    </div>
+    <TrappingWater
+      client:load
+      heights={DEFAULT_HEIGHTS}
+      showAlgorithm={false}
+      showWaterPreview={false}
+      showControls={false}
+      showRain={true}
+      scale={0.375}
+    />
+  </section>
+
+  <section>
+    <TrappingWater
+      client:load
+      heights={DEFAULT_HEIGHTS}
+      showAlgorithm={false}
+      showWaterPreview={true}
+      showControls={false}
+      showRain={true}
+      scale={0.375}
+    />
   </section>
 
   <!-- Slide 4: The Challenge -->
@@ -92,7 +77,6 @@ import {
       </p>
       <TrappingWater
         client:load
-        title="Two-Pointer Algorithm"
         heights={DEFAULT_HEIGHTS}
         showAlgorithm={true}
         showWaterPreview={false}
@@ -144,7 +128,6 @@ import {
       <h2 class="text-3xl font-bold mb-2">🕹️ Try It Yourself!</h2>
       <TrappingWater
         client:load
-        title="Interactive Demo"
         heights={DEFAULT_HEIGHTS}
         showAlgorithm={true}
         showWaterPreview={false}
@@ -165,7 +148,6 @@ import {
       <h2 class="text-3xl font-bold mb-2">🎬 Watch It Run</h2>
       <TrappingWater
         client:load
-        title="Auto-play Mode"
         heights={DEFAULT_HEIGHTS}
         showAlgorithm={true}
         showWaterPreview={false}
@@ -183,7 +165,6 @@ import {
       <h2 class="text-3xl font-bold mb-2">🗻 Different Terrain</h2>
       <TrappingWater
         client:load
-        title="A Taller World"
         heights={[3, 0, 2, 0, 4, 0, 1, 0, 3, 0, 2]}
         showAlgorithm={true}
         showWaterPreview={false}
@@ -196,8 +177,7 @@ import {
 
   <!-- Slide 10: Code -->
   <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-3xl font-bold">💻 The Code</h2>
+    <div class="flex flex-col h-full gap-6">
       <pre
         class="text-lg bg-gray-900 p-6 rounded-xl shadow-xl"><code class="language-python">{`def trap(height):
     if not height:
