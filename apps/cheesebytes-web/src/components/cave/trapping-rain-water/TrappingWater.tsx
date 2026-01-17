@@ -23,6 +23,7 @@ interface TrappingWaterProps {
   showRain?: boolean;
   showWaterPreview?: boolean;
   showControls?: boolean;
+  showHeightEditor?: boolean;
   autoPlay?: boolean;
   autoPlayDelay?: number;
   highlightColumn?: number;
@@ -63,11 +64,12 @@ function calculateWater(heights: number[]): number[] {
 // ===========================================
 
 export const TrappingWater: React.FC<TrappingWaterProps> = ({
-  heights = DEFAULT_HEIGHTS,
+  heights: initialHeights = DEFAULT_HEIGHTS,
   showAlgorithm = false,
   showRain = false,
   showWaterPreview = false,
   showControls = true,
+  showHeightEditor = false,
   autoPlay = false,
   autoPlayDelay = 800,
   highlightColumn,
@@ -76,6 +78,10 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
   height = 400,
   scale = 0.4,
 }) => {
+  // State for editable heights
+  const [heights, setHeights] = useState(initialHeights);
+  const [heightInput, setHeightInput] = useState(initialHeights.join(', '));
+  
   // State for algorithm animation
   const [pointerState, setPointerState] = useState<PointerState>({
     left: 0,
@@ -215,6 +221,35 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
     }
   }, [heights]);
 
+  // Handle height input change
+  const handleHeightInputChange = useCallback((value: string) => {
+    setHeightInput(value);
+    
+    // Parse the input
+    const parsed = value
+      .split(/[,\s]+/)
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n) && n >= 0 && n <= 10);
+    
+    if (parsed.length > 0) {
+      setHeights(parsed);
+      // Reset the algorithm state with new heights
+      setPointerState({
+        left: 0,
+        right: parsed.length - 1,
+        leftMax: parsed[0] || 0,
+        rightMax: parsed[parsed.length - 1] || 0,
+        waterTotal: 0,
+        waterPerColumn: new Array(parsed.length).fill(0),
+        activeSide: null,
+      });
+      setStepLogs([]);
+      setCurrentStep(0);
+      setIsComplete(false);
+      setIsPlaying(false);
+    }
+  }, []);
+
   // Auto-play effect
   useEffect(() => {
     if ((isPlaying || autoPlay) && !isComplete && showAlgorithm) {
@@ -255,13 +290,28 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
           <div className="text-sky-600">Loading Phaser...</div>
         </div>
       }>
-        <PhaserWorld {...worldProps} />
+        <PhaserWorld key={heights.join('-')} {...worldProps} />
       </Suspense>
     );
   };
 
   return (
     <CheeseSlideContainer>
+      {/* Height editor */}
+      {showHeightEditor && (
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <label className="text-sm font-medium text-gray-300">heights =</label>
+          <input
+            type="text"
+            value={heightInput}
+            onChange={(e) => handleHeightInputChange(e.target.value)}
+            className="font-mono text-sm bg-gray-800 text-amber-300 border border-gray-600 rounded-lg px-3 py-2 w-80 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+            placeholder="0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1"
+          />
+          <span className="text-xs text-gray-500">(0-10)</span>
+        </div>
+      )}
+      
       <div className="flex gap-4 items-start justify-center">
         {/* Main sprite world visualization */}
         <div className="relative flex-shrink-0">
