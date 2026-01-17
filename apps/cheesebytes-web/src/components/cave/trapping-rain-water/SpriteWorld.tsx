@@ -3,8 +3,15 @@ import {
   SPRITES, 
   SPRITE_SIZE, 
   DEFAULT_SPRITE_SHEET,
-  type SpriteKey,
+  WATER_SURFACE_FRAMES,
+  SPRITE_SHEET_COLS
 } from './sprites';
+
+const getSpriteCoords = (index: number) => {
+  const col = index % SPRITE_SHEET_COLS;
+  const row = Math.floor(index / SPRITE_SHEET_COLS);
+  return [col, row] as const;
+};
 
 // ===========================================
 // TYPES
@@ -185,9 +192,8 @@ export const SpriteWorld: React.FC<SpriteWorldProps> = ({
           const isTop = row === h - 1;
 
           if (spriteLoaded && spriteImgRef.current) {
-            // Use sprite
-            const spriteKey: SpriteKey = isTop ? 'DIRT_GRASS_TOP' : 'DIRT';
-            const [sx, sy] = SPRITES[spriteKey];
+            // Use BLOCK_BROWN for terrain
+            const [sx, sy] = getSpriteCoords(SPRITES.BLOCK_BROWN);
             ctx.drawImage(
               spriteImgRef.current,
               sx * SPRITE_SIZE, sy * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
@@ -213,9 +219,16 @@ export const SpriteWorld: React.FC<SpriteWorldProps> = ({
           const isTop = row === waterHeight - 1;
 
           if (spriteLoaded && spriteImgRef.current) {
-            const spriteKey: SpriteKey = isTop ? 'WATER_SURFACE' : 'WATER_FULL';
-            const [sx, sy] = SPRITES[spriteKey];
-            ctx.globalAlpha = 0.8;
+            // For surface water, use animated frames
+            let spriteIndex: number;
+            if (isTop) {
+              const frameIndex = Math.floor(frameRef.current / 30) % WATER_SURFACE_FRAMES.length;
+              spriteIndex = WATER_SURFACE_FRAMES[frameIndex];
+            } else {
+              spriteIndex = SPRITES.WATER_FULL;
+            }
+            const [sx, sy] = getSpriteCoords(spriteIndex);
+            ctx.globalAlpha = 0.85;
             ctx.drawImage(
               spriteImgRef.current,
               sx * SPRITE_SIZE, sy * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
@@ -266,7 +279,9 @@ export const SpriteWorld: React.FC<SpriteWorldProps> = ({
 
       frameRef.current++;
 
-      if (showRain) {
+      // Animate if there's rain OR if there's water (for surface animation)
+      const hasWater = waterLevels.some(w => w > 0);
+      if (showRain || hasWater) {
         animFrameRef.current = requestAnimationFrame(drawFrame);
       }
     };

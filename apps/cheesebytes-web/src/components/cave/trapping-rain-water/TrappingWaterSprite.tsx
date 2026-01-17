@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import type { PointerState, StepLog } from './types';
 import { DEFAULT_HEIGHTS } from './types';
-import { SpriteWorld } from './SpriteWorld';
 import { 
   CheeseSlideContainer, 
   CheeseControlBar, 
@@ -11,6 +10,9 @@ import {
   CheeseStepLog,
   CheeseCompletionBadge,
 } from '../shared';
+
+// Lazy load PhaserWorld to avoid SSR issues
+const PhaserWorld = lazy(() => import('./PhaserWorld'));
 
 // ===========================================
 // TYPES
@@ -71,7 +73,7 @@ export const TrappingWaterSprite: React.FC<TrappingWaterSpriteProps> = ({
   autoPlayDelay = 800,
   highlightColumn,
   spriteSheet,
-  scale = 1.5,
+  scale = 0.375,
 }) => {
   // State for algorithm animation
   const [pointerState, setPointerState] = useState<PointerState>({
@@ -231,6 +233,32 @@ export const TrappingWaterSprite: React.FC<TrappingWaterSpriteProps> = ({
     ? previewWater.reduce((a, b) => a + b, 0)
     : pointerState.waterTotal;
 
+  // Render the world using Phaser
+  const renderWorld = () => {
+    const worldProps = {
+      heights,
+      waterLevels: displayWater,
+      spriteSheet,
+      scale,
+      showRain,
+      highlightedColumn: highlightColumn,
+      leftPointer: showAlgorithm ? pointerState.left : undefined,
+      rightPointer: showAlgorithm ? pointerState.right : undefined,
+      width: 800,
+      height: 400,
+    };
+
+    return (
+      <Suspense fallback={
+        <div className="w-[800px] h-[400px] bg-sky-200 rounded-xl flex items-center justify-center">
+          <div className="text-sky-600">Loading Phaser...</div>
+        </div>
+      }>
+        <PhaserWorld {...worldProps} />
+      </Suspense>
+    );
+  };
+
   return (
     <CheeseSlideContainer>
       {/* Title - using compact mode for Reveal slides */}
@@ -241,19 +269,7 @@ export const TrappingWaterSprite: React.FC<TrappingWaterSpriteProps> = ({
       <div className="flex gap-4 items-start justify-center">
         {/* Main sprite world visualization */}
         <div className="relative flex-shrink-0">
-          <SpriteWorld
-            heights={heights}
-            waterLevels={displayWater}
-            spriteSheet={spriteSheet}
-            scale={scale}
-            showRain={showRain}
-            highlightedColumn={highlightColumn}
-            leftPointer={showAlgorithm ? pointerState.left : undefined}
-            rightPointer={showAlgorithm ? pointerState.right : undefined}
-            animationPhase={isComplete ? 'complete' : isPlaying ? 'filling' : 'idle'}
-            width={800}
-            height={400}
-          />
+          {renderWorld()}
           
           {/* Water total overlay */}
           {(showAlgorithm || showWaterPreview) && totalWater > 0 && (
