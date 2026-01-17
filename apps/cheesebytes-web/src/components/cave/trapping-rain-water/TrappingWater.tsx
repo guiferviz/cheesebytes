@@ -1,40 +1,22 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import type { PointerState, StepLog } from './types';
-import { COLORS, DEFAULT_HEIGHTS } from './types';
-import { Background, RainDrops } from './Background';
-import { TerrainColumn } from './TerrainBlocks';
-import { WaterColumn } from './WaterBlocks';
-import { Pointer, MaxMarker } from './Pointers';
+import { DEFAULT_HEIGHTS } from './types';
+import { 
+  CheeseSlideContainer, 
+  CheeseControlBar, 
+  CheeseTitleBadge,
+  CheeseCard,
+  CheeseStat,
+  CheeseStepLog,
+  CheeseCompletionBadge,
+} from '../shared';
 
-// CSS Animations
-const ANIMATION_STYLES = `
-  @keyframes blockGrow {
-    0% { transform: scaleY(0); opacity: 0; }
-    100% { transform: scaleY(1); opacity: 1; }
-  }
-  
-  @keyframes waterFill {
-    0% { transform: scaleY(0); opacity: 0; }
-    60% { transform: scaleY(1.1); opacity: 0.9; }
-    100% { transform: scaleY(1); opacity: 0.85; }
-  }
-  
-  @keyframes rainFall {
-    0% { transform: translateY(0); opacity: 0.6; }
-    100% { transform: translateY(450px); opacity: 0; }
-  }
-  
-  @keyframes highlight {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 0.3; }
-  }
-  
-  @keyframes counterPop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-  }
-`;
+// Lazy load PhaserWorld to avoid SSR issues
+const PhaserWorld = lazy(() => import('./PhaserWorld'));
+
+// ===========================================
+// TYPES
+// ===========================================
 
 interface TrappingWaterProps {
   heights?: number[];
@@ -46,8 +28,8 @@ interface TrappingWaterProps {
   autoPlay?: boolean;
   autoPlayDelay?: number;
   highlightColumn?: number;
-  showMaxMarkers?: boolean;
-  showFormula?: boolean;
+  spriteSheet?: string;
+  scale?: number;
 }
 
 // Calculate trapped water for preview
@@ -76,31 +58,23 @@ function calculateWater(heights: number[]): number[] {
   return water;
 }
 
+// ===========================================
+// MAIN COMPONENT
+// ===========================================
+
 export const TrappingWater: React.FC<TrappingWaterProps> = ({
   heights = DEFAULT_HEIGHTS,
   showAlgorithm = false,
   showRain = false,
   showWaterPreview = false,
   showControls = true,
-  title = 'Trapping Rain Water',
+  title = null,
   autoPlay = false,
   autoPlayDelay = 800,
   highlightColumn,
-  showMaxMarkers = false,
-  showFormula = false,
+  spriteSheet,
+  scale = 0.375,
 }) => {
-  // Layout constants
-  const SVG_WIDTH = 900;
-  const SVG_HEIGHT = 400;
-  const BLOCK_WIDTH = 45;
-  const BLOCK_HEIGHT = 28;
-  const GAP = 8;
-  const BASE_Y = 340;
-  
-  // Calculate starting X to center the terrain
-  const totalWidth = heights.length * (BLOCK_WIDTH + GAP) - GAP;
-  const START_X = (SVG_WIDTH - totalWidth) / 2;
-  
   // State for algorithm animation
   const [pointerState, setPointerState] = useState<PointerState>({
     left: 0,
@@ -116,33 +90,35 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showTerrainAnimation, setShowTerrainAnimation] = useState(true);
   
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Preview water (for showWaterPreview mode)
   const previewWater = showWaterPreview ? calculateWater(heights) : [];
   
-  // Get column X position
-  const getColumnX = (index: number): number => START_X + index * (BLOCK_WIDTH + GAP);
-  const getColumnCenterX = (index: number): number => getColumnX(index) + BLOCK_WIDTH / 2;
-  
+  // Get current water levels to display
+  const displayWater = showWaterPreview 
+    ? previewWater 
+    : showAlgorithm 
+      ? pointerState.waterPerColumn 
+      : new Array(heights.length).fill(0);
+
   // Execute one step of the two-pointer algorithm
   const executeStep = useCallback(() => {
-    if (isComplete) return;
-    
     setPointerState(prev => {
-      const { left, right, leftMax, rightMax, waterPerColumn, waterTotal } = prev;
-      
-      if (left >= right) {
-        setIsComplete(true);
-        setStepLogs(logs => [...logs, {
-          step: currentStep + 1,
-          description: '✓ Done! Pointers met.',
-        }]);
+      if (prev.left >= prev.right) {
+        // Already complete - schedule completion side effects
+        setTimeout(() => {
+          setIsComplete(true);
+          setStepLogs(logs => [...logs, {
+            step: currentStep + 1,
+            description: '✓ Done! Pointers met.',
+          }]);
+        }, 0);
         return prev;
       }
       
+      const { left, right, leftMax, rightMax, waterPerColumn, waterTotal } = prev;
       const newState = { ...prev, waterPerColumn: [...waterPerColumn] };
       
       if (leftMax <= rightMax) {
@@ -153,19 +129,23 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
         const newHeight = heights[newState.left];
         if (newHeight >= leftMax) {
           newState.leftMax = newHeight;
-          setStepLogs(logs => [...logs, {
-            step: currentStep + 1,
-            description: `L→${newState.left}: New leftMax = ${newHeight}`,
-          }]);
+          setTimeout(() => {
+            setStepLogs(logs => [...logs, {
+              step: currentStep + 1,
+              description: `L→${newState.left}: New leftMax = ${newHeight}`,
+            }]);
+          }, 0);
         } else {
           const water = leftMax - newHeight;
           newState.waterPerColumn[newState.left] = water;
           newState.waterTotal = waterTotal + water;
-          setStepLogs(logs => [...logs, {
-            step: currentStep + 1,
-            description: `L→${newState.left}: Water = ${leftMax} - ${newHeight} = ${water}`,
-            waterAdded: water,
-          }]);
+          setTimeout(() => {
+            setStepLogs(logs => [...logs, {
+              step: currentStep + 1,
+              description: `L→${newState.left}: +${water} water`,
+              waterAdded: water,
+            }]);
+          }, 0);
         }
       } else {
         // Process right side
@@ -175,28 +155,45 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
         const newHeight = heights[newState.right];
         if (newHeight >= rightMax) {
           newState.rightMax = newHeight;
-          setStepLogs(logs => [...logs, {
-            step: currentStep + 1,
-            description: `R→${newState.right}: New rightMax = ${newHeight}`,
-          }]);
+          setTimeout(() => {
+            setStepLogs(logs => [...logs, {
+              step: currentStep + 1,
+              description: `R→${newState.right}: New rightMax = ${newHeight}`,
+            }]);
+          }, 0);
         } else {
           const water = rightMax - newHeight;
           newState.waterPerColumn[newState.right] = water;
           newState.waterTotal = waterTotal + water;
-          setStepLogs(logs => [...logs, {
-            step: currentStep + 1,
-            description: `R→${newState.right}: Water = ${rightMax} - ${newHeight} = ${water}`,
-            waterAdded: water,
-          }]);
+          setTimeout(() => {
+            setStepLogs(logs => [...logs, {
+              step: currentStep + 1,
+              description: `R→${newState.right}: +${water} water`,
+              waterAdded: water,
+            }]);
+          }, 0);
         }
       }
       
+      // Check if this step completes the algorithm
+      if (newState.left >= newState.right) {
+        setTimeout(() => {
+          setIsComplete(true);
+          setStepLogs(logs => [...logs, {
+            step: currentStep + 2,
+            description: '✓ Complete! Pointers met.',
+          }]);
+        }, 0);
+      }
+      
+      setTimeout(() => {
+        setCurrentStep(s => s + 1);
+      }, 0);
+      
       return newState;
     });
-    
-    setCurrentStep(s => s + 1);
-  }, [heights, currentStep, isComplete]);
-  
+  }, [heights, currentStep]);
+
   // Reset
   const reset = useCallback(() => {
     setPointerState({
@@ -216,7 +213,7 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
       clearTimeout(autoPlayTimerRef.current);
     }
   }, [heights]);
-  
+
   // Auto-play effect
   useEffect(() => {
     if ((isPlaying || autoPlay) && !isComplete && showAlgorithm) {
@@ -230,297 +227,147 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
         }
       };
     }
-  }, [isPlaying, autoPlay, isComplete, showAlgorithm, executeStep, autoPlayDelay]);
-  
-  // Disable terrain animation after initial render
-  useEffect(() => {
-    const timer = setTimeout(() => setShowTerrainAnimation(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-  
-  const maxHeight = Math.max(...heights, 1);
-  
-  return (
-    <>
-      <style>{ANIMATION_STYLES}</style>
-      
-      <div className="trapping-water-container flex flex-col items-center gap-4 p-4 select-none">
-        {/* Title */}
-        <div className="bg-blue-100 dark:bg-blue-900/50 px-6 py-2 rounded-full shadow-md">
-          <h2 className="text-lg font-bold text-blue-800 dark:text-blue-200">
-            {title}
-          </h2>
+  }, [isPlaying, autoPlay, isComplete, showAlgorithm, executeStep, autoPlayDelay, currentStep]);
+
+  const totalWater = showWaterPreview 
+    ? previewWater.reduce((a, b) => a + b, 0)
+    : pointerState.waterTotal;
+
+  // Render the world using Phaser
+  const renderWorld = () => {
+    const worldProps = {
+      heights,
+      waterLevels: displayWater,
+      spriteSheet,
+      scale,
+      showRain,
+      highlightedColumn: highlightColumn,
+      leftPointer: showAlgorithm ? pointerState.left : undefined,
+      rightPointer: showAlgorithm ? pointerState.right : undefined,
+      width: 800,
+      height: 400,
+    };
+
+    return (
+      <Suspense fallback={
+        <div className="w-[800px] h-[400px] bg-sky-200 rounded-xl flex items-center justify-center">
+          <div className="text-sky-600">Loading Phaser...</div>
         </div>
-        
-        <div className="flex gap-6 items-start">
-          {/* Main SVG visualization */}
-          <div className="relative">
-            <svg 
-              width={SVG_WIDTH} 
-              height={SVG_HEIGHT} 
-              viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-              className="rounded-xl shadow-lg overflow-visible"
-            >
-              {/* Background */}
-              <Background 
-                width={SVG_WIDTH} 
-                height={SVG_HEIGHT}
-                showMountains={true}
-              />
-              
-              {/* Rain effect */}
-              <RainDrops
-                width={SVG_WIDTH}
-                height={SVG_HEIGHT}
-                isAnimating={showRain}
-              />
-              
-              {/* Terrain columns */}
-              {heights.map((h, i) => (
-                <TerrainColumn
-                  key={`terrain-${i}`}
-                  x={getColumnX(i)}
-                  baseY={BASE_Y}
-                  blockWidth={BLOCK_WIDTH}
-                  blockHeight={BLOCK_HEIGHT}
-                  stackHeight={h}
-                  isAnimating={showTerrainAnimation}
-                  delay={i * 60}
-                />
-              ))}
-              
-              {/* Water columns (preview or algorithm) */}
-              {(showWaterPreview ? previewWater : pointerState.waterPerColumn).map((w, i) => (
-                <WaterColumn
-                  key={`water-${i}`}
-                  x={getColumnX(i)}
-                  baseY={BASE_Y}
-                  blockWidth={BLOCK_WIDTH}
-                  blockHeight={BLOCK_HEIGHT}
-                  waterUnits={w}
-                  terrainHeight={heights[i]}
-                  isAnimating={!showWaterPreview}
-                  delay={showWaterPreview ? i * 50 : 0}
-                />
-              ))}
-              
-              {/* Highlight column */}
-              {highlightColumn !== undefined && (
-                <rect
-                  x={getColumnX(highlightColumn) - 4}
-                  y={BASE_Y - maxHeight * BLOCK_HEIGHT - 40}
-                  width={BLOCK_WIDTH + 8}
-                  height={maxHeight * BLOCK_HEIGHT + 50}
-                  fill="#fbbf24"
-                  opacity={0.2}
-                  rx={4}
-                  style={{ animation: 'highlight 1s ease-in-out infinite' }}
-                />
-              )}
-              
-              {/* Algorithm pointers */}
-              {showAlgorithm && (
-                <>
-                  <Pointer
-                    x={getColumnCenterX(pointerState.left)}
-                    y={BASE_Y - heights[pointerState.left] * BLOCK_HEIGHT - 30}
-                    side="L"
-                    isActive={pointerState.activeSide === 'L'}
-                  />
-                  <Pointer
-                    x={getColumnCenterX(pointerState.right)}
-                    y={BASE_Y - heights[pointerState.right] * BLOCK_HEIGHT - 30}
-                    side="R"
-                    isActive={pointerState.activeSide === 'R'}
-                  />
-                </>
-              )}
-              
-              {/* Max markers */}
-              {showMaxMarkers && showAlgorithm && (
-                <>
-                  <MaxMarker
-                    x={getColumnCenterX(pointerState.left)}
-                    baseY={BASE_Y}
-                    blockHeight={BLOCK_HEIGHT}
-                    maxValue={pointerState.leftMax}
-                    side="L"
-                    isActive={pointerState.activeSide === 'L'}
-                    columnWidth={BLOCK_WIDTH}
-                  />
-                  <MaxMarker
-                    x={getColumnCenterX(pointerState.right)}
-                    baseY={BASE_Y}
-                    blockHeight={BLOCK_HEIGHT}
-                    maxValue={pointerState.rightMax}
-                    side="R"
-                    isActive={pointerState.activeSide === 'R'}
-                    columnWidth={BLOCK_WIDTH}
-                  />
-                </>
-              )}
-              
-              {/* Column indices */}
-              {heights.map((_, i) => (
-                <text
-                  key={`idx-${i}`}
-                  x={getColumnCenterX(i)}
-                  y={BASE_Y + 20}
-                  textAnchor="middle"
-                  fontSize={11}
-                  fontFamily="monospace"
-                  fill="#78716c"
-                >
-                  {i}
-                </text>
-              ))}
-              
-              {/* Formula overlay */}
-              {showFormula && highlightColumn !== undefined && (
-                <g transform={`translate(${SVG_WIDTH / 2}, 40)`}>
-                  <rect
-                    x={-200}
-                    y={-20}
-                    width={400}
-                    height={45}
-                    rx={8}
-                    fill="white"
-                    opacity={0.95}
-                    stroke="#e5e7eb"
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={0}
-                    y={8}
-                    textAnchor="middle"
-                    fontSize={16}
-                    fontFamily="monospace"
-                    fill="#374151"
-                  >
-                    water = min(leftMax, rightMax) - height
-                  </text>
-                </g>
-              )}
-            </svg>
-            
-            {/* Water total overlay */}
-            {showAlgorithm && (
-              <div 
-                className="absolute top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg"
-                style={{
-                  animation: pointerState.waterTotal > 0 ? 'counterPop 0.3s ease-out' : undefined,
-                }}
-              >
-                <div className="text-xs opacity-80">Total Water</div>
-                <div className="text-2xl font-bold tabular-nums">
-                  {pointerState.waterTotal}
-                </div>
-              </div>
-            )}
-            
-            {/* Preview total */}
-            {showWaterPreview && (
-              <div className="absolute top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
-                <div className="text-xs opacity-80">Total Water</div>
-                <div className="text-2xl font-bold tabular-nums">
-                  {previewWater.reduce((a, b) => a + b, 0)}
-                </div>
-              </div>
-            )}
-          </div>
+      }>
+        <PhaserWorld {...worldProps} />
+      </Suspense>
+    );
+  };
+
+  return (
+    <CheeseSlideContainer>
+      {/* Title - using compact mode for Reveal slides */}
+      {title && (
+        <CheeseTitleBadge compact>{title}</CheeseTitleBadge>
+      )}
+      
+      <div className="flex gap-4 items-start justify-center">
+        {/* Main sprite world visualization */}
+        <div className="relative flex-shrink-0">
+          {renderWorld()}
           
-          {/* Side panel for algorithm */}
-          {showAlgorithm && (
-            <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-4 shadow-lg backdrop-blur-sm min-w-[200px] max-h-[380px] overflow-y-auto">
-              <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3 uppercase tracking-wide">
-                Algorithm State
-              </h3>
-              
-              {/* Pointers */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className={`p-2 rounded ${pointerState.activeSide === 'L' ? 'bg-green-100 dark:bg-green-900/30' : ''}`}>
-                  <div className="text-xs text-gray-500">L</div>
-                  <div className="text-xl font-bold text-green-600">{pointerState.left}</div>
-                </div>
-                <div className={`p-2 rounded ${pointerState.activeSide === 'R' ? 'bg-amber-100 dark:bg-amber-900/30' : ''}`}>
-                  <div className="text-xs text-gray-500">R</div>
-                  <div className="text-xl font-bold text-amber-600">{pointerState.right}</div>
-                </div>
-              </div>
-              
-              {/* Max values */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className={`p-2 rounded border-l-4 ${pointerState.activeSide === 'L' ? 'border-green-500' : 'border-gray-300'}`}>
-                  <div className="text-xs text-gray-500">leftMax</div>
-                  <div className="text-lg font-bold">{pointerState.leftMax}</div>
-                </div>
-                <div className={`p-2 rounded border-l-4 ${pointerState.activeSide === 'R' ? 'border-amber-500' : 'border-gray-300'}`}>
-                  <div className="text-xs text-gray-500">rightMax</div>
-                  <div className="text-lg font-bold">{pointerState.rightMax}</div>
-                </div>
-              </div>
-              
-              {/* Step log */}
-              <div className="border-t pt-3">
-                <div className="text-xs text-gray-500 mb-2">
-                  Step {currentStep} {isComplete && '(Done!)'}
-                </div>
-                <div className="space-y-1 text-xs max-h-[150px] overflow-y-auto">
-                  {stepLogs.slice(-5).map((log, i) => (
-                    <div 
-                      key={i} 
-                      className={`p-1 rounded ${log.waterAdded ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                    >
-                      {log.description}
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {/* Water total overlay */}
+          {(showAlgorithm || showWaterPreview) && totalWater > 0 && (
+            <div className="absolute top-3 right-3 bg-blue-500/90 text-white px-3 py-1.5 rounded-lg shadow-lg backdrop-blur-sm">
+              <div className="text-xs opacity-80">💧 Total Water</div>
+              <div className="text-xl font-bold tabular-nums">{totalWater}</div>
+            </div>
+          )}
+          
+          {/* Completion badge */}
+          {isComplete && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2">
+              <CheeseCompletionBadge message="Level Complete! 🏆" />
             </div>
           )}
         </div>
         
-        {/* Controls */}
-        {showControls && showAlgorithm && (
-          <div className="flex gap-3 mt-2">
-            <button
-              onClick={reset}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
-            >
-              ↺ Reset
-            </button>
-            <button
-              onClick={executeStep}
-              disabled={isComplete || isPlaying}
-              className={`
-                px-6 py-2 rounded-lg font-bold transition-all
-                ${isComplete || isPlaying
-                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg'
-                }
-              `}
-            >
-              {isComplete ? 'Done!' : 'Step →'}
-            </button>
-            <button
-              onClick={() => setIsPlaying(p => !p)}
-              disabled={isComplete}
-              className={`
-                px-4 py-2 rounded-lg font-medium transition-all
-                ${isComplete
-                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
-                  : isPlaying
-                  ? 'bg-red-500 hover:bg-red-600 text-white'
-                  : 'bg-green-500 hover:bg-green-600 text-white'
-                }
-              `}
-            >
-              {isPlaying ? '⏸ Pause' : '▶ Play'}
-            </button>
-          </div>
+        {/* Side panel for algorithm state */}
+        {showAlgorithm && (
+          <CheeseCard className="min-w-[180px] max-h-[380px] overflow-y-auto flex-shrink-0">
+            <h3 className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-wide flex items-center gap-1 !m-0">
+              <span>🎮</span> Game State
+            </h3>
+            
+            {/* Pointers */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <CheeseStat 
+                label="L" 
+                value={pointerState.left}
+                highlight={pointerState.activeSide === 'L'}
+                color="green"
+              />
+              <CheeseStat 
+                label="R" 
+                value={pointerState.right}
+                highlight={pointerState.activeSide === 'R'}
+                color="amber"
+              />
+            </div>
+            
+            {/* Max values */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <CheeseStat 
+                label="leftMax" 
+                value={pointerState.leftMax}
+                highlight={pointerState.activeSide === 'L'}
+                color="green"
+              />
+              <CheeseStat 
+                label="rightMax" 
+                value={pointerState.rightMax}
+                highlight={pointerState.activeSide === 'R'}
+                color="amber"
+              />
+            </div>
+            
+            {/* Step log */}
+            <CheeseStepLog
+              currentStep={currentStep}
+              isComplete={isComplete}
+              logs={stepLogs.slice(-4).map((log, i) => ({
+                key: i,
+                text: log.description,
+                highlight: !!log.waterAdded
+              }))}
+            />
+          </CheeseCard>
         )}
       </div>
-    </>
+      
+      {/* Controls */}
+      {showControls && showAlgorithm && (
+        <CheeseControlBar
+          onReset={reset}
+          onStep={executeStep}
+          onPlayPause={() => setIsPlaying(p => !p)}
+          isPlaying={isPlaying}
+          isComplete={isComplete}
+          stepLabel="Next →"
+        />
+      )}
+      
+      {/* Height labels - hidden to save space */}
+      {/* Height labels - hidden to save space in slides */}
+      {false && (
+        <div className="flex justify-center gap-1 font-mono text-xs text-stone-500">
+          {heights.map((h, i) => (
+            <div 
+              key={i} 
+              className="w-12 text-center"
+              style={{ opacity: highlightColumn === i ? 1 : 0.6 }}
+            >
+              [{h}]
+            </div>
+          ))}
+        </div>
+      )}
+    </CheeseSlideContainer>
   );
 };
 

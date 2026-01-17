@@ -19,17 +19,19 @@ interface SceneData {
   scene: any;
   leftPointerContainer: any;
   rightPointerContainer: any;
-  waterSprites: any[];
+  waterSprites: Map<string, any>; // key: "col-row"
   startX: number;
   groundY: number;
   scaledSize: number;
+  numColumns: number;
+  heights: number[];
 }
 
 export const PhaserWorld: React.FC<PhaserWorldProps> = ({
   heights,
   waterLevels,
   spriteSheet = DEFAULT_SPRITE_SHEET,
-  scale = 0.375, // 128 * 0.375 = 48px (integer to avoid gaps)
+  scale = 0.375,
   showRain = false,
   highlightedColumn,
   leftPointer,
@@ -41,19 +43,31 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
   const gameRef = useRef<any>(null);
   const sceneDataRef = useRef<SceneData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Store current values in refs so we can access them without triggering re-renders
+  const heightsRef = useRef(heights);
+  const waterLevelsRef = useRef(waterLevels);
+  const leftPointerRef = useRef(leftPointer);
+  const rightPointerRef = useRef(rightPointer);
+  
+  // Keep refs updated
+  heightsRef.current = heights;
+  waterLevelsRef.current = waterLevels;
+  leftPointerRef.current = leftPointer;
+  rightPointerRef.current = rightPointer;
 
-  // Create Phaser game once
+  // Create Phaser game ONCE - use refs to access dynamic values
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
     
-    // Dynamic import to avoid SSR issues
     import('phaser').then((Phaser) => {
       const scaledSize = SPRITE_SIZE * scale;
+      const currentHeights = heightsRef.current;
 
       class TrappingWaterScene extends Phaser.Scene {
         leftPointerContainer: any = null;
         rightPointerContainer: any = null;
-        waterSprites: any[] = [];
+        waterSprites: Map<string, any> = new Map(); // key: "col-row"
 
         constructor() {
           super({ key: 'TrappingWaterScene' });
@@ -67,59 +81,61 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
         }
 
         create() {
-          const numColumns = heights.length;
+          const numColumns = currentHeights.length;
           const totalWidth = numColumns * scaledSize;
           const startX = (width - totalWidth) / 2;
           const groundY = height - scaledSize * 2;
 
-          // Background
-          this.createBackground(groundY);
-          
           // Ground
           this.createGround(startX, groundY, numColumns);
           
-          // Terrain
-          this.createTerrain(startX, groundY);
+          // Terrain (static - doesn't change)
+          this.createTerrain(startX, groundY, currentHeights);
           
-          // Water animation
-          const waterFrame1 = WATER_SURFACE_FRAMES[0];
-          const waterFrame2 = WATER_SURFACE_FRAMES[1];
+          // Water animation definition (Phaser handles sync automatically)
           if (!this.anims.exists('water-surface')) {
             this.anims.create({
               key: 'water-surface',
               frames: [
-                { key: 'tiles', frame: waterFrame1 },
-                { key: 'tiles', frame: waterFrame2 },
+                { key: 'tiles', frame: WATER_SURFACE_FRAMES[0] },
+                { key: 'tiles', frame: WATER_SURFACE_FRAMES[1] },
               ],
               frameRate: 2,
               repeat: -1,
             });
           }
           
-          // Water
-          this.createWater(startX, groundY);
+          // Pre-create ALL possible water sprites (invisible) so animations stay synced
+          const maxWaterHeight = 15; // Safe upper bound
+          this.preCreateWaterSprites(startX, groundY, currentHeights, maxWaterHeight);
+          
+          // Set initial water visibility
+          this.updateWater(waterLevelsRef.current);
 
           // Rain
           if (showRain) {
             this.createRain();
           }
           
-          // Create pointer containers (always create them, just set visibility)
+          // Create pointer containers
           const pointerY = groundY + scaledSize + 25;
           this.leftPointerContainer = this.createPointerContainer(0, pointerY, 'L', 0x22C55E);
           this.rightPointerContainer = this.createPointerContainer(0, pointerY, 'R', 0xF59E0B);
           
           // Position pointers initially
-          if (leftPointer !== undefined) {
-            const x = startX + leftPointer * scaledSize + scaledSize / 2;
+          const lp = leftPointerRef.current;
+          const rp = rightPointerRef.current;
+          
+          if (lp !== undefined) {
+            const x = startX + lp * scaledSize + scaledSize / 2;
             this.leftPointerContainer.setPosition(x, pointerY);
             this.leftPointerContainer.setVisible(true);
           } else {
             this.leftPointerContainer.setVisible(false);
           }
           
-          if (rightPointer !== undefined) {
-            const x = startX + rightPointer * scaledSize + scaledSize / 2;
+          if (rp !== undefined) {
+            const x = startX + rp * scaledSize + scaledSize / 2;
             this.rightPointerContainer.setPosition(x, pointerY);
             this.rightPointerContainer.setVisible(true);
           } else {
@@ -135,12 +151,11 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
             startX,
             groundY,
             scaledSize,
+            numColumns,
+            heights: currentHeights,
           };
           
           setIsLoading(false);
-        }
-
-        createBackground(groundY: number) {
         }
 
         createRain() {
@@ -179,13 +194,13 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
           }
         }
 
-        createTerrain(startX: number, groundY: number) {
+        createTerrain(startX: number, groundY: number, h: number[]) {
           const blockFrame = SPRITES.BLOCK_BROWN;
           
-          for (let col = 0; col < heights.length; col++) {
-            const h = heights[col];
+          for (let col = 0; col < h.length; col++) {
+            const colHeight = h[col];
             const x = startX + col * scaledSize + scaledSize / 2;
-            for (let row = 0; row < h; row++) {
+            for (let row = 0; row < colHeight; row++) {
               const y = groundY - (row + 1) * scaledSize + scaledSize / 2;
               const sprite = this.add.sprite(x, y, 'tiles', blockFrame);
               sprite.setScale(scale);
@@ -193,25 +208,69 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
           }
         }
 
-        createWater(startX: number, groundY: number) {
+        preCreateWaterSprites(startX: number, groundY: number, h: number[], maxWaterHeight: number) {
           const waterFullFrame = SPRITES.WATER_FULL;
-          const waterSurfaceFrame = SPRITES.WATER_SURFACE_1;
           
-          for (let col = 0; col < heights.length; col++) {
-            const waterHeight = waterLevels[col];
-            if (waterHeight <= 0) continue;
-            
-            const terrainHeight = heights[col];
+          for (let col = 0; col < h.length; col++) {
+            const terrainHeight = h[col];
             const x = startX + col * scaledSize + scaledSize / 2;
             
-            for (let row = 0; row < waterHeight; row++) {
+            for (let row = 0; row < maxWaterHeight; row++) {
+              const key = `${col}-${row}`;
               const y = groundY - (terrainHeight + row + 1) * scaledSize + scaledSize / 2;
-              const isTop = row === waterHeight - 1;
-              const sprite = this.add.sprite(x, y, 'tiles', isTop ? waterSurfaceFrame : waterFullFrame);
+              
+              // Create sprite invisible with animation already playing
+              const sprite = this.add.sprite(x, y, 'tiles', waterFullFrame);
               sprite.setScale(scale);
-              sprite.setAlpha(0.85);
-              if (isTop) sprite.play('water-surface');
-              this.waterSprites.push(sprite);
+              sprite.setAlpha(0); // Start invisible
+              sprite.play('water-surface'); // Start animation NOW - all sprites sync from this moment
+              sprite.setData('row', row);
+              
+              this.waterSprites.set(key, sprite);
+            }
+          }
+        }
+
+        updateWater(wl: number[]) {
+          const waterFullFrame = SPRITES.WATER_FULL;
+          
+          for (let col = 0; col < wl.length; col++) {
+            const waterHeight = wl[col];
+            
+            // Update visibility and frame for each pre-created sprite
+            for (let row = 0; row < 15; row++) {
+              const key = `${col}-${row}`;
+              const sprite = this.waterSprites.get(key);
+              if (!sprite) continue;
+              
+              const shouldBeVisible = row < waterHeight;
+              const isTop = row === waterHeight - 1;
+              const targetAlpha = shouldBeVisible ? 0.85 : 0;
+              const currentAlpha = sprite.alpha;
+              
+              // Only tween if alpha needs to change significantly
+              if (Math.abs(currentAlpha - targetAlpha) > 0.01) {
+                this.tweens.add({
+                  targets: sprite,
+                  alpha: targetAlpha,
+                  duration: 150,
+                  ease: 'Power1'
+                });
+              }
+              
+              // Update frame: surface tiles animate, full tiles are static
+              if (shouldBeVisible) {
+                if (isTop) {
+                  // Surface: let animation play (it's already running)
+                  if (!sprite.anims.isPlaying) {
+                    sprite.play('water-surface');
+                  }
+                } else {
+                  // Full water: stop animation, show static frame
+                  sprite.stop();
+                  sprite.setFrame(waterFullFrame);
+                }
+              }
             }
           }
         }
@@ -257,6 +316,7 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
           antialias: false,
           roundPixels: true,
         },
+        backgroundColor: 0x000000,
       });
     });
 
@@ -265,7 +325,7 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
       gameRef.current = null;
       sceneDataRef.current = null;
     };
-  }, [heights, waterLevels, scale, showRain, spriteSheet, width, height]); // Note: pointers NOT in deps
+  }, [scale, showRain, spriteSheet, width, height]); // NO heights/waterLevels/pointers here!
 
   // Update pointer positions with tween animation
   useEffect(() => {
@@ -305,6 +365,19 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
       rightPointerContainer.setVisible(false);
     }
   }, [leftPointer, rightPointer]);
+
+  // Update water levels dynamically
+  useEffect(() => {
+    const data = sceneDataRef.current;
+    if (!data || !data.scene) return;
+
+    const { scene } = data;
+    
+    // Call updateWater on the scene (only needs waterLevels now)
+    if (scene.updateWater) {
+      scene.updateWater(waterLevels);
+    }
+  }, [waterLevels]);
 
   return (
     <div ref={containerRef} className="rounded-xl shadow-lg overflow-hidden" style={{ width, height }}>
