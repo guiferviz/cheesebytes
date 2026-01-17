@@ -4,30 +4,52 @@ import {
   Probador,
   GarmentIcon,
   DEFAULT_GARMENT_COLORS,
-} from "../../components/cave/balanced-dressing-room";
+} from "../../components/cave/you-cannot-take-off-a-jacket-you-never-wore";
 ---
 
 <RevealLayout
-  title="The Balanced Dressing Room"
-  description="Why parentheses need a stack, not a counter"
+  title="You Can't Take Off a Jacket You Never Wore"
+  description="Solving balanced parentheses with a dressing room metaphor"
   theme="dark"
 >
-  <!-- Slide 1: Title -->
   <section>
     <div class="flex flex-col items-center justify-center h-full gap-8">
-      <h1 class="text-5xl font-bold">🧥 The Dressing Room</h1>
-      <p class="text-2xl text-gray-300">
-        Why balancing parentheses needs a <strong>stack</strong>
-      </p>
-      <p class="text-lg text-gray-400 mt-8">
-        Press <kbd class="px-2 py-1 bg-gray-700 rounded">→</kbd> or <kbd
-          class="px-2 py-1 bg-gray-700 rounded">Space</kbd
-        > to continue
-      </p>
+      <h2 class="text-4xl font-bold mb-4">Balanced Parentheses</h2>
+      <div class="grid grid-cols-2 gap-16 text-center">
+        <div class="flex flex-col items-center gap-4">
+          <div class="text-6xl">✅</div>
+          <code class="text-4xl tracking-wider">
+            <span class="text-green-400">(</span>
+            <span class="text-blue-400">[</span>
+            <span class="text-purple-400">{`{`}</span>
+            <span class="text-purple-400">{`}`}</span>
+            <span class="text-blue-400">]</span>
+            <span class="text-green-400">)</span>
+          </code>
+          <p class="text-xl text-green-400 font-semibold">Valid</p>
+          <p class="text-gray-400">Each closing matches the last opening</p>
+        </div>
+        <div class="flex flex-col items-center gap-4">
+          <div class="text-6xl">❌</div>
+          <code class="text-4xl tracking-wider">
+            <span class="text-green-400">(</span>
+            <span class="text-blue-400">[</span>
+            <span
+              class="text-green-400 line-through decoration-red-500 decoration-4"
+              >)</span
+            >
+            <span class="text-blue-400">]</span>
+          </code>
+          <p class="text-xl text-red-400 font-semibold">Invalid</p>
+          <p class="text-gray-400">
+            Can't close <span class="text-green-400">(</span> before <span
+              class="text-blue-400">[</span>
+          </p>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- Slide 2: The Rule -->
   <section>
     <div class="flex flex-col items-center justify-center h-full gap-6">
       <h2 class="text-4xl font-bold mb-4">The Dressing Room Rule</h2>

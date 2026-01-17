@@ -187,6 +187,22 @@ const {
       class="reveal prose dark:prose-invert !max-w-none w-full h-full bg-yellow-50 dark:bg-black text-gray-700 dark:text-gray-100"
     >
       <div class="slides">
+        <section>
+          <div class="flex flex-col items-center justify-center h-full gap-8">
+            <h1 class="text-5xl font-bold">
+              {title}
+            </h1>
+            <p class="text-2xl text-gray-300">
+              {description}
+            </p>
+            <p class="text-lg text-gray-400 mt-8">
+              Press <kbd class="px-2 py-1 bg-gray-700 rounded">→</kbd> or <kbd
+                class="px-2 py-1 bg-gray-700 rounded">Space</kbd
+              > to continue
+            </p>
+          </div>
+        </section>
+        <!-- Rest of the slides go here -->
         <slot />
       </div>
     </div>
