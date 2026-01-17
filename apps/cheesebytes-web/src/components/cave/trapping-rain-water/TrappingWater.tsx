@@ -27,6 +27,8 @@ interface TrappingWaterProps {
   autoPlayDelay?: number;
   highlightColumn?: number;
   spriteSheet?: string;
+  width?: number;
+  height?: number;
   scale?: number;
 }
 
@@ -70,7 +72,9 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
   autoPlayDelay = 800,
   highlightColumn,
   spriteSheet,
-  scale = 0.375,
+  width = 800,
+  height = 400,
+  scale = 0.4,
 }) => {
   // State for algorithm animation
   const [pointerState, setPointerState] = useState<PointerState>({
@@ -241,8 +245,8 @@ export const TrappingWater: React.FC<TrappingWaterProps> = ({
       highlightedColumn: highlightColumn,
       leftPointer: showAlgorithm ? pointerState.left : undefined,
       rightPointer: showAlgorithm ? pointerState.right : undefined,
-      width: 800,
-      height: 400,
+      width: width,
+      height: height,
     };
 
     return (
