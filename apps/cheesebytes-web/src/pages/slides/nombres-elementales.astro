@@ -6,6 +6,7 @@ import {
   ElementalNamesSingleChar as ArrayVisualizer,
   ElementalNamesAllPossibilities,
 } from "../../components/cave/nombres-elementales";
+import RevealCode from "../../components/RevealCode";
 ---
 
 <RevealLayout
@@ -150,33 +151,38 @@ import {
       <li>React</li>
     </ul>
   </section>
-  <section class="text-left text-sm">
-    <pre>
-      <code data-trim is:raw class="language-python" data-line-numbers="1-11|13-15|17-18|20-21|23">
-        ELEMENTS = {
-            'H','He',
-            'Li','Be','B','C','N','O','F','Ne',
-            'Na','Mg','Al','Si','P','S','Cl','Ar',
-            'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
-            'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
-            'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
-            'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
-            'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
-            'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Fl','Lv','Ts','Og'
-        }
+  <section id="code-final" class="text-left text-sm">
+    <RevealCode
+      client:only="react"
+      animation="fade"
+      code={`# STEP-0
+ELEMENTS = {
+    'H','He',
+    'Li','Be','B','C','N','O','F','Ne',
+    'Na','Mg','Al','Si','P','S','Cl','Ar',
+    'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+    'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
+    'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
+    'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
+    'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+    'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Fl','Lv','Ts','Og'
+}
 
-        def is_elemental(name: str) -> bool:
-            if name == "":
-                return True
+def is_elemental(name: str) -> bool:
+    # STEP-1
+    if name == "":
+        return True
 
-            if name[:1] in ELEMENTS:
-                return is_elemental(name[1:])
+    # STEP-2
+    if name[:1] in ELEMENTS:
+        return is_elemental(name[1:])
 
-            if len(name) >= 2 and name[:2] in ELEMENTS:
-                return is_elemental(name[2:])
+    # STEP-3
+    if len(name) >= 2 and name[:2] in ELEMENTS:
+        return is_elemental(name[2:])
+    # STEP-0
 
-            return False
-      </code>
-    </pre>
+    return False`}
+    />
   </section>
 </RevealLayout>
