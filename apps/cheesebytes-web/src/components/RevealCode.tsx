@@ -257,7 +257,7 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
   // For fade animation: highlight each block separately
   const blockHighlights = useMemo(() => {
     if (animation !== "fade") return [];
-    
+
     return sortedBlocks.map((block) => {
       try {
         if (language && hljs.getLanguage(language)) {
@@ -312,17 +312,18 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
         <pre style={{ gridArea: "1 / 1", margin: 0, textAlign: "left" }}>
           {animation === "fade" ? (
             <code className={`hljs language-${language}`}>
-              {sortedBlocks.map((block, i) => (
-                visibleIndices.has(block.index) && (
-                  <span
-                    key={`${block.index}-${block.position}`}
-                    className={block.index !== 0 ? "rc-fade-block" : ""}
-                    dangerouslySetInnerHTML={{ 
-                      __html: (i > 0 ? "\n" : "") + blockHighlights[i] 
-                    }}
-                  />
-                )
-              ))}
+              {sortedBlocks.map(
+                (block, i) =>
+                  visibleIndices.has(block.index) && (
+                    <span
+                      key={`${block.index}-${block.position}`}
+                      className={block.index !== 0 ? "rc-fade-block" : ""}
+                      dangerouslySetInnerHTML={{
+                        __html: (i > 0 ? "\n" : "") + blockHighlights[i],
+                      }}
+                    />
+                  )
+              )}
             </code>
           ) : (
             <code
