@@ -254,6 +254,33 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
     }
   }, [sortedBlocks, visibleIndices, typingProgress, animation, language]);
 
+  // For fade animation: highlight each block separately
+  const blockHighlights = useMemo(() => {
+    if (animation !== "fade") return [];
+    
+    return sortedBlocks.map((block) => {
+      try {
+        if (language && hljs.getLanguage(language)) {
+          return hljs.highlight(block.code, { language }).value;
+        }
+        return hljs.highlightAuto(block.code).value;
+      } catch {
+        return block.code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+    });
+  }, [sortedBlocks, animation, language]);
+
+  // CSS for fade animation
+  const fadeStyles = `
+    @keyframes rc-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .rc-fade-block {
+      animation: rc-fade-in 0.5s ease-in-out;
+    }
+  `;
+
   return (
     <div
       ref={containerRef}
@@ -264,6 +291,7 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
         height: "100%",
       }}
     >
+      {animation === "fade" && <style>{fadeStyles}</style>}
       <div style={{ display: "grid" }}>
         {/* Ghost Element to Reserve Space (row 1, col 1) */}
         <pre
@@ -282,10 +310,26 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
 
         {/* Actual Content (row 1, col 1 - overlaps ghost) */}
         <pre style={{ gridArea: "1 / 1", margin: 0, textAlign: "left" }}>
-          <code
-            className={`hljs language-${language}`}
-            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-          />
+          {animation === "fade" ? (
+            <code className={`hljs language-${language}`}>
+              {sortedBlocks.map((block, i) => (
+                visibleIndices.has(block.index) && (
+                  <span
+                    key={`${block.index}-${block.position}`}
+                    className={block.index !== 0 ? "rc-fade-block" : ""}
+                    dangerouslySetInnerHTML={{ 
+                      __html: (i > 0 ? "\n" : "") + blockHighlights[i] 
+                    }}
+                  />
+                )
+              ))}
+            </code>
+          ) : (
+            <code
+              className={`hljs language-${language}`}
+              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+            />
+          )}
         </pre>
 
         {Array.from({ length: maxIndex }, (_, i) => (
