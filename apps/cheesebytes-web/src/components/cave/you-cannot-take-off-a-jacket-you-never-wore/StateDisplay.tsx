@@ -39,11 +39,6 @@ export const StateDisplay: React.FC<StateDisplayProps> = ({
       >
         {balance ?? stack.length}
       </div>
-      {hasError && (
-        <div className="text-xs text-red-500 mt-1">
-          (doesn't help!)
-        </div>
-      )}
     </div>
   );
 
@@ -112,9 +107,9 @@ export const StateDisplay: React.FC<StateDisplayProps> = ({
 
   return (
     <div className="state-display bg-white/80 dark:bg-gray-800/80 rounded-lg p-4 shadow-lg backdrop-blur-sm min-w-[120px]">
-      <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3 uppercase tracking-wide text-center">
+      <p className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide text-center">
         State
-      </h3>
+      </p>
       
       {(mode === 'counter' || mode === 'both') && renderCounter()}
       

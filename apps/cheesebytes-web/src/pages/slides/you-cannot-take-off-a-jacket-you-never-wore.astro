@@ -3,6 +3,7 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
 import {
   Probador,
   GarmentIcon,
+  ParenthesesCounter,
   DEFAULT_GARMENT_COLORS,
 } from "../../components/cave/you-cannot-take-off-a-jacket-you-never-wore";
 ---
@@ -14,24 +15,18 @@ import {
 >
   <section>
     <div class="flex flex-col items-center justify-center h-full gap-8">
-      <h2 class="text-4xl font-bold mb-4">Balanced Parentheses</h2>
-      <div class="grid grid-cols-2 gap-16 text-center">
-        <div class="flex flex-col items-center gap-4">
-          <div class="text-6xl">✅</div>
-          <code class="text-4xl tracking-wider">
+      <div class="grid grid-rows-2 gap-40 text-center">
+        <div class="grid grid-cols-2 items-center gap-4">
+          <code class="text-6xl tracking-wider">
             <span class="text-green-400">(</span>
             <span class="text-blue-400">[</span>
-            <span class="text-purple-400">{`{`}</span>
-            <span class="text-purple-400">{`}`}</span>
             <span class="text-blue-400">]</span>
             <span class="text-green-400">)</span>
           </code>
-          <p class="text-xl text-green-400 font-semibold">Valid</p>
-          <p class="text-gray-400">Each closing matches the last opening</p>
+          <div class="text-6xl">✅</div>
         </div>
-        <div class="flex flex-col items-center gap-4">
-          <div class="text-6xl">❌</div>
-          <code class="text-4xl tracking-wider">
+        <div class="grid grid-cols-2 items-center gap-4">
+          <code class="text-6xl tracking-wider">
             <span class="text-green-400">(</span>
             <span class="text-blue-400">[</span>
             <span
@@ -40,13 +35,29 @@ import {
             >
             <span class="text-blue-400">]</span>
           </code>
-          <p class="text-xl text-red-400 font-semibold">Invalid</p>
-          <p class="text-gray-400">
-            Can't close <span class="text-green-400">(</span> before <span
-              class="text-blue-400">[</span>
-          </p>
+          <div class="text-6xl">❌</div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <ParenthesesCounter
+        client:load
+        mode="count"
+        title="Count Opening & Closing"
+      />
+    </div>
+  </section>
+
+  <section>
+    <div class="flex flex-col items-center justify-center h-full">
+      <ParenthesesCounter
+        client:load
+        mode="balance"
+        title="Tracking Pending to Close"
+      />
     </div>
   </section>
 
@@ -67,10 +78,10 @@ import {
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
-        title="The Basic Rule"
         actions={[
-          { type: "PUT", garment: "T", color: "#86efac" },
-          { type: "PUT", garment: "T", color: "#fde047" },
+          { type: "PUT", garment: "T" },
+          { type: "PUT", garment: "T" },
+          { type: "TAKE_OFF", garment: "T" },
           { type: "TAKE_OFF", garment: "T" },
         ]}
         displayMode="counter"
@@ -140,7 +151,6 @@ import {
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
-        title="Is this possible?"
         actions={[
           { type: "PUT", garment: "T", color: "#86efac" },
           { type: "PUT", garment: "T", color: "#fde047" },
@@ -215,7 +225,6 @@ import {
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
-        title="Multiple Types - Valid Nesting"
         actions={[
           { type: "PUT", garment: "T" },
           { type: "PUT", garment: "S" },
@@ -261,7 +270,6 @@ import {
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
-        title="Counters look fine... but is it?"
         actions={[
           { type: "PUT", garment: "T" },
           { type: "PUT", garment: "S" },
@@ -306,7 +314,6 @@ import {
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
-        title="Balanced Parentheses = Dressing in Layers"
         actions={[
           { type: "PUT", garment: "T" },
           { type: "PUT", garment: "S" },
@@ -386,18 +393,10 @@ import {
     </div>
   </section>
 
-  <!-- Slide 21: Final message -->
   <section>
-    <div class="flex flex-col items-center justify-center h-full gap-8">
-      <p class="text-3xl text-gray-300">
-        That's why the classic algorithm uses a <strong class="text-amber-400"
-          >stack</strong
-        >
-      </p>
-      <p class="text-2xl text-gray-400 fragment">
-        It's simulating a dressing room!
-      </p>
-      <div class="text-6xl fragment mt-8">🧥</div>
-    </div>
+    <iframe
+      src="https://cheesebytes.com/cave/parentheses-balancing/"
+      width="1080"
+      height="720"></iframe>
   </section>
 </RevealLayout>

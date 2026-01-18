@@ -12,7 +12,6 @@ interface ProbadorProps {
   autoPlay?: boolean;
   autoPlayDelay?: number;
   showParentheses?: boolean;
-  title?: string;
   showControls?: boolean;
   onComplete?: () => void;
   onError?: (step: number) => void;
@@ -85,7 +84,6 @@ export const Probador: React.FC<ProbadorProps> = ({
   autoPlay = false,
   autoPlayDelay = 1500,
   showParentheses = false,
-  title = 'Dressing Room Log: Is this possible?',
   showControls = true,
   onComplete,
   onError,
@@ -240,13 +238,6 @@ export const Probador: React.FC<ProbadorProps> = ({
       <style>{ANIMATION_STYLES}</style>
       
       <div className="probador-container flex flex-col items-center gap-4 p-4 select-none">
-        {/* Title banner */}
-        <div className="bg-amber-100 dark:bg-amber-900/50 px-6 py-2 rounded-full shadow-md">
-          <h2 className="text-lg font-bold text-amber-800 dark:text-amber-200">
-            {title}
-          </h2>
-        </div>
-        
         {/* Main content area */}
         <div className="flex gap-6 items-start justify-center w-full">
           {/* Action Log - Left */}
@@ -261,9 +252,6 @@ export const Probador: React.FC<ProbadorProps> = ({
           <div className="relative">
             {/* Background */}
             <div className="bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 shadow-inner">
-              {/* Mirror effect hint */}
-              <div className="absolute top-4 right-4 w-16 h-24 bg-white/20 rounded-lg border border-white/30" />
-              
               <svg 
                 width="280" 
                 height="350" 

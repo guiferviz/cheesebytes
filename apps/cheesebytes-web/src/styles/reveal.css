@@ -10,6 +10,15 @@
   .reveal [hidden]:not([hidden="until-found"]) {
     display: block !important;
   }
+  
+  /* 
+   * Remove the backticks that Tailwind Typography adds to inline code.
+   * Without this, <code> elements show visible ` characters before and after.
+   */
+  .reveal code::before,
+  .reveal code::after {
+    content: none !important;
+  }
 }
 
 /* 

@@ -29,9 +29,9 @@ export const ActionLog: React.FC<ActionLogProps> = ({
 
   return (
     <div className="action-log bg-white/80 dark:bg-gray-800/80 rounded-lg p-4 shadow-lg backdrop-blur-sm min-w-[180px]">
-      <h3 className="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3 uppercase tracking-wide">
+      <p className="text-sm font-bold text-gray-600 dark:text-gray-300 m-3 uppercase tracking-wide">
         Action Log
-      </h3>
+      </p>
       <div className="space-y-1.5">
         {actions.map((action, index) => {
           const isCurrentStep = index === currentStep;
