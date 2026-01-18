@@ -79,8 +79,10 @@ const {
           //scrollProgress: true,
           plugins: [RevealHighlight],
           keyboard: {
-            // 80 es la tecla 'p'/'P' y queremos evitar que se vaya a la "previous" slide.
-            80: null,
+            // 80 es la tecla 'p'/'P'. Usamos Reveal para manejarlo y evitar conflictos con inputs.
+            80: function() {
+              window.dispatchEvent(new CustomEvent("toggle-drawing"));
+            },
             // '84' es el keyCode de 't'/'T'
             // Cambiar entre el modo claro y oscuro.
             84: function () {
@@ -183,8 +185,8 @@ const {
     </style>
   </head>
   <body>
-    <!-- Drawing overlay for annotations (cursor disabled because we use custom cheese cursor) -->
-    <DrawingOverlay client:load disableCursorStyles={true} />
+    <!-- Drawing overlay currently controlled via Reveal keys (P) emitting 'toggle-drawing' event -->
+    <DrawingOverlay client:load disableCursorStyles={true} enableKeyboardShortcut={false} />
     <!-- SVG image for the custom cursor, loaded from a URL.
         The CSS cursor property is not used because it does not work well in Chrome.
         It works in Safari, but the image quality is very low. -->
