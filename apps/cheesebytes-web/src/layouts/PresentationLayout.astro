@@ -32,6 +32,7 @@ const {
       src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/reveal.min.js"
     ></script>
     <link
+      id="highlight-theme"
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/atom-one-dark.min.css"
     />
@@ -41,6 +42,16 @@ const {
     ></script>
     <script is:inline>
       window.addEventListener("DOMContentLoaded", function () {
+        const syncHighlightTheme = () => {
+          const themeLink = document.getElementById("highlight-theme");
+          if (themeLink) {
+            const isDark = document.documentElement.classList.contains("dark");
+            const theme = isDark ? "atom-one-dark" : "atom-one-light";
+            themeLink.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${theme}.min.css`;
+          }
+        };
+        syncHighlightTheme();
+
         // Script to move the custom cursor.
         const customCursor = document.getElementById("customCursor");
         // Guardar el scale actual en window
@@ -79,6 +90,7 @@ const {
               } else {
                 html.classList.add("dark");
               }
+              syncHighlightTheme();
             },
             // '67' es el keyCode de 'c'/'C'
             // Cambiar la visibilidad del cursor personalizado.
