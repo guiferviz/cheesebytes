@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 interface ParenthesesCounterProps {
-  mode: "count" | "balance";
+  mode: "count" | "balance" | "multi-count";
   title?: string;
 }
 
@@ -33,6 +33,28 @@ export const ParenthesesCounter: React.FC<ParenthesesCounterProps> = ({
       }
     }
 
+    if (mode === "multi-count") {
+      // Check if any individual counter goes negative
+      let roundBalance = 0;
+      let squareBalance = 0;
+      let curlyBalance = 0;
+      for (let i = 0; i < filtered.length; i++) {
+        const char = filtered[i];
+        if (char === "(") roundBalance++;
+        else if (char === ")") roundBalance--;
+        else if (char === "[") squareBalance++;
+        else if (char === "]") squareBalance--;
+        else if (char === "{") curlyBalance++;
+        else if (char === "}") curlyBalance--;
+
+        if (roundBalance < 0 || squareBalance < 0 || curlyBalance < 0) {
+          // Stop here, don't allow adding more but allow deletions
+          setInput(filtered.slice(0, i + 1));
+          return;
+        }
+      }
+    }
+
     setInput(filtered);
   };
 
@@ -43,6 +65,25 @@ export const ParenthesesCounter: React.FC<ParenthesesCounterProps> = ({
   // Balance mode: opening - closing (pending to close)
   const balance = openCount - closeCount;
   const isNegative = balance < 0;
+
+  // Multi-count mode: count per type
+  const roundOpen = (input.match(/\(/g) || []).length;
+  const roundClose = (input.match(/\)/g) || []).length;
+  const squareOpen = (input.match(/\[/g) || []).length;
+  const squareClose = (input.match(/\]/g) || []).length;
+  const curlyOpen = (input.match(/\{/g) || []).length;
+  const curlyClose = (input.match(/\}/g) || []).length;
+
+  const roundBalance = roundOpen - roundClose;
+  const squareBalance = squareOpen - squareClose;
+  const curlyBalance = curlyOpen - curlyClose;
+
+  const anyNegative = roundBalance < 0 || squareBalance < 0 || curlyBalance < 0;
+  const allBalanced =
+    roundBalance === 0 &&
+    squareBalance === 0 &&
+    curlyBalance === 0 &&
+    input.length > 0;
 
   return (
     <div className="flex flex-col items-center gap-12 w-full max-w-2xl">
@@ -124,6 +165,93 @@ export const ParenthesesCounter: React.FC<ParenthesesCounterProps> = ({
           )}
 
           {!isNegative && balance === 0 && input.length > 0 && (
+            <div className="text-2xl font-bold flex items-center gap-2 text-green-600 dark:text-green-400">
+              <span className="text-4xl">✅</span>
+              BALANCED!
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === "multi-count" && (
+        <div className="flex flex-col items-center gap-6">
+          <div className="grid grid-cols-3 gap-6 text-center">
+            <div
+              className={`p-6 rounded-xl border-2 ${
+                roundBalance < 0
+                  ? "bg-red-50 border-red-500 dark:bg-red-900/30"
+                  : roundBalance === 0 && (roundOpen > 0 || roundClose > 0)
+                    ? "bg-green-50 border-green-500 dark:bg-green-900/30"
+                    : "bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-500/30"
+              }`}
+            >
+              <div className="text-3xl mb-2 text-green-600 dark:text-green-400">
+                <code>( )</code>
+              </div>
+              <div
+                className={`text-5xl font-bold ${
+                  roundBalance < 0
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-green-700 dark:text-green-300"
+                }`}
+              >
+                {roundBalance}
+              </div>
+            </div>
+            <div
+              className={`p-6 rounded-xl border-2 ${
+                squareBalance < 0
+                  ? "bg-red-50 border-red-500 dark:bg-red-900/30"
+                  : squareBalance === 0 && (squareOpen > 0 || squareClose > 0)
+                    ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30"
+                    : "bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-500/30"
+              }`}
+            >
+              <div className="text-3xl mb-2 text-blue-600 dark:text-blue-400">
+                <code>[ ]</code>
+              </div>
+              <div
+                className={`text-5xl font-bold ${
+                  squareBalance < 0
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-blue-700 dark:text-blue-300"
+                }`}
+              >
+                {squareBalance}
+              </div>
+            </div>
+            <div
+              className={`p-6 rounded-xl border-2 ${
+                curlyBalance < 0
+                  ? "bg-red-50 border-red-500 dark:bg-red-900/30"
+                  : curlyBalance === 0 && (curlyOpen > 0 || curlyClose > 0)
+                    ? "bg-purple-50 border-purple-500 dark:bg-purple-900/30"
+                    : "bg-purple-50 border-purple-200 dark:bg-purple-900/30 dark:border-purple-500/30"
+              }`}
+            >
+              <div className="text-3xl mb-2 text-purple-600 dark:text-purple-400">
+                <code>{"{ }"}</code>
+              </div>
+              <div
+                className={`text-5xl font-bold ${
+                  curlyBalance < 0
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-purple-700 dark:text-purple-300"
+                }`}
+              >
+                {curlyBalance}
+              </div>
+            </div>
+          </div>
+
+          {anyNegative && (
+            <div className="text-2xl font-bold flex items-center gap-2 text-red-600 dark:text-red-400">
+              <span className="text-4xl">❌</span>
+              IMPOSSIBLE!
+            </div>
+          )}
+
+          {!anyNegative && allBalanced && (
             <div className="text-2xl font-bold flex items-center gap-2 text-green-600 dark:text-green-400">
               <span className="text-4xl">✅</span>
               BALANCED!
