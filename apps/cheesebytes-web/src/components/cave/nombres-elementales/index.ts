@@ -8,3 +8,4 @@ export type { ElementData, Category } from './PeriodicTable';
 export { default as ElementalNamesSingleChar } from './ElementalNamesSingleChar';
 export { default as ElementalNamesDPArray } from './ElementalNamesDPArray';
 export { default as ElementalNamesAllPossibilities } from './ElementalNamesAllPossibilities';
+export { default as ComplexityBenchmark } from './ComplexityBenchmark';
