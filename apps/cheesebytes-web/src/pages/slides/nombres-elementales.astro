@@ -65,6 +65,71 @@ def is_elemental(name: str) -> bool:
   </section>
 
   <section id="wip">
-    <ComplexityBenchmark client:visible />
+    <ComplexityBenchmark
+      client:visible
+      title="String Slicing Complexity"
+      xAxisLabel="Input Size (characters)"
+      yAxisLabel="Time (ms)"
+      inputGenerator={`from random import random
+  
+def create_input(x):
+    return "C" * x`}
+      algorithms={[
+        {
+          id: "slicing",
+          name: "slicing (O(n²))",
+          functionName: "slicing",
+          code: `def slicing(name: str) -> int:
+    steps = 0
+    while name:
+        name = name[1:]  # copies almost the entire string
+        steps += 1
+    return steps`,
+        },
+        {
+          id: "counting",
+          name: "counting (O(n))",
+          functionName: "counting",
+          code: `def counting(name: str) -> int:
+    steps = 0
+    for char in name:
+        steps += 1
+    return steps`,
+        },
+        {
+          id: "counting1",
+          name: "counting (O(n))",
+          functionName: "counting",
+          code: `def counting(name: str) -> int:
+    steps = 0
+    for char in name:
+        steps += 1
+    return steps`,
+        },
+        {
+          id: "counting2",
+          name: "counting (O(n))",
+          functionName: "counting",
+          code: `def counting(name: str) -> int:
+    steps = 0
+    for char in name:
+        steps += 1
+    return steps`,
+        },
+        {
+          id: "counting3",
+          name: "counting (O(n))",
+          functionName: "counting",
+          code: `def counting(name: str) -> int:
+    steps = 0
+    for char in name:
+        steps += 1
+    return steps`,
+        },
+      ]}
+      startX={1}
+      stepX={1000}
+      maxXLimit={1000000}
+    />
   </section>
 </RevealLayout>

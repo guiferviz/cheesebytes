@@ -7,109 +7,134 @@ interface DataPoint {
   y: number;
 }
 
-interface Algorithm {
+interface AlgorithmConfig {
+  /** Unique identifier */
   id: string;
+  /** Display name in legend */
   name: string;
-  color: string;
+  /** Line color (hex) */
+  color?: string;
+  /** Python function code (will be executed to define the function) */
   code: string;
+  /** Name of the function to call (must match the def in code) */
+  functionName: string;
+}
+
+interface AlgorithmState extends AlgorithmConfig {
   data: DataPoint[];
 }
 
-const ELEMENTS_CODE = `
-ELEMENTS = {
-    'H','He',
-    'Li','Be','B','C','N','O','F','Ne',
-    'Na','Mg','Al','Si','P','S','Cl','Ar',
-    'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
-    'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
-    'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
-    'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
-    'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
-    'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Fl','Lv','Ts','Og'
+interface ComplexityBenchmarkProps {
+  /** Title displayed at the top */
+  title?: string;
+  /** Label for the X axis */
+  xAxisLabel?: string;
+  /** Label for the Y axis */
+  yAxisLabel?: string;
+  /** Array of algorithm configurations to benchmark */
+  algorithms: AlgorithmConfig[];
+  /**
+   * Python code that defines a function `create_input(x)` which returns
+   * the input to pass to all benchmark functions.
+   * Example: `def create_input(x): return "Co" * x`
+   */
+  inputGenerator: string;
+  /** Optional setup code to run before benchmarks (e.g., imports, constants) */
+  setupCode?: string;
+  /** Starting value of X (default: 1) */
+  startX?: number;
+  /** Increment of X per iteration (default: 1) */
+  stepX?: number;
+  /** Maximum value of X (default: 1000) */
+  maxXLimit?: number;
 }
-`;
 
-const SLICING_CODE = `def slicing(name: str) -> int:
-    steps = 0
-    while name:
-        name = name[1:]  # copia un string casi tan grande como el anterior
-        steps += 1
-    return steps`;
+const DEFAULT_COLORS = [
+  "#f59e0b", // amber
+  "#22c55e", // green
+  "#3b82f6", // blue
+  "#ef4444", // red
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+  "#06b6d4", // cyan
+  "#f97316", // orange
+];
 
-const COUNTING_CODE = `def counting(name: str) -> int:
-    steps = 0
-    for char in name:
-        steps += 1
-    return steps`;
-
-const BENCHMARK_CODE = `
-import time
-
-def benchmark_slicing(pattern, x):
-    name = pattern * x
-    start = time.perf_counter()
-    slicing(name)
-    end = time.perf_counter()
-    return (end - start) * 1000  # ms
-
-def benchmark_counting(pattern, x):
-    name = pattern * x
-    start = time.perf_counter()
-    counting(name)
-    end = time.perf_counter()
-    return (end - start) * 1000  # ms
-`;
-
-export const ComplexityBenchmark: React.FC = () => {
+export const ComplexityBenchmark: React.FC<ComplexityBenchmarkProps> = ({
+  title = "Algorithm Complexity Comparison",
+  xAxisLabel = "Input Size (X)",
+  yAxisLabel = "Time (ms)",
+  algorithms: algorithmConfigs,
+  inputGenerator,
+  setupCode = "",
+  startX = 1,
+  stepX = 1,
+  maxXLimit = 1000,
+}) => {
   const [isRunning, setIsRunning] = useState(false);
-  const [pattern, setPattern] = useState("Co");
   const [currentX, setCurrentX] = useState(0);
   const [pyodideReady, setPyodideReady] = useState(false);
   const [hoveredAlgorithm, setHoveredAlgorithm] = useState<string | null>(null);
   const [maxY, setMaxY] = useState(10);
-  const [maxX, setMaxX] = useState(10);
+  const [maxX, setMaxX] = useState(Math.max(10, startX * 2));
   const runningRef = useRef(false);
 
-  const [algorithms, setAlgorithms] = useState<Algorithm[]>([
-    {
-      id: "slicing",
-      name: "slicing",
-      color: "#f59e0b",
-      code: SLICING_CODE,
-      data: [],
-    },
-    {
-      id: "counting",
-      name: "counting",
-      color: "#22c55e",
-      code: COUNTING_CODE,
-      data: [],
-    },
-  ]);
+  // Assign colors to algorithms if not provided
+  const algorithmsWithColors = algorithmConfigs.map((alg, i) => ({
+    ...alg,
+    color: alg.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+  }));
 
-  // Initialize Pyodide
+  const [algorithms, setAlgorithms] = useState<AlgorithmState[]>(
+    algorithmsWithColors.map((alg) => ({ ...alg, data: [] })),
+  );
+
+  // Initialize Pyodide and setup Python environment
   useEffect(() => {
     const initPyodide = async () => {
       try {
         await pyodideContext.init();
-        // Setup the Python environment
-        await pyodideContext.run(SLICING_CODE);
-        await pyodideContext.run(COUNTING_CODE);
-        await pyodideContext.run(BENCHMARK_CODE);
+
+        // Run setup code if provided
+        if (setupCode) {
+          await pyodideContext.run(setupCode);
+        }
+
+        // Define input generator function
+        await pyodideContext.run(inputGenerator);
+
+        // Define all algorithm functions
+        for (const alg of algorithmsWithColors) {
+          await pyodideContext.run(alg.code);
+        }
+
+        // Create benchmark wrapper for each algorithm
+        const benchmarkCode = `
+import time
+
+def __benchmark__(func, x):
+    input_data = create_input(x)
+    start = time.perf_counter()
+    func(input_data)
+    end = time.perf_counter()
+    return (end - start) * 1000  # ms
+`;
+        await pyodideContext.run(benchmarkCode);
+
         setPyodideReady(true);
       } catch (err) {
         console.error("Failed to initialize Pyodide:", err);
       }
     };
     initPyodide();
-  }, []);
+  }, [setupCode, inputGenerator, algorithmsWithColors]);
 
   const reset = useCallback(() => {
     setAlgorithms((prev) => prev.map((alg) => ({ ...alg, data: [] })));
     setCurrentX(0);
     setMaxY(10);
-    setMaxX(10);
-  }, []);
+    setMaxX(Math.max(10, startX * 2));
+  }, [startX]);
 
   const runBenchmark = useCallback(async () => {
     if (!pyodideReady) return;
@@ -118,43 +143,40 @@ export const ComplexityBenchmark: React.FC = () => {
     setIsRunning(true);
     reset();
 
-    let x = 1;
-    const maxX = 1000000;
+    let x = startX;
 
-    while (runningRef.current && x <= maxX) {
+    while (runningRef.current && x <= maxXLimit) {
       try {
-        // Run slicing benchmark
-        const timeSlicing = await pyodideContext.run(
-          `benchmark_slicing("${pattern}", ${x})`,
-        );
+        const times: { [id: string]: number } = {};
 
-        // Run counting benchmark
-        const timeCounting = await pyodideContext.run(
-          `benchmark_counting("${pattern}", ${x})`,
-        );
+        // Benchmark each algorithm
+        for (const alg of algorithmsWithColors) {
+          const time = await pyodideContext.run(
+            `__benchmark__(${alg.functionName}, ${x})`,
+          );
+          times[alg.id] = Number(time);
+        }
 
-        const slicingMs = Number(timeSlicing);
-        const countingMs = Number(timeCounting);
-
+        // Update algorithm data
         setAlgorithms((prev) => {
-          const newAlgs = prev.map((alg) => {
-            if (alg.id === "slicing") {
-              return { ...alg, data: [...alg.data, { x, y: slicingMs }] };
-            } else if (alg.id === "counting") {
-              return { ...alg, data: [...alg.data, { x, y: countingMs }] };
+          return prev.map((alg) => {
+            const time = times[alg.id];
+            if (time !== undefined) {
+              return { ...alg, data: [...alg.data, { x, y: time }] };
             }
             return alg;
           });
-          return newAlgs;
         });
 
         // Update max Y dynamically
-        setMaxY((prev) => Math.max(prev, slicingMs * 1.2, countingMs * 1.2));
+        const maxTime = Math.max(...Object.values(times));
+        setMaxY((prev) => Math.max(prev, maxTime * 1.2));
+
         // Update max X dynamically
         setMaxX((prev) => Math.max(prev, x * 1.2));
         setCurrentX(x);
 
-        x += 10000;
+        x += stepX;
 
         // Small delay to allow UI updates
         await new Promise((resolve) => setTimeout(resolve, 50));
@@ -166,7 +188,7 @@ export const ComplexityBenchmark: React.FC = () => {
 
     runningRef.current = false;
     setIsRunning(false);
-  }, [pyodideReady, pattern, reset]);
+  }, [pyodideReady, reset, startX, stepX, maxXLimit, algorithmsWithColors]);
 
   const stopBenchmark = useCallback(() => {
     runningRef.current = false;
@@ -182,6 +204,7 @@ export const ComplexityBenchmark: React.FC = () => {
 
   // Generate nice axis ticks
   const getAxisTicks = (max: number, count: number = 5) => {
+    if (max <= 0) return [0];
     const step = max / count;
     const magnitude = Math.pow(10, Math.floor(Math.log10(step)));
     const normalizedStep = step / magnitude;
@@ -233,25 +256,10 @@ export const ComplexityBenchmark: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center gap-6 p-4 text-gray-800 dark:text-white">
-      <h2 className="text-2xl font-bold">Algorithm Complexity Comparison</h2>
+      <h2 className="text-2xl font-bold">{title}</h2>
 
       {/* Controls */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600 dark:text-gray-300">
-            Pattern:
-          </label>
-          <input
-            type="text"
-            value={pattern}
-            onChange={(e) => setPattern(e.target.value)}
-            disabled={isRunning}
-            className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white font-mono w-24 text-center"
-            placeholder="Co"
-          />
-          <span className="text-gray-500 dark:text-gray-400 text-sm">× X</span>
-        </div>
-
         {!isRunning ? (
           <button
             onClick={runBenchmark}
@@ -282,10 +290,16 @@ export const ComplexityBenchmark: React.FC = () => {
             Loading Python...
           </span>
         )}
+
+        {currentX > 0 && (
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            X = {currentX}
+          </span>
+        )}
       </div>
 
       {/* Legend with hover */}
-      <div className="flex gap-8 relative">
+      <div className="flex flex-wrap gap-6 justify-center relative">
         {algorithms.map((alg) => (
           <div
             key={alg.id}
@@ -301,9 +315,9 @@ export const ComplexityBenchmark: React.FC = () => {
 
             {/* Code tooltip */}
             {hoveredAlgorithm === alg.id && (
-              <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-4 shadow-xl min-w-[400px]">
+              <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-4 shadow-xl min-w-[400px] max-w-[600px]">
                 <pre
-                  className="text-xs font-mono whitespace-pre overflow-x-auto text-gray-800 dark:text-gray-200"
+                  className="hljs text-xs font-mono whitespace-pre overflow-x-auto"
                   dangerouslySetInnerHTML={{ __html: highlightCode(alg.code) }}
                 />
               </div>
@@ -364,7 +378,7 @@ export const ComplexityBenchmark: React.FC = () => {
           textAnchor="middle"
           className="text-sm fill-gray-600 dark:fill-gray-300"
         >
-          Repetitions (X)
+          {xAxisLabel}
         </text>
         <text
           x={20}
@@ -373,7 +387,7 @@ export const ComplexityBenchmark: React.FC = () => {
           transform={`rotate(-90, 20, ${height / 2})`}
           className="text-sm fill-gray-600 dark:fill-gray-300"
         >
-          Time (ms)
+          {yAxisLabel}
         </text>
 
         {/* Axes */}
@@ -398,7 +412,7 @@ export const ComplexityBenchmark: React.FC = () => {
 
         {/* Data lines */}
         {algorithms.map((alg) => (
-          <g key={alg.id}>{renderPath(alg.data, alg.color)}</g>
+          <g key={alg.id}>{renderPath(alg.data, alg.color!)}</g>
         ))}
 
         {/* Current X indicator */}
@@ -416,20 +430,6 @@ export const ComplexityBenchmark: React.FC = () => {
           />
         )}
       </svg>
-
-      {/* Current input display */}
-      {currentX > 0 && (
-        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-          Current input:{" "}
-          <code className="text-amber-600 dark:text-amber-400">{pattern}</code>{" "}
-          × {currentX} ={" "}
-          <code className="text-amber-600 dark:text-amber-400">
-            "{pattern.repeat(Math.min(currentX, 10))}
-            {currentX > 10 ? "..." : ""}"
-          </code>
-          <span className="ml-2">({pattern.length * currentX} chars)</span>
-        </div>
-      )}
     </div>
   );
 };
