@@ -1,13 +1,28 @@
 ---
-title: Parentheses Balancing
+title: Validating Parentheses with Counting
 marimo-version: 0.13.15
 ---
 
-Given an expression formed only with parentheses, return whether they are
-balanced.
+Given an expression formed only with standard parentheses `(` and `)`, return
+whether they are balanced.
 
-This is also a Leetcode problem:
-[20. Valid Parentheses](https://leetcode.com/problems/valid-parentheses/).
+This is a simplified version of the classic
+[Valid Parentheses](https://leetcode.com/problems/valid-parentheses/) problem.
+Because we only have one type of parenthesis, we can solve this by simply
+**counting** `balance`.
+
+**The Logic:**
+
+1. Start with `balance = 0`.
+2. Iterate through the string:
+   - For `(`, add 1.
+   - For `)`, subtract 1.
+3. If `balance` ever drops below 0, return `False` (too many closing
+   parentheses).
+4. Return `True` if `balance` is 0 at the end.
+
+Try modifying the code below to test your own logic. Test cases are provided and
+automatically run to validate your solution.
 
 ```python {.marimo}
 import marimo as mo
@@ -72,5 +87,11 @@ for s, expected in test_cases:
     result = "✅" if actual == expected else "❌" if not error else f"💥 {str(error)}"
     rows.append(f"| `{s}` | `{expected}` | `{actual}` | {result} |")
 
-mo.md("\n".join(rows))
+mo.md(
+    f"""
+    ### Test Results
+
+    {"\n".join(rows)}
+    """
+)
 ```

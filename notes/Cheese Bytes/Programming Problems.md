@@ -12,8 +12,8 @@ original _Cheese Bytes_ creations.
   that challenge you to predict the output of code snippets without running
   them. Each problem is crafted to highlight subtle behaviors, edge cases, or
   surprising quirks in various programming languages.
-- [[Parentheses Balancing]]. This problem challenges you to determine if a given
-  string of parentheses is balanced.
+- [[Validating Parentheses with Counting]]. This problem challenges you to
+  determine if a given string of parentheses is balanced.
 
 <!--
 En el principio, todo era caos: enunciados incomprensibles, condiciones enrevesadas, variables indefinidas, ideas inconexas... Pero, como un artista que pule la piedra, **El Programador** elimina lo superfluo, conecta lo esencial y moldea, línea a línea, un algoritmo tan elegante que, al completarse, trae la luz a donde antes solo reinaba la oscuridad.
