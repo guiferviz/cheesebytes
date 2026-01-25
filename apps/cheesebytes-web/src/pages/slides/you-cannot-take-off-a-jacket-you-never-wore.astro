@@ -6,6 +6,7 @@ import {
   ParenthesesCounter,
   DEFAULT_GARMENT_COLORS,
 } from "../../components/cave/you-cannot-take-off-a-jacket-you-never-wore";
+import RevealCode from "../../components/RevealCode";
 ---
 
 <RevealLayout
@@ -15,25 +16,30 @@ import {
 >
   <section>
     <div class="flex flex-col items-center justify-center h-full gap-8">
+      <!--
+      It might sound odd at first, but there is a close relationship between trying on
+      clothes and knowing if a sequence of parentheses is valid.
+
+      The first sequence is valid. The second one is not.
+      -->
       <div class="grid grid-rows-2 gap-40 text-center">
-        <div class="grid grid-cols-2 items-center gap-4">
+        <div class="fragment fade-in grid grid-cols-2 items-center gap-4">
           <code class="text-6xl tracking-wider">
-            <span class="text-green-400">(</span>
-            <span class="text-blue-400">[</span>
-            <span class="text-blue-400">]</span>
-            <span class="text-green-400">)</span>
+            <span class="text-green-200">(</span>
+            <span class="text-green-200">(</span>
+            <span class="text-green-200">)</span>
+            <span class="text-green-200">)</span>
           </code>
           <div class="text-6xl">✅</div>
         </div>
-        <div class="grid grid-cols-2 items-center gap-4">
+        <div class="fragment fade-in grid grid-cols-2 items-center gap-4">
           <code class="text-6xl tracking-wider">
-            <span class="text-green-400">(</span>
-            <span class="text-blue-400">[</span>
+            <span class="text-red-200">(</span>
+            <span class="text-red-200">)</span>
             <span
-              class="text-green-400 line-through decoration-red-500 decoration-4"
+              class="text-red-200 line-through decoration-red-500 decoration-4"
               >)</span
             >
-            <span class="text-blue-400">]</span>
           </code>
           <div class="text-6xl">❌</div>
         </div>
@@ -42,6 +48,22 @@ import {
   </section>
 
   <section>
+    <!--
+    We are given a line of parentheses. The question is simple: is this line well
+    formed? Every opening parenthesis must be closed. And nothing should close
+    before it's opened.
+
+    The first thing we tried was counting. Parentheses come in pairs. So we count
+    how many open, and how many close.
+
+    If the numbers match... maybe we are done. And in many cases, we are.
+    And when the numbers do not match, the sequence is clearly invalid.
+
+    If the number of opening parentheses is greater than the number of closing
+    parentheses, something is missing.
+    If the number of closing parentheses is greater than the number of opening
+    parentheses, something is extra.
+    -->
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
         client:load
@@ -52,6 +74,19 @@ import {
   </section>
 
   <section>
+    <!--
+    But then there is this.
+    )(
+    Same count. Nothing missing. Nothing extra. And still, completely broken. So
+    counting helps. But it doesn't tell the whole story. Order matters.
+
+    So instead of counting everything at the end, we follow the line as it unfolds.
+    We keep track of how many opening parentheses we have seen that are still
+    pending to be closed.
+
+    If we try to close more parentheses than we have opened at any point, we know
+    the sequence is invalid.
+    -->
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
         client:load
@@ -62,6 +97,24 @@ import {
   </section>
 
   <section>
+    <!--
+    This works well for a single type of parenthesis. But what if we have more than
+    one type? We have parentheses, brackets, and curly braces.
+
+    It might seem that it works the same way. But look at this one.
+    (]
+    So order matters, and type matters.
+
+    We can try to keep track of how many opening parentheses of each type we have
+    seen that are still pending to be closed.
+
+    (]
+    This example is no longer a problem. However, it's easy to find a new issue.
+
+    ([)]
+    We are trying to close a parenthesis when there is still an unclosed bracket. So
+    we need to remember the most recent unclosed opener.
+    -->
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
         client:load
@@ -72,129 +125,16 @@ import {
   </section>
 
   <section>
+    <!--
+    Let's use an analogy to make this idea clearer. Think of a changing room. You
+    walk in, and you put one t-shirt on. Then a sweater. Then a jacket.
+
+    After looking at yourself in the mirror, you start taking your clothes off.
+
+    You have to take off the jacket first. Then the sweater. Then the t-shirt.
+    -->
     <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-4xl font-bold mb-4">The Dressing Room Rule</h2>
-      <div class="text-2xl text-gray-300 max-w-2xl text-center space-y-4">
-        <p class="fragment">👕 You try on clothes in <strong>layers</strong></p>
-        <p class="fragment">
-          🔄 You can only take off the <strong>last one you put on</strong>
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Slide 3: Basic Demo -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full">
-      <Probador
-        client:load
-        actions={[
-          { type: "PUT", garment: "T" },
-          { type: "PUT", garment: "T" },
-          { type: "TAKE_OFF", garment: "T" },
-          { type: "TAKE_OFF", garment: "T" },
-        ]}
-        displayMode="counter"
-        autoPlay={false}
-        showControls={true}
-      />
-    </div>
-  </section>
-
-  <!-- Slide 4: Counter insight -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-3xl font-bold">With ONE type of clothing...</h2>
-      <p class="text-2xl text-gray-300 fragment">
-        A simple <strong class="text-amber-400">counter</strong> tells us if the sequence
-        is valid
-      </p>
-      <p class="text-xl text-gray-400 fragment">
-        Just track: how many items are on?
-      </p>
-    </div>
-  </section>
-
-  <!-- Slide 5: Valid Sequence -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full">
-      <Probador
-        client:load
-        title="Valid Sequence"
-        actions={[
-          { type: "PUT", garment: "T", color: "#86efac" },
-          { type: "PUT", garment: "T", color: "#fde047" },
-          { type: "TAKE_OFF", garment: "T" },
-          { type: "PUT", garment: "T", color: "#93c5fd" },
-          { type: "TAKE_OFF", garment: "T" },
-          { type: "TAKE_OFF", garment: "T" },
-        ]}
-        displayMode="counter"
-        autoPlay={false}
-        showControls={true}
-      />
-    </div>
-  </section>
-
-  <!-- Slide 6: Valid sequence insight -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <div class="text-6xl">✅</div>
-      <p class="text-2xl text-gray-300">
-        We <strong>never</strong> tried to remove a garment that wasn't on top
-      </p>
-    </div>
-  </section>
-
-  <!-- Slide 7: Impossible sequence intro -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-4xl font-bold">What if we try too many times?</h2>
-      <p class="text-2xl text-gray-300 fragment">
-        Let's try to remove more than we put on...
-      </p>
-    </div>
-  </section>
-
-  <!-- Slide 8: Impossible sequence demo -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full">
-      <Probador
-        client:load
-        actions={[
-          { type: "PUT", garment: "T", color: "#86efac" },
-          { type: "PUT", garment: "T", color: "#fde047" },
-          { type: "TAKE_OFF", garment: "T" },
-          { type: "TAKE_OFF", garment: "T" },
-          { type: "TAKE_OFF", garment: "T" },
-        ]}
-        displayMode="counter"
-        autoPlay={false}
-        showControls={true}
-      />
-    </div>
-  </section>
-
-  <!-- Slide 9: Counter catches it -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <p class="text-2xl text-gray-300">
-        With one type, the counter catches this: <strong class="text-red-400"
-          >we go negative!</strong
-        >
-      </p>
-      <p class="text-3xl font-bold fragment mt-8">
-        But what if we have <strong class="text-amber-400"
-          >multiple types</strong
-        >?
-      </p>
-    </div>
-  </section>
-
-  <!-- Slide 10: Multiple types intro -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-4xl font-bold">Multiple Types</h2>
+      <h2 class="text-4xl font-bold">The Dressing Room Analogy</h2>
       <div class="grid grid-cols-3 gap-12 mt-8 text-center">
         <div class="fragment flex flex-col items-center">
           <GarmentIcon
@@ -204,7 +144,7 @@ import {
             size={100}
             showLabel={true}
           />
-          <p class="text-xl mt-4"><strong>T</strong> - T-Shirt</p>
+          <p class="text-xl mt-4">T-Shirt</p>
         </div>
         <div class="fragment flex flex-col items-center">
           <GarmentIcon
@@ -214,7 +154,7 @@ import {
             size={100}
             showLabel={true}
           />
-          <p class="text-xl mt-4"><strong>S</strong> - Sweater</p>
+          <p class="text-xl mt-4">Sweater</p>
         </div>
         <div class="fragment flex flex-col items-center">
           <GarmentIcon
@@ -224,7 +164,7 @@ import {
             size={100}
             showLabel={true}
           />
-          <p class="text-xl mt-4"><strong>J</strong> - Jacket</p>
+          <p class="text-xl mt-4">Jacket</p>
         </div>
       </div>
     </div>
@@ -232,6 +172,10 @@ import {
 
   <!-- Slide 11: Valid nested sequence -->
   <section>
+    <!--
+    It's not possible to take off the sweater before the jacket. The last thing you
+    put on is the first thing you take off.
+    -->
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
@@ -253,6 +197,12 @@ import {
 
   <!-- Slide 12: Stack insight -->
   <section>
+    <!--
+    This is exactly how our problem works. Instead of stacking clothes one on top of
+    another, we are stacking opening parentheses. When we see a closing parenthesis,
+    we need to make sure it matches the most recent opening parenthesis we have
+    seen.
+    -->
     <div class="flex flex-col items-center justify-center h-full gap-6">
       <p class="text-2xl text-gray-300">
         With multiple types, we need to remember
@@ -342,6 +292,10 @@ import {
 
   <!-- Slide 18: Mapping explanation -->
   <section>
+    <!--
+    Next, we define which closing parenthesis belongs to which opening one. Each
+    closer knows exactly what it expects in the stack.
+    -->
     <div class="flex flex-col items-center justify-center h-full gap-6">
       <h2 class="text-3xl font-bold mb-4">The Mapping</h2>
       <div class="grid grid-cols-2 gap-x-12 gap-y-4 text-2xl">
@@ -377,11 +331,98 @@ import {
     </div>
   </section>
 
+  <section id="code" class="text-lg">
+    <!--
+    Let's see how this works in Python code.
+
+    We start with an empty stack. This is where we keep the parentheses that are
+    still open. In Python, we implement the stack as a list.
+
+    Now we go through the input line, one character at a time.
+
+    If the character is an opening parenthesis, we push it onto the stack. We are
+    just remembering it.
+
+    If the character is not an opening parenthesis, we assume it is a closing one.
+    We assume no letters or numbers will appear in the input.
+
+    Do we have something to close? If the stack is empty, we stop immediately.
+
+    If there is something to close, we take the last thing we opened. We use pop to
+    get and remove the last item from the stack.
+
+    Now we check if the types match. If they do not, the sequence is invalid. We use
+    the matching dictionary to see what we expected to find in the stack, based on
+    the closing parenthesis we encountered.
+
+    We repeat this until we reach the end of the line. At the very end, only one
+    thing matters. Did we close everything we opened?
+    -->
+    <RevealCode
+      client:only="react"
+      animation="fade"
+      code={`def is_valid_parentheses(text: str) -> bool:
+    # STEP: We create empty stack to remember opening parentheses
+    stack = []
+    # STEP: Mapping of closing to opening parentheses
+    matching = {
+        ')': '(',
+        ']': '[',
+        '}': '{',
+    }
+
+    # STEP: Process each character in the input text
+    for char in text:
+        # STEP: If we see an opening parenthesis, we remember it
+        if char in '([{':
+            stack.append(char)
+        # STEP: If we see a closing parenthesis
+        else:  # we assume char in ')]}'
+            # STEP: There must be something to close
+            if not stack:
+                return False
+
+            # STEP: It must close the last opened parenthesis
+            last_open = stack.pop()
+
+            # STEP: And it must be the correct type
+            if matching[char] != last_open:
+                return False
+
+    # STEP: At the end, nothing should be left open
+    return len(stack) == 0`}
+      `
+    />
+  </section>
+  <section id="followup-code" class="text-lg">
+    <RevealCode
+      client:only="react"
+      animation="fade"
+      code={`def is_valid_parentheses(text: str) -> bool:
+    stack = []
+
+    for char in text:
+        if char in "([{":
+            stack.append(char)
+        else:
+            if not stack:
+                return False
+
+            last_open = stack.pop()
+
+            diff = ord(char) - ord(last_open)
+            if diff != 1 and diff != 2:
+                return False
+
+    return len(stack) == 0
+`}
+    />
+  </section>
   <!-- Slide 20: Counter vs Stack -->
   <section>
     <div class="flex flex-col items-center justify-center h-full gap-8">
       <h2 class="text-3xl font-bold">Counter vs Stack</h2>
-      <div class="grid grid-cols-2 gap-12 text-xl mt-4">
+      <div class="grid grid-cols-2 gap-50 text-xl mt-4">
         <div class="text-center fragment">
           <p class="text-amber-400 font-bold text-2xl mb-4">Single type</p>
           <p class="text-gray-300">Just count!</p>
