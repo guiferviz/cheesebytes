@@ -16,7 +16,7 @@ export interface GarmentItem {
   color: string;
 }
 
-export type DisplayMode = "counter" | "stack" | "both";
+export type DisplayMode = "counter" | "stack" | "both" | "none";
 
 export interface ProbadorConfig {
   actions: Action[];

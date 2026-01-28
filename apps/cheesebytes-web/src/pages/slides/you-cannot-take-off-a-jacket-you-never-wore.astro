@@ -66,12 +66,18 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
   <section>
     <aside class="notes">
       The first thing we tried was counting. Parentheses come in pairs. So we
-      count how many open, and how many close. If the numbers match... maybe we
-      are done. And in many cases, we are. And when the numbers do not match,
-      the sequence is clearly invalid. If the number of opening parentheses is
-      greater than the number of closing parentheses, something is missing. If
-      the number of closing parentheses is greater than the number of opening
-      parentheses, something is extra. But then there is this.
+      count how many open, and how many close.
+      <!-- () -->
+      If the numbers match... maybe we are done. And in many cases, we are.
+      <!-- (()()) -->
+      When the numbers do not match, the sequence is clearly invalid. If the number
+      of opening parentheses is greater than the number of closing parentheses, something
+      is missing.
+      <!-- (()() -->
+      If the number of closing parentheses is greater than the number of opening parentheses,
+      something is extra.
+      <!-- (()())) -->
+      But then there is this.
       <!-- )( -->
       Same count. Nothing missing. Nothing extra. And still, completely broken. So
       counting helps. But it doesn't tell the whole story. Order matters.
@@ -92,12 +98,16 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
       are still pending to be closed. If we try to close more parentheses than
       we have opened at any point, we know the sequence is invalid.
       <!-- ()) -->
+      If we finish the line and there are still opening parentheses pending to be
+      closed, the sequence is also invalid.
+      <!-- (() -->
       This works well for a single type of parenthesis. But what if we have more than
       one type? We have parentheses, brackets, and curly braces. It might seem that
       it works the same way.
       <!-- ([{}]) -->
       But look at this one.
       <!-- (] -->
+      So order matters, and type matters.
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -110,12 +120,13 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      So order matters, and type matters. We can try to keep track of how many
-      opening parentheses of each type we have seen that are still pending to be
-      closed. (] This example is no longer a problem. However, it's easy to find
-      a new issue. ([)] We are trying to close a parenthesis when there is still
-      an unclosed bracket. So we need to remember the most recent unclosed
-      opener.
+      We can try to keep track of how many opening parentheses of each type we
+      have seen that are still pending to be closed.
+      <!-- (] -->
+      This example is no longer a problem. However, it's easy to find a new issue.
+      <!-- ([)] -->
+      We are trying to close a parenthesis when there is still an unclosed bracket.
+      So we need to remember the most recent unclosed opener.
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -134,49 +145,6 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
       off. You have to take off the jacket first. Then the sweater. Then the
       t-shirt.
     </aside>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-4xl font-bold">The Dressing Room Analogy</h2>
-      <div class="grid grid-cols-3 gap-12 mt-8 text-center">
-        <div class="fragment flex flex-col items-center">
-          <GarmentIcon
-            client:load
-            type="T"
-            color={DEFAULT_GARMENT_COLORS.T}
-            size={100}
-            showLabel={true}
-          />
-          <p class="text-xl mt-4">T-Shirt</p>
-        </div>
-        <div class="fragment flex flex-col items-center">
-          <GarmentIcon
-            client:load
-            type="S"
-            color={DEFAULT_GARMENT_COLORS.S}
-            size={100}
-            showLabel={true}
-          />
-          <p class="text-xl mt-4">Sweater</p>
-        </div>
-        <div class="fragment flex flex-col items-center">
-          <GarmentIcon
-            client:load
-            type="J"
-            color={DEFAULT_GARMENT_COLORS.J}
-            size={100}
-            showLabel={true}
-          />
-          <p class="text-xl mt-4">Jacket</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Slide 11: Valid nested sequence -->
-  <section>
-    <aside class="notes">
-      It's not possible to take off the sweater before the jacket. The last
-      thing you put on is the first thing you take off.
-    </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
@@ -188,7 +156,7 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
           { type: "TAKE_OFF", garment: "S" },
           { type: "TAKE_OFF", garment: "T" },
         ]}
-        displayMode="stack"
+        displayMode="none"
         showTypeCounters={false}
         autoPlay={false}
         showControls={true}
@@ -196,82 +164,37 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
     </div>
   </section>
 
-  <!-- Slide 12: Stack insight -->
   <section>
     <aside class="notes">
-      This is exactly how our problem works. Instead of stacking clothes one on
-      top of another, we are stacking opening parentheses. When we see a closing
-      parenthesis, we need to make sure it matches the most recent opening
-      parenthesis we have seen.
+      Let's try a different sequence. T-Shirt, Sweater, Jacket, and... it's not
+      possible to take off the sweater before the jacket. The last thing you put
+      on is the first thing you take off.
     </aside>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <p class="text-2xl text-gray-300">
-        With multiple types, we need to remember
-      </p>
-      <p class="text-4xl font-bold text-amber-400">WHAT was put on last</p>
-      <p class="text-2xl text-gray-300 fragment mt-4">Not just count!</p>
-    </div>
-  </section>
-
-  <!-- Slide 13: The tricky example intro -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-4xl font-bold">The Tricky Example</h2>
-      <p class="text-2xl text-gray-300 fragment">
-        The <strong>count per type</strong> might look balanced...
-      </p>
-      <p class="text-2xl text-red-400 fragment">
-        ...but the sequence is <strong>impossible</strong>
-      </p>
-    </div>
-  </section>
-
-  <!-- Slide 14: Tricky example demo -->
-  <section>
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
         actions={[
           { type: "PUT", garment: "T" },
           { type: "PUT", garment: "S" },
-          { type: "TAKE_OFF", garment: "T" },
+          { type: "PUT", garment: "J" },
+          { type: "TAKE_OFF", garment: "S" },
         ]}
-        displayMode="both"
-        showTypeCounters={true}
+        displayMode="none"
+        showTypeCounters={false}
         autoPlay={false}
         showControls={true}
       />
     </div>
   </section>
 
-  <!-- Slide 15: Tricky insight -->
   <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <div class="text-6xl">❌</div>
-      <p class="text-2xl text-gray-300">
-        You can't remove the <strong>T-Shirt</strong> when the <strong
-          >Sweater</strong
-        > is on top!
-      </p>
-      <p class="text-xl text-gray-400 fragment mt-4">
-        The counters say everything is fine (1 T, 1 S on)
-      </p>
-      <p class="text-3xl font-bold text-amber-400 fragment">ORDER MATTERS</p>
-    </div>
-  </section>
-
-  <!-- Slide 16: The reveal intro -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-4xl font-bold">The Final Reveal</h2>
-      <p class="text-2xl text-gray-300 fragment">
-        Watch the labels transform...
-      </p>
-    </div>
-  </section>
-
-  <!-- Slide 17: Parentheses reveal -->
-  <section>
+    <aside class="notes">
+      This is exactly how our problem works. Instead of stacking clothes one on
+      top of another, we are stacking opening parentheses. When we see a closing
+      parenthesis, we need to make sure it matches the most recent opening
+      parenthesis we have seen. We repeat this process until we reach the end,
+      making sure we finish in the same state we started.
+    </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
         client:load
@@ -281,6 +204,32 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
           { type: "PUT", garment: "J" },
           { type: "TAKE_OFF", garment: "J" },
           { type: "TAKE_OFF", garment: "S" },
+          { type: "PUT", garment: "S" },
+          { type: "TAKE_OFF", garment: "S" },
+          { type: "TAKE_OFF", garment: "T" },
+        ]}
+        displayMode="none"
+        showParentheses={true}
+        autoPlay={false}
+        showControls={true}
+      />
+    </div>
+  </section>
+
+  <section>
+    <aside class="notes">
+      This pile of symbols is what we call a stack. The last item added to the
+      stack is the first one to be removed. Last In, First Out.
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full">
+      <Probador
+        client:load
+        actions={[
+          { type: "PUT", garment: "T" },
+          { type: "PUT", garment: "S" },
+          { type: "TAKE_OFF", garment: "S" },
+          { type: "PUT", garment: "J" },
+          { type: "TAKE_OFF", garment: "J" },
           { type: "TAKE_OFF", garment: "T" },
         ]}
         displayMode="stack"
@@ -291,63 +240,48 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
     </div>
   </section>
 
-  <!-- Slide 18: Mapping explanation -->
-  <section>
-    <aside class="notes">
-      Next, we define which closing parenthesis belongs to which opening one.
-      Each closer knows exactly what it expects in the stack.
-    </aside>
-    <div class="flex flex-col items-center justify-center h-full gap-6">
-      <h2 class="text-3xl font-bold mb-4">The Mapping</h2>
-      <div class="grid grid-cols-2 gap-x-12 gap-y-4 text-2xl">
-        <div class="text-right">
-          <code class="text-green-400">(</code> = PUT T-Shirt
-        </div>
-        <div><code class="text-green-400">)</code> = TAKE OFF T-Shirt</div>
-        <div class="text-right fragment">
-          <code class="text-blue-400">[</code> = PUT Sweater
-        </div>
-        <div class="fragment">
-          <code class="text-blue-400">]</code> = TAKE OFF Sweater
-        </div>
-        <div class="text-right fragment">
-          <code class="text-purple-400">{`{`}</code> = PUT Jacket
-        </div>
-        <div class="fragment">
-          <code class="text-purple-400">{`}`}</code> = TAKE OFF Jacket
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Slide 19: The insight -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-8">
-      <blockquote
-        class="text-2xl text-gray-300 max-w-3xl text-center italic border-l-4 border-amber-400 pl-6"
-      >
-        "Balancing parentheses is exactly like getting dressed in layers without
-        breaking the laws of physics."
-      </blockquote>
-    </div>
-  </section>
-
   <section id="code" class="text-lg">
     <aside class="notes">
-      Let's see how this works in Python code. We start with an empty stack.
-      This is where we keep the parentheses that are still open. In Python, we
-      implement the stack as a list. Now we go through the input line, one
-      character at a time. If the character is an opening parenthesis, we push
-      it onto the stack. We are just remembering it. If the character is not an
-      opening parenthesis, we assume it is a closing one. We assume no letters
-      or numbers will appear in the input. Do we have something to close? If the
-      stack is empty, we stop immediately. If there is something to close, we
-      take the last thing we opened. We use pop to get and remove the last item
-      from the stack. Now we check if the types match. If they do not, the
-      sequence is invalid. We use the matching dictionary to see what we
-      expected to find in the stack, based on the closing parenthesis we
-      encountered. We repeat this until we reach the end of the line. At the
-      very end, only one thing matters. Did we close everything we opened?
+      <p>
+        Let's see how this works in Python code. We start with an empty stack.
+        This is where we keep the parentheses that are still open. In Python, we
+        implement the stack as a list.
+      </p>
+      <p>
+        We also create a mapping from closing parentheses to their corresponding
+        opening ones. This mapping defines which opening parenthesis we expect
+        to find on the stack when we encounter a closing parenthesis.
+      </p>
+      <p>We then go through the input line, one character at a time.</p>
+      <p>
+        If the character is an opening parenthesis, we push it onto the stack.
+        We are simply remembering it. If the character is not an opening
+        parenthesis, we assume it is a closing one. We assume no letters,
+        numbers or other symbols will appear in the input.
+      </p>
+      <p>
+        At that point, we ask: do we have something to close? If the stack is
+        empty, we stop immediately.
+      </p>
+      <p>
+        If there is something to close, we take the most recent opening
+        parenthesis. We use pop to get and remove the last item from the stack.
+      </p>
+      <p>
+        We then use the mapping to check if this opening parenthesis matches the
+        closing one we just encountered. If it does not match, the sequence is
+        invalid.
+      </p>
+      <p>
+        We repeat this until we reach the end of the line. At the very end, only
+        one thing matters: did we close everything we opened?
+      </p>
+      <p>
+        The time complexity is linear because we process each character in the
+        input string exactly once. The space complexity is also linear in the
+        worst case, as we may need to store all opening parentheses in the stack
+        if they are never closed. So we have an efficient solution.
+      </p>
     </aside>
     <RevealCode
       client:only="react"
@@ -385,7 +319,38 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
       `
     />
   </section>
-  <section id="followup-code" class="text-lg">
+
+  <section>
+    <aside class="notes">
+      The key takeaway is simple. With one type of parenthesis, counting works.
+      But with multiple types, we need to remember the order in which they were
+      opened. A stack is the perfect data structure for this job.
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full gap-8">
+      <h2 class="text-3xl font-bold">Counter vs Stack</h2>
+      <div class="grid grid-cols-2 gap-50 text-xl mt-4">
+        <div class="text-center fragment">
+          <p class="text-amber-400 font-bold text-2xl mb-4">Single type</p>
+          <p class="text-gray-300">Just count!</p>
+          <code class="text-green-400 text-3xl block mt-4">( ( ) ( ) )</code>
+        </div>
+        <div class="text-center fragment">
+          <p class="text-amber-400 font-bold text-2xl mb-4">Multiple types</p>
+          <p class="text-gray-300">Need a stack!</p>
+          <code class="text-3xl block mt-4">
+            <span class="text-green-400">(</span>
+            <span class="text-blue-400">[</span>
+            <span class="text-purple-400">{`{`}</span>
+            <span class="text-purple-400">{`}`}</span>
+            <span class="text-blue-400">]</span>
+            <span class="text-green-400">)</span>
+          </code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="follow-up-code" class="text-lg">
     <aside class="notes">
       There is another way to solve this. Same idea. Different perspective. I'll
       leave it here... Leave a comment if you can figure out why it works.
@@ -412,40 +377,6 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
     return len(stack) == 0
 `}
     />
-  </section>
-  <!-- Slide 20: Counter vs Stack -->
-  <section>
-    <aside class="notes">
-      The time complexity is linear because we process each character in the
-      input string exactly once. The space complexity is also linear in the
-      worst case, as we may need to store all opening parentheses in the stack
-      if they are never closed. So we have an efficient solution. The key
-      takeaway is simple. With one type of parenthesis, counting works. But with
-      multiple types, we need to remember the order in which they were opened. A
-      stack is the perfect data structure for this job.
-    </aside>
-    <div class="flex flex-col items-center justify-center h-full gap-8">
-      <h2 class="text-3xl font-bold">Counter vs Stack</h2>
-      <div class="grid grid-cols-2 gap-50 text-xl mt-4">
-        <div class="text-center fragment">
-          <p class="text-amber-400 font-bold text-2xl mb-4">Single type</p>
-          <p class="text-gray-300">Just count!</p>
-          <code class="text-green-400 text-3xl block mt-4">( ( ) ( ) )</code>
-        </div>
-        <div class="text-center fragment">
-          <p class="text-amber-400 font-bold text-2xl mb-4">Multiple types</p>
-          <p class="text-gray-300">Need a stack!</p>
-          <code class="text-3xl block mt-4">
-            <span class="text-green-400">(</span>
-            <span class="text-blue-400">[</span>
-            <span class="text-purple-400">{`{`}</span>
-            <span class="text-purple-400">{`}`}</span>
-            <span class="text-blue-400">]</span>
-            <span class="text-green-400">)</span>
-          </code>
-        </div>
-      </div>
-    </div>
   </section>
 
   <section>
