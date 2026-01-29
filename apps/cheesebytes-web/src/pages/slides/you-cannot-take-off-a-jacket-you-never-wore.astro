@@ -36,7 +36,7 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
   </section>
 
   <section>
-    <aside class="notes">Intro here</aside>
+    <!-- Intro video here. -->
   </section>
 
   <section>
@@ -65,22 +65,33 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      The first thing we tried was counting. Parentheses come in pairs. So we
-      count how many open, and how many close.
+      <p>
+        The first thing we tried was counting. Parentheses come in pairs. So we
+        count how many open, and how many close.
+      </p>
       <!-- () -->
-      If the numbers match... maybe we are done. And in many cases, we are.
+      <p>
+        If the numbers match... maybe we are done. And in many cases, we are.
+      </p>
       <!-- (()()) -->
-      When the numbers do not match, the sequence is clearly invalid. If the number
-      of opening parentheses is greater than the number of closing parentheses, something
-      is missing.
+      <p>
+        When the numbers do not match, the sequence is clearly invalid. If the
+        number of opening parentheses is greater than the number of closing
+        parentheses, something is missing.
+      </p>
       <!-- (()() -->
-      If the number of closing parentheses is greater than the number of opening parentheses,
-      something is extra.
+      <p>
+        If the number of closing parentheses is greater than the number of
+        opening parentheses, something is extra.
+      </p>
       <!-- (()())) -->
-      But then there is this.
+      <p>But then there is this.</p>
       <!-- )( -->
-      Same count. Nothing missing. Nothing extra. And still, completely broken. So
-      counting helps. But it doesn't tell the whole story. Order matters.
+      <p>
+        Same count. Nothing missing. Nothing extra. And still, completely
+        broken. So counting helps. But it doesn't tell the whole story. Order
+        matters.
+      </p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -93,21 +104,27 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      So instead of counting everything at the end, we follow the line as it
-      unfolds. We keep track of how many opening parentheses we have seen that
-      are still pending to be closed. If we try to close more parentheses than
-      we have opened at any point, we know the sequence is invalid.
+      <p>
+        So instead of counting everything at the end, we follow the line as it
+        unfolds. We keep track of how many opening parentheses we have seen that
+        are still pending to be closed. If we try to close more parentheses than
+        we have opened at any point, we know the sequence is invalid.
+      </p>
       <!-- ()) -->
-      If we finish the line and there are still opening parentheses pending to be
-      closed, the sequence is also invalid.
+      <p>
+        If we finish the line and there are still opening parentheses pending to
+        be closed, the sequence is also invalid.
+      </p>
       <!-- (() -->
-      This works well for a single type of parenthesis. But what if we have more than
-      one type? We have parentheses, brackets, and curly braces. It might seem that
-      it works the same way.
+      <p>
+        This works well for a single type of parenthesis. But what if we have
+        more than one type? We have parentheses, brackets, and curly braces. It
+        might seem that it works the same way.
+      </p>
       <!-- ([{}]) -->
-      But look at this one.
+      <p>But look at this one.</p>
       <!-- (] -->
-      So order matters, and type matters.
+      <p>So order matters, and type matters.</p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -120,13 +137,20 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      We can try to keep track of how many opening parentheses of each type we
-      have seen that are still pending to be closed.
+      <p>
+        We can try to keep track of how many opening parentheses of each type we
+        have seen that are still pending to be closed.
+      </p>
       <!-- (] -->
-      This example is no longer a problem. However, it's easy to find a new issue.
+      <p>
+        This example is no longer a problem. However, it's easy to find a new
+        issue.
+      </p>
       <!-- ([)] -->
-      We are trying to close a parenthesis when there is still an unclosed bracket.
-      So we need to remember the most recent unclosed opener.
+      <p>
+        We are trying to close a parenthesis when there is still an unclosed
+        bracket. So we need to remember the most recent unclosed opener.
+      </p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -139,11 +163,13 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      Let's use an analogy to make this idea clearer. Think of a changing room.
-      You walk in, and you put one t-shirt on. Then a sweater. Then a jacket.
-      After looking at yourself in the mirror, you start taking your clothes
-      off. You have to take off the jacket first. Then the sweater. Then the
-      t-shirt.
+      <p>
+        Let's use an analogy to make this idea clearer. Think of a changing
+        room. You walk in, and you put one t-shirt on. Then a sweater. Then a
+        jacket. After looking at yourself in the mirror, you start taking your
+        clothes off. You have to take off the jacket first. Then the sweater.
+        Then the t-shirt.
+      </p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
@@ -166,9 +192,11 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      Let's try a different sequence. T-Shirt, Sweater, Jacket, and... it's not
-      possible to take off the sweater before the jacket. The last thing you put
-      on is the first thing you take off.
+      <p>
+        Let's try a different sequence. T-Shirt, Sweater, Jacket, and... it's
+        not possible to take off the sweater before the jacket. The last thing
+        you put on is the first thing you take off.
+      </p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
@@ -189,11 +217,13 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      This is exactly how our problem works. Instead of stacking clothes one on
-      top of another, we are stacking opening parentheses. When we see a closing
-      parenthesis, we need to make sure it matches the most recent opening
-      parenthesis we have seen. We repeat this process until we reach the end,
-      making sure we finish in the same state we started.
+      <p>
+        This is exactly how our problem works. Instead of stacking clothes one
+        on top of another, we are stacking opening parentheses. When we see a
+        closing parenthesis, we need to make sure it matches the most recent
+        opening parenthesis we have seen. We repeat this process until we reach
+        the end, making sure we finish in the same state we started.
+      </p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
@@ -218,8 +248,10 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
 
   <section>
     <aside class="notes">
-      This pile of symbols is what we call a stack. The last item added to the
-      stack is the first one to be removed. Last In, First Out.
+      <p>
+        This pile of symbols is what we call a stack. The last item added to the
+        stack is the first one to be removed. Last In, First Out.
+      </p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <Probador
