@@ -684,7 +684,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
     // Calculate positions in a fan/arc on the right side of cursor
     // Cursor tip is approximately 64px below mousePos
-    const cursorTipOffset = 48; // Offset to cursor tip area
+    const cursorTipOffset = 32; // Offset to cursor tip area
     const radius = 120; // Larger radius for more spacing
     const startAngle = -70; // degrees from horizontal
     const endAngle = 70;
