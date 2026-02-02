@@ -69,29 +69,24 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
         The first thing we tried was counting. Parentheses come in pairs. So we
         count how many open, and how many close.
       </p>
-      <!-- () -->
+      <span class="bold"> () </span>
       <p>
         If the numbers match... maybe we are done. And in many cases, we are.
       </p>
       <!-- (()()) -->
       <p>
-        When the numbers do not match, the sequence is clearly invalid. If the
-        number of opening parentheses is greater than the number of closing
-        parentheses, something is missing.
+        When the numbers do not match, the sequence is clearly invalid. If there
+        are more openings than closings, something is missing.
       </p>
       <!-- (()() -->
-      <p>
-        If the number of closing parentheses is greater than the number of
-        opening parentheses, something is extra.
-      </p>
+      <p>If there are more closings than openings, something is extra.</p>
       <!-- (()())) -->
-      <p>But then there is this.</p>
-      <!-- )( -->
       <p>
-        Same count. Nothing missing. Nothing extra. And still, completely
-        broken. So counting helps. But it doesn't tell the whole story. Order
-        matters.
+        But then there is this. Same count. Nothing missing. Nothing extra. And
+        still, completely broken. So counting helps. But it doesn't tell the
+        whole story. Order matters.
       </p>
+      <!-- )( -->
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -105,26 +100,27 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
   <section>
     <aside class="notes">
       <p>
-        So instead of counting everything at the end, we follow the line as it
-        unfolds. We keep track of how many opening parentheses we have seen that
-        are still pending to be closed. If we try to close more parentheses than
-        we have opened at any point, we know the sequence is invalid.
+        So instead of counting at the end, we follow the line as it unfolds. We
+        track how many openings are still pending. Closing more than we have
+        opened means the sequence is invalid.
       </p>
       <!-- ()) -->
       <p>
-        If we finish the line and there are still opening parentheses pending to
-        be closed, the sequence is also invalid.
+        If we reach the end and some openings are still pending, the sequence is
+        also invalid.
       </p>
       <!-- (() -->
       <p>
         This works well for a single type of parenthesis. But what if we have
-        more than one type? We have parentheses, brackets, and curly braces. It
-        might seem that it works the same way.
+        more than one type? We have round parentheses, brackets, and curly
+        braces.
       </p>
       <!-- ([{}]) -->
-      <p>But look at this one.</p>
+      <p>
+        It might seem that it works the same way. But look at this one. So order
+        matters, and type matters.
+      </p>
       <!-- (] -->
-      <p>So order matters, and type matters.</p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -138,13 +134,10 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
   <section>
     <aside class="notes">
       <p>
-        We can try to keep track of how many opening parentheses of each type we
-        have seen that are still pending to be closed.
-      </p>
-      <!-- (] -->
-      <p>
-        This example is no longer a problem. However, it's easy to find a new
-        issue.
+        We can track how many openings of each type are waiting to be closed.
+        <!-- (] -->
+        With this approach, our previous example is no longer a problem. However,
+        it's easy to find a new issue.
       </p>
       <!-- ([)] -->
       <p>
@@ -218,11 +211,10 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
   <section>
     <aside class="notes">
       <p>
-        This is exactly how our problem works. Instead of stacking clothes one
-        on top of another, we are stacking opening parentheses. When we see a
-        closing parenthesis, we need to make sure it matches the most recent
-        opening parenthesis we have seen. We repeat this process until we reach
-        the end, making sure we finish in the same state we started.
+        This is exactly how our problem works. Instead of stacking clothes, we
+        stack openings. Each time we see a closing one, it must match the most
+        recent opening. We repeat this until the end, making sure we finish in
+        the same state we started.
       </p>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
@@ -280,28 +272,27 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
         implement the stack as a list.
       </p>
       <p>
-        We also create a mapping from closing parentheses to their corresponding
-        opening ones. This mapping defines which opening parenthesis we expect
-        to find on the stack when we encounter a closing parenthesis.
+        We also define a mapping from each closing symbol to the opening one it
+        matches. That mapping tells us exactly what we expect to find on the
+        stack when a closing appears.
       </p>
       <p>We then go through the input line, one character at a time.</p>
       <p>
-        If the character is an opening parenthesis, we push it onto the stack.
-        We are simply remembering it. If the character is not an opening
-        parenthesis, we assume it is a closing one. We assume no letters,
-        numbers or other symbols will appear in the input.
+        If the character is an opening, we push it onto the stack. Otherwise, we
+        treat it as a closing one. We assume the input contains no letters,
+        numbers, or other symbols.
       </p>
       <p>
         At that point, we ask: do we have something to close? If the stack is
         empty, we stop immediately.
       </p>
       <p>
-        If there is something to close, we take the most recent opening
-        parenthesis. We use pop to get and remove the last item from the stack.
+        If there is something to close, we take the most recent opening. We use
+        pop to get and remove the last item from the stack.
       </p>
       <p>
-        We then use the mapping to check if this opening parenthesis matches the
-        closing one we just encountered. If it does not match, the sequence is
+        We then use the mapping to check if the opening we pop matches the
+        closing we just encountered. If it doesn't match, the sequence is
         invalid.
       </p>
       <p>
@@ -309,10 +300,10 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
         one thing matters: did we close everything we opened?
       </p>
       <p>
-        The time complexity is linear because we process each character in the
-        input string exactly once. The space complexity is also linear in the
-        worst case, as we may need to store all opening parentheses in the stack
-        if they are never closed. So we have an efficient solution.
+        The time complexity is linear because we process each character exactly
+        once. The space complexity is also linear in the worst case, as we may
+        need to store every opening if none are closed. That gives us an
+        efficient solution.
       </p>
     </aside>
     <RevealCode
