@@ -1,6 +1,12 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 
-type Tool = "pen" | "rectangle" | "circle" | "eraser";
+type Tool = "pen" | "rectangle" | "circle" | "eraser" | "text";
 type MenuMode = "normal" | "color" | "tool" | "size" | "help";
 
 interface Point {
@@ -30,18 +36,24 @@ const COLOR_OPTIONS = [
 // Tool options with key bindings
 const TOOL_OPTIONS: { key: string; tool: Tool; name: string }[] = [
   { key: "p", tool: "pen", name: "Pen" },
+  { key: "t", tool: "text", name: "Text" },
   { key: "r", tool: "rectangle", name: "Rectangle" },
   { key: "c", tool: "circle", name: "Circle" },
   { key: "e", tool: "eraser", name: "Eraser" },
 ];
 
-// Size options with key bindings
+// Size options with key bindings (fontSize in px, roughly: XS=1em, S=1.5em, M=2.5em, L=4em, XL=5em)
 const SIZE_OPTIONS = [
-  { key: "1", size: 2, name: "XS" },
-  { key: "2", size: 4, name: "S" },
-  { key: "3", size: 8, name: "M" },
-  { key: "4", size: 12, name: "L" },
-  { key: "5", size: 20, name: "XL" },
+  { key: "1", size: 2, fontSize: 16, name: "XS" },
+  { key: "2", size: 4, fontSize: 24, name: "S" },
+  { key: "3", size: 8, fontSize: 40, name: "M" },
+  { key: "4", size: 12, fontSize: 64, name: "L" },
+  { key: "5", size: 20, fontSize: 80, name: "XL" },
+  { key: "6", size: 28, fontSize: 96, name: "XXL", hidden: true },
+  { key: "7", size: 36, fontSize: 112, name: "3XL", hidden: true },
+  { key: "8", size: 48, fontSize: 128, name: "4XL", hidden: true },
+  { key: "9", size: 64, fontSize: 160, name: "5XL", hidden: true },
+  { key: "0", size: 96, fontSize: 192, name: "MAX", hidden: true },
 ];
 
 const MAX_HISTORY = 20;
@@ -58,10 +70,16 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [mousePos, setMousePos] = useState<Point>({ x: 0, y: 0 });
 
+  // Text tool state
+  const [textInput, setTextInput] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+
   // Use refs for drawing state to avoid re-renders during drawing
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<Point | null>(null);
   const lastPointRef = useRef<Point | null>(null);
+  const cursorPosRef = useRef({ x: 0, y: 0 });
 
   // Cache canvas context and rect to avoid repeated lookups
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -69,6 +87,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
   // Performance refs for interaction
   const cursorRef = useRef<HTMLImageElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
   const menuModeRef = useRef(menuMode);
   const mousePosRef = useRef<Point>({ x: 0, y: 0 });
 
@@ -110,12 +129,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
       // Always update ref for sync
       mousePosRef.current = { x, y };
-
-      // Direct DOM update for cursor to avoid re-renders in normal mode
-      if (cursorRef.current) {
-        cursorRef.current.style.left = `${x - 10}px`;
-        cursorRef.current.style.top = `${y}px`;
-      }
+      cursorPosRef.current = { x: x - 10, y };
 
       // Only force re-render if we need to update the menu position
       if (menuModeRef.current !== "normal") {
@@ -126,12 +140,28 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  // Cursor animation loop for high performance (decoupled from React/Canvas)
+  useLayoutEffect(() => {
+    if (!isActive) return;
+
+    let frameId: number;
+    const animate = () => {
+      if (cursorRef.current) {
+        const { x, y } = cursorPosRef.current;
+        cursorRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(-25deg)`;
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [isActive]);
+
   // Sync cursor position when overlay becomes active
   useEffect(() => {
     if (isActive && cursorRef.current) {
       const { x, y } = mousePosRef.current;
-      cursorRef.current.style.left = `${x - 10}px`;
-      cursorRef.current.style.top = `${y}px`;
+      cursorRef.current.style.transform = `translate3d(${x - 10}px, ${y}px, 0) rotate(-25deg)`;
     }
   }, [isActive]);
 
@@ -192,12 +222,39 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     }
   }, []);
 
+  // Commit text to canvas
+  const commitText = useCallback(
+    (text: string, x: number, y: number) => {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!ctx || !canvas || !text.trim()) return;
+
+      const sizeOption = SIZE_OPTIONS.find(
+        (opt) => opt.size === strokeWidthRef.current,
+      );
+      const fontSize = sizeOption?.fontSize || strokeWidthRef.current * 5;
+      ctx.font = `bold ${fontSize}px "IosevkaTermSlab Nerd Font Mono"`;
+      ctx.fillStyle = strokeColorRef.current;
+      ctx.textBaseline = "top";
+
+      // Offset correction: user reported text moving UP, so we need more Y offset to push it down.
+      // TextArea has p-1 (4px) + border (1px) = 5px base.
+      // Line-height 1.2 adds space. We bump factor to 0.25 to align better.
+      const yOffset = 5 + fontSize * 0.25;
+      ctx.fillText(text, x + 5, y + yOffset);
+
+      drawingsRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      saveToHistory();
+    },
+    [saveToHistory],
+  );
+
   // Resize canvas to window size
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { desynchronized: true });
     if (ctx && canvas.width > 0 && canvas.height > 0) {
       drawingsRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
@@ -237,6 +294,18 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       if (!isActive) return;
 
       const key = e.key.toLowerCase();
+
+      // If text input is active, only handle Escape to exit text mode
+      if (textInput) {
+        if (key === "escape") {
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          setTextInput(null);
+        }
+        // Let all other keys pass through to the textarea
+        return;
+      }
 
       // CRITICAL: Stop propagation to prevent Reveal.js from capturing our keys
       e.stopPropagation();
@@ -307,6 +376,24 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
         case "help":
           if (key === "escape" || key === "h") {
             setMenuMode("normal");
+          } else if (key === "c") {
+            setMenuMode("color");
+          } else if (key === "t") {
+            setMenuMode("tool");
+          } else if (key === "s") {
+            setMenuMode("size");
+          } else if (key === "d") {
+            clearCanvas();
+            setMenuMode("normal");
+          } else if (key === "u") {
+            undo();
+            setMenuMode("normal");
+          } else if (key === "r") {
+            redo();
+            setMenuMode("normal");
+          } else if (key === "p") {
+            setIsActive(false);
+            setMenuMode("normal");
           }
           break;
       }
@@ -374,6 +461,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   }, [
     isActive,
     menuMode,
+    textInput,
     resizeCanvas,
     clearCanvas,
     undo,
@@ -385,6 +473,9 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   const startDrawing = useCallback(
     (e: PointerEvent) => {
       if (!isActive || menuModeRef.current !== "normal") return;
+
+      // Prevent focus loss from existing elements (like text input)
+      e.preventDefault();
 
       // Ensure we capture pointer events for tracking outside canvas if needed
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -405,6 +496,15 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       const tool = currentToolRef.current;
       const color = strokeColorRef.current;
       const width = strokeWidthRef.current;
+
+      if (tool === "text") {
+        if (textInput && textInputRef.current) {
+          commitText(textInputRef.current.value, textInput.x, textInput.y);
+        }
+        setTextInput({ x: coords.x, y: coords.y });
+        isDrawingRef.current = false;
+        return;
+      }
 
       if (tool === "pen" || tool === "eraser") {
         ctx.beginPath();
@@ -432,7 +532,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
         }
       }
     },
-    [isActive],
+    [isActive, textInput, commitText],
   );
 
   const draw = useCallback(
@@ -454,6 +554,9 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       const tool = currentToolRef.current;
       const color = strokeColorRef.current;
       const width = strokeWidthRef.current;
+
+      // Update cursor ref for the animation loop
+      cursorPosRef.current = { x: e.clientX - 10, y: e.clientY };
 
       if (tool === "pen" || tool === "eraser") {
         // Draw all coalesced points
@@ -578,6 +681,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       color?: string;
       active?: boolean;
       tool?: Tool;
+      strokeSize?: number;
     }[] = [];
     let title = "";
 
@@ -600,12 +704,16 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
           active: currentTool === opt.tool,
         }));
         break;
+      // Filter out hidden options unless they are active
       case "size":
         title = "Size";
-        options = SIZE_OPTIONS.map((opt) => ({
+        options = SIZE_OPTIONS.filter(
+          (opt) => !opt.hidden || strokeWidth === opt.size,
+        ).map((opt) => ({
           key: opt.key,
           label: opt.name,
           active: strokeWidth === opt.size,
+          strokeSize: opt.size,
         }));
         break;
       case "help":
@@ -640,6 +748,20 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
               <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
               <path d="M2 2l7.586 7.586" />
               <circle cx="11" cy="11" r="2" />
+            </svg>
+          );
+        case "text":
+          return (
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M4 7V4h16v3" />
+              <path d="M9 20h6" />
+              <path d="M12 4v16" />
             </svg>
           );
         case "rectangle":
@@ -723,12 +845,106 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
           const isColorMenu = menuMode === "color";
           const isToolMenu = menuMode === "tool";
+          const isSizeMenu = menuMode === "size";
+          const isHelpMenu = menuMode === "help";
 
           // Smaller size for color circles
           const circleSize = isColorMenu ? "w-7 h-7" : "w-12 h-12";
           const badgeSize = isColorMenu
             ? "w-5 h-5 text-[10px]"
             : "w-6 h-6 text-xs";
+
+          // Help menu uses rectangular labels with full text
+          if (isHelpMenu) {
+            return (
+              <div
+                key={opt.key}
+                className={`absolute flex items-center transition-all duration-150 ${
+                  opt.active ? "scale-110" : ""
+                }`}
+                style={{
+                  left: x,
+                  top: y,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                <div className="relative flex items-center">
+                  {/* Full label rectangle */}
+                  <div
+                    className={`px-3 py-1.5 rounded-lg flex items-center justify-center shadow-xl border ${
+                      opt.active
+                        ? "bg-blue-600 border-white"
+                        : "bg-gray-800 border-gray-500/50"
+                    }`}
+                  >
+                    <span className="text-white text-sm font-medium whitespace-nowrap">
+                      {opt.label}
+                    </span>
+                  </div>
+                  {/* Key badge */}
+                  <div
+                    className={`ml-1 w-6 h-6 text-xs rounded-md flex items-center justify-center font-mono font-bold uppercase shadow-lg ${
+                      opt.active
+                        ? "bg-white text-gray-900"
+                        : "bg-gray-700 text-white border border-gray-500"
+                    }`}
+                  >
+                    {opt.key}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Size menu shows stroke preview (dots)
+          if (isSizeMenu && opt.strokeSize) {
+            return (
+              <div
+                key={opt.key}
+                className={`absolute flex items-center transition-all duration-150 ${
+                  opt.active ? "scale-110" : ""
+                }`}
+                style={{
+                  left: x,
+                  top: y,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                <div className="relative flex items-center">
+                  {/* Stroke preview container (round) */}
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center shadow-xl border-2 ${
+                      opt.active
+                        ? "border-white ring-2 ring-white/50 ring-offset-2 ring-offset-black bg-gray-900"
+                        : "border-gray-500/50 bg-gray-800"
+                    }`}
+                  >
+                    {/* Stroke preview dot */}
+                    <div
+                      className="rounded-full"
+                      style={{
+                        width: opt.strokeSize,
+                        height: opt.strokeSize,
+                        backgroundColor: strokeColor,
+                        minWidth: 4,
+                        minHeight: 4,
+                      }}
+                    />
+                  </div>
+                  {/* Key badge */}
+                  <div
+                    className={`absolute -bottom-1 -right-1 w-6 h-6 text-xs rounded-md flex items-center justify-center font-mono font-bold uppercase shadow-lg ${
+                      opt.active
+                        ? "bg-white text-gray-900"
+                        : "bg-gray-700 text-white border border-gray-500"
+                    }`}
+                  >
+                    {opt.key}
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <div
@@ -812,7 +1028,8 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
           className="fixed z-[10002] pointer-events-none w-14 h-14 transition-opacity duration-200"
           style={{
             opacity: 1,
-            transform: "rotate(-25deg)",
+            top: 0,
+            left: 0,
             transformOrigin: "bottom right",
           }}
         />
@@ -820,6 +1037,41 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
       {/* Radial menu (including help mode) */}
       {isActive && menuMode !== "normal" && renderRadialMenu()}
+
+      {/* Text Input Overlay */}
+      {textInput && (
+        <textarea
+          ref={textInputRef}
+          className="fixed z-[10005] bg-transparent outline-none border border-dashed border-gray-400/50 p-1 overflow-hidden resize-none whitespace-pre"
+          style={{
+            left: textInput.x,
+            top: textInput.y,
+            color: strokeColor,
+            fontSize: `${SIZE_OPTIONS.find((opt) => opt.size === strokeWidth)?.fontSize || strokeWidth * 5}px`,
+            fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
+            fontWeight: "bold",
+            lineHeight: "1.2",
+            minWidth: "300px",
+          }}
+          autoFocus
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (textInputRef.current) {
+                commitText(
+                  textInputRef.current.value,
+                  textInput.x,
+                  textInput.y,
+                );
+              }
+              setTextInput(null);
+            } else if (e.key === "Escape") {
+              setTextInput(null);
+            }
+          }}
+        />
+      )}
     </>
   );
 };
