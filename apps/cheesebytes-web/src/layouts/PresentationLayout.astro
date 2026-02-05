@@ -107,22 +107,8 @@ const {
               }
             },
             // '68' es el keyCode de 'd'/'D'
-            // Agrandar el cursor personalizado.
+            // Disminuñe el cursor personalizado.
             68: function () {
-              if (customCursor) {
-                const current = window._customCursorScale || 1;
-                const newScale = Math.min(current + 0.2, 3);
-                window._customCursorScale = newScale;
-                // Obtener la posición actual
-                const match =
-                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
-                const translate = match ? `translate(${match[1]})` : "";
-                customCursor.style.transform = `${translate} scale(${newScale})`;
-              }
-            },
-            // '83' es el keyCode de 's'/'S'
-            // Disminuir el tamaño del cursor personalizado.
-            83: function () {
               if (customCursor) {
                 const current = window._customCursorScale || 1;
                 const newScale = Math.max(current - 0.2, 0.4);
@@ -134,17 +120,17 @@ const {
               }
             },
             // '69' es el keyCode de 'e'/'E'
-            // Agranda y luego encoge el cursor rápidamente (animación "boing").
+            // Engrandecer el cursor.
             69: function () {
               if (customCursor) {
+                const current = window._customCursorScale || 1;
+                const newScale = Math.min(current + 0.2, 3);
+                window._customCursorScale = newScale;
+                // Obtener la posición actual
                 const match =
                   customCursor.style.transform.match(/translate\(([^)]+)\)/);
                 const translate = match ? `translate(${match[1]})` : "";
-                customCursor.style.transform = `${translate} scale(2)`;
-                setTimeout(() => {
-                  const scale = window._customCursorScale || 1;
-                  customCursor.style.transform = `${translate} scale(${scale})`;
-                }, 200);
+                customCursor.style.transform = `${translate} scale(${newScale})`;
               }
             },
             // '82' es el keyCode de 'r'/'R'
