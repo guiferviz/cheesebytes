@@ -73,20 +73,20 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
       <p>
         If the numbers match... maybe we are done. And in many cases, we are.
       </p>
-      <!-- (()()) -->
+      <span>(()())</span>
       <p>
         When the numbers do not match, the sequence is clearly invalid. If there
         are more openings than closings, something is missing.
       </p>
-      <!-- (()() -->
+      <span>(()()</span>
       <p>If there are more closings than openings, something is extra.</p>
-      <!-- (()())) -->
+      <span>(()()))</span>
       <p>
         But then there is this. Same count. Nothing missing. Nothing extra. And
         still, completely broken. So counting helps. But it doesn't tell the
         whole story. Order matters.
       </p>
-      <!-- )( -->
+      <span>)(</span>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -104,23 +104,23 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
         track how many openings are still pending. Closing more than we have
         opened means the sequence is invalid.
       </p>
-      <!-- ()) -->
+      <span>())</span>
       <p>
         If we reach the end and some openings are still pending, the sequence is
         also invalid.
       </p>
-      <!-- (() -->
+      <span>(()</span>
       <p>
         This works well for a single type of parenthesis. But what if we have
         more than one type? We have round parentheses, brackets, and curly
         braces.
       </p>
-      <!-- ([{}]) -->
+      <span>([{}])</span>
       <p>
         It might seem that it works the same way. But look at this one. So order
         matters, and type matters.
       </p>
-      <!-- (] -->
+      <span>(]</span>
     </aside>
     <div class="flex flex-col items-center justify-center h-full">
       <ParenthesesCounter
@@ -135,11 +135,11 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
     <aside class="notes">
       <p>
         We can track how many openings of each type are waiting to be closed.
-        <!-- (] -->
+        <span>(]</span>
         With this approach, our previous example is no longer a problem. However,
         it's easy to find a new issue.
       </p>
-      <!-- ([)] -->
+      <span>([)]</span>
       <p>
         We are trying to close a parenthesis when there is still an unclosed
         bracket. So we need to remember the most recent unclosed opener.
