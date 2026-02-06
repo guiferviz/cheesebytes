@@ -2,9 +2,7 @@
 import RevealLayout from "../../layouts/PresentationLayout.astro";
 import {
   Probador,
-  GarmentIcon,
   ParenthesesCounter,
-  DEFAULT_GARMENT_COLORS,
 } from "../../components/cave/you-cannot-take-off-a-jacket-you-never-wore";
 import RevealCode from "../../components/RevealCode";
 import CheeseTick from "../../components/icons/CheeseTick.astro";
@@ -26,7 +24,8 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
   <section>
     <div class="flex flex-col items-center justify-center h-full gap-8">
       <aside class="notes">
-        They look similar. They use the same symbols. But one of them breaks.
+        Now look at these two expressions. They look similar. They use the same
+        symbols. But one of them breaks.
       </aside>
       <div class="grid grid-rows-2 gap-40 text-center">
         <code class="text-6xl tracking-wider"> (()()) </code>
@@ -69,7 +68,7 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
         The first thing we tried was counting. Parentheses come in pairs. So we
         count how many open, and how many close.
       </p>
-      <span class="bold"> () </span>
+      <span>()</span>
       <p>
         If the numbers match... maybe we are done. And in many cases, we are.
       </p>
@@ -407,9 +406,5 @@ import CheeseCross from "../../components/icons/CheeseCross.astro";
       This was today's Cheese Byte. Remember, the code matters, but the idea
       comes first.
     </aside>
-    <iframe
-      src="https://cheesebytes.com/cave/parentheses-balancing/"
-      width="1080"
-      height="720"></iframe>
   </section>
 </RevealLayout>
