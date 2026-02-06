@@ -13,7 +13,15 @@ original _Cheese Bytes_ creations.
   them. Each problem is crafted to highlight subtle behaviors, edge cases, or
   surprising quirks in various programming languages.
 - [[Validating Parentheses with Counting]]. This problem challenges you to
-  determine if a given string of parentheses is balanced.
+  determine if a given string of round parentheses is balanced.
+- [[You Cannot Take Off a Jacket You Never Wore]]. This problem explores the
+  concept of balanced parentheses with multiple types of brackets, using the
+  metaphor of dressing and undressing in a dressing room.
+
+You can also find a curated list of
+[[LeetCode|programming problems from LeetCode that I have solved]] and written
+up in Cheese Bytes. Each entry links a LeetCode problem (title and ID) to its
+corresponding Cheese note.
 
 <!--
 En el principio, todo era caos: enunciados incomprensibles, condiciones enrevesadas, variables indefinidas, ideas inconexas... Pero, como un artista que pule la piedra, **El Programador** elimina lo superfluo, conecta lo esencial y moldea, línea a línea, un algoritmo tan elegante que, al completarse, trae la luz a donde antes solo reinaba la oscuridad.

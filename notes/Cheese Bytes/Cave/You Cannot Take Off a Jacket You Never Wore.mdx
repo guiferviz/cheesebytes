@@ -1,0 +1,225 @@
+import {
+  Probador,
+  GarmentIcon,
+  ParenthesesCounter,
+  DEFAULT_GARMENT_COLORS,
+} from "../../../apps/cheesebytes-web/src/components/cave/you-cannot-take-off-a-jacket-you-never-wore";
+
+It might sound odd at first, but there is a close relationship between trying on
+clothes and knowing if a sequence of parentheses is valid.
+
+Imagine you are given a line full of parentheses and asked a simple question:
+**Is it well-formed?** For the answer to be yes, every opening parenthesis must
+be closed. And, of course, you cannot close something you haven't opened before.
+
+Look at these two expressions. They use the same symbols, but one works and the
+other doesn't.
+
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "2rem",
+    textAlign: "center",
+    margin: "2rem 0",
+  }}
+>
+  <code style={{ fontSize: "1.5em" }}> (()()) </code>
+  <code style={{ fontSize: "1.5em" }}> ())() </code>
+</div>
+
+# The First Try: Counting
+
+Our initial intuition is usually to count. Parentheses come in pairs, right? So
+if we count how many open and how many close, and the numbers match... maybe
+we're done? Try to find an example where this doesn't work.
+
+<div style={{ margin: "2rem 0" }}>
+  <ParenthesesCounter client:load mode="count" />
+</div>
+
+In many cases, this works. If you have more closings than openings, obviously
+something is missing. If you have more openings than closings, something is
+extra.
+
+But then comes this case: `)(`. Same number of openings as closings. Nothing
+missing, nothing extra. And yet, it is **completely broken**.
+
+When the numbers do not match, we know for sure it's invalid. But when they do,
+we can't be sure.
+
+Counting helps, but it doesn't tell us the whole story. **Order matters.**
+
+# The Second Try: The Balance
+
+Instead of counting everything at the end, we can follow the line as it
+progresses. We keep a counter of "openings pending to be closed". If at any
+point we try to close more than we have opened (the counter becomes negative),
+the sequence is invalid. If we reach the end and the counter is not zero, it
+also fails.
+
+<div>
+  <ParenthesesCounter client:load mode="balance" />
+</div>
+
+This works wonders... if you only have round parentheses `()`. But the world of
+code is full of brackets `[]` and braces `{}`. Expressions like `([{}])` also
+work perfectly well, but there are other combinations that break. Can you find
+one?
+
+Try this: `(]`. Order matters, but **type also matters**.
+
+> [!note]
+>
+> You can find a the full implementation of this solution in
+> [[Validating Parentheses with Counting]].
+
+# Multiple Types of Parentheses
+
+We could try keeping separate counters for each type. How many `(` pending? How
+many `[` pending? With that, we solve the previous problem `(]`. Are you able to
+find a counterexample?
+
+<div>
+  <ParenthesesCounter client:load mode="multi-count" title="Counter Per Type" />
+</div>
+
+We fall into a new trap: `([)]`. Here we are trying to close a round parenthesis
+when we still have an open bracket. We need to always remember **which one was
+the last one** we opened.
+
+# The Dressing Room Metaphor
+
+Let's use an analogy to make it clearer. Think of a dressing room. You walk in
+and put on a **T-shirt**. Then a **Sweater**. And finally a **Jacket**.
+
+You look at yourself in the mirror (looking good, by the way) and decide to take
+your clothes off. You can't take off the t-shirt first. You have to take off the
+**Jacket** first. Then the **Sweater**. And finally the **T-shirt**.
+
+<div>
+  <Probador
+    client:load
+    actions={[
+      { type: "PUT", garment: "T" },
+      { type: "PUT", garment: "S" },
+      { type: "PUT", garment: "J" },
+      { type: "TAKE_OFF", garment: "J" },
+      { type: "TAKE_OFF", garment: "S" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="none"
+    showTypeCounters={false}
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+The last one in is the first one out (**LIFO**: Last In, First Out). If you try
+to take off the sweater before the jacket... well, you're going to have
+problems.
+
+<div>
+  <Probador
+    client:load
+    actions={[
+      { type: "PUT", garment: "T" },
+      { type: "PUT", garment: "S" },
+      { type: "PUT", garment: "J" },
+      { type: "TAKE_OFF", garment: "S" },
+    ]}
+    displayMode="none"
+    showTypeCounters={false}
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+# The Stack
+
+This is exactly the parentheses problem. Instead of stacking clothes, we stack
+openings. Every time we see a closing symbol, it must match the **most recent**
+opening (the one "on top" of all our clothes).
+
+In programming, we call this pile of symbols a **Stack**.
+
+<div>
+  <Probador
+    client:load
+    actions={[
+      { type: "PUT", garment: "T" },
+      { type: "PUT", garment: "S" },
+      { type: "TAKE_OFF", garment: "S" },
+      { type: "PUT", garment: "J" },
+      { type: "TAKE_OFF", garment: "J" },
+      { type: "TAKE_OFF", garment: "T" },
+    ]}
+    displayMode="stack"
+    showParentheses={true}
+    autoPlay={false}
+    showControls={true}
+  />
+</div>
+
+# The Code Solution
+
+The implementation is straightforward using a list in Python as a stack.
+
+1. We iterate through the text character by character.
+2. If it's an opening `([{`, we push it onto the stack.
+3. If it's a closing `)]}`:
+   - We check that the stack is not empty.
+   - We remove the last element (`pop`).
+   - We check if they are a pair.
+4. At the end, the stack must be empty.
+
+```python
+def is_valid_parentheses(text: str) -> bool:
+    # Our "stack" of clothes
+    stack = []
+    # Map of what closes what
+    matching = {')': '(', ']': '[', '}': '{'}
+
+    for char in text:
+        if char in '([{':
+            stack.append(char)
+        elif char in ')]}':
+            if not stack:
+                return False  # Trying to take off clothes you're not wearing!
+
+            last_open = stack.pop()
+            if matching[char] != last_open:
+                return False  # Wrong garment!
+
+    return len(stack) == 0  # Have you taken everything off?
+```
+
+# Bonus Track
+
+There is another curious way to solve this in Python based on the ASCII codes of
+the characters, without using a mapping dictionary. I'll leave it here for you
+to think about. Can you figure out why the difference of 1 or 2 works?
+
+```python
+def is_valid_parentheses(text: str) -> bool:
+    stack = []
+    for char in text:
+        if char in "([{":
+            stack.append(char)
+        else:
+            if not stack: return False
+            last_open = stack.pop()
+            # ASCII Magic
+            diff = ord(char) - ord(last_open)
+            if diff != 1 and diff != 2:
+                return False
+    return len(stack) == 0
+```
+
+And that's it! The next time you struggle with nested parentheses, remember:
+it's just a matter of getting dressed and undressed in the right order.
+
+# References
+
+- [LeetCode Problem 20 - Valid Parentheses](https://leetcode.com/problems/valid-parentheses/)
+- [Presentation Version](/slides/you-cannot-take-off-a-jacket-you-never-wore)
