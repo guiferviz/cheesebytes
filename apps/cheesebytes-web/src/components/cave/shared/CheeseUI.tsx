@@ -63,6 +63,7 @@ interface ControlBarProps {
   canStep?: boolean;
   stepLabel?: string;
   resetLabel?: string;
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
@@ -75,12 +76,13 @@ export const CheeseControlBar: React.FC<ControlBarProps> = ({
   canStep = true,
   stepLabel = 'Step →',
   resetLabel = '↺ Reset',
+  size = 'md',
   className = '',
 }) => {
   return (
     <div className={`flex gap-3 items-center justify-center ${className}`}>
       {onReset && (
-        <CheeseButton variant="secondary" onClick={onReset}>
+        <CheeseButton variant="secondary" size={size} onClick={onReset}>
           {resetLabel}
         </CheeseButton>
       )}
@@ -88,6 +90,7 @@ export const CheeseControlBar: React.FC<ControlBarProps> = ({
       {onStep && (
         <CheeseButton
           variant="primary"
+          size={size}
           onClick={onStep}
           disabled={isComplete || isPlaying || !canStep}
         >
@@ -98,6 +101,7 @@ export const CheeseControlBar: React.FC<ControlBarProps> = ({
       {onPlayPause && (
         <CheeseButton
           variant={isPlaying ? 'danger' : 'success'}
+          size={size}
           onClick={onPlayPause}
           disabled={isComplete}
         >

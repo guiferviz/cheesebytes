@@ -4,6 +4,7 @@ import {
   TrappingWater,
   DEFAULT_HEIGHTS,
 } from "../../components/cave/trapping-rain-water";
+import RevealCode from "../../components/RevealCode";
 ---
 
 <RevealLayout
@@ -11,7 +12,12 @@ import {
   description="Two-pointer algorithm visualization with pixel art sprites"
   theme="dark"
 >
+  <!-- Intro: the terrain -->
   <section>
+    <aside class="notes">
+      Look at this terrain. Hills and valleys. A quiet landscape. But something
+      is about to happen.
+    </aside>
     <TrappingWater
       client:load
       heights={DEFAULT_HEIGHTS}
@@ -25,7 +31,12 @@ import {
     />
   </section>
 
+  <!-- It rains -->
   <section>
+    <aside class="notes">
+      It rains. Water falls from the sky, and the valleys start to fill. Some of
+      it flows away. But some of it stays, trapped between the walls.
+    </aside>
     <TrappingWater
       client:load
       heights={DEFAULT_HEIGHTS}
@@ -39,7 +50,13 @@ import {
     />
   </section>
 
+  <!-- Water trapped -->
   <section>
+    <aside class="notes">
+      The question is: how much water gets trapped? We know the shape of the
+      terrain. We know where the hills are, and where the gaps are. Can we
+      figure out the answer without simulating every single raindrop?
+    </aside>
     <TrappingWater
       client:load
       heights={DEFAULT_HEIGHTS}
@@ -53,10 +70,15 @@ import {
     />
   </section>
 
-  <!-- Slide 4: The Challenge -->
+  <!-- The problem statement -->
   <section>
+    <aside class="notes">
+      Let's make it formal. We receive a list of numbers. Each number represents
+      the height of a column. Our job is to figure out how many units of water
+      would be trapped between them after it rains. Sounds simple, right? Let's
+      start small.
+    </aside>
     <div class="flex flex-col items-center justify-center h-full gap-8">
-      <h2 class="text-4xl font-bold">🎯 The Challenge</h2>
       <div class="text-2xl text-gray-300 space-y-4 text-center max-w-3xl">
         <p class="fragment">
           Given the height of each <span class="text-amber-400"
@@ -64,7 +86,7 @@ import {
           >...
         </p>
         <p class="fragment">
-          Calculate how many <span class="text-blue-400">water blocks</span> get trapped!
+          Calculate how many <span class="text-blue-400">water blocks</span> get trapped.
         </p>
         <p class="fragment fade-up text-amber-300 font-mono mt-8">
           heights = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]
@@ -73,14 +95,162 @@ import {
     </div>
   </section>
 
-  <!-- Slide 5: Two Pointers Concept -->
+  <!-- Intro example: single column -->
   <section>
-    <div class="flex flex-col items-center justify-center h-full gap-4">
-      <p class="text-xl text-gray-300 mb-4">
-        <span class="text-green-400">L</span> starts left,
-        <span class="text-amber-400">R</span> starts right - they march toward each
-        other!
+    <aside class="notes">
+      Let's think about the simplest case. A single column. It rains. Where
+      would the water go? There is nothing to hold it. No walls on either side.
+      It just falls off. Zero water trapped.
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full gap-10">
+      <code class="text-3xl tracking-wider text-amber-300">[1]</code>
+      <TrappingWater
+        client:load
+        heights={[0]}
+        showAlgorithm={false}
+        showWaterPreview={true}
+        showControls={false}
+        showRain={true}
+        scale={0.7}
+      />
+      <p class="text-xl text-gray-400 fragment">Nothing to hold it. Zero.</p>
+    </div>
+  </section>
+
+  <!-- Intro example: two columns -->
+  <section>
+    <aside class="notes">
+      Two columns now. A short one and a tall one. Still, no gap between them.
+      No valley where the water could rest. It slides down the sides and
+      disappears. Still zero.
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full gap-10">
+      <code class="text-3xl tracking-wider text-amber-300">[0, 1]</code>
+      <TrappingWater
+        client:load
+        heights={[0, 1]}
+        showAlgorithm={false}
+        showWaterPreview={true}
+        showControls={false}
+        showRain={true}
+        scale={0.7}
+      />
+      <p class="text-xl text-gray-400 fragment">No valley. Still zero.</p>
+    </div>
+  </section>
+
+  <!-- Intro example: 1, 0, 1 -->
+  <section>
+    <aside class="notes">
+      <p>
+        Now this is interesting. A wall, a gap, and another wall. Both walls are
+        one block tall. The gap between them can hold exactly one unit of water.
+        And it does.
       </p>
+      <p>
+        This is the smallest meaningful case. Two walls and a valley between
+        them.
+      </p>
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full gap-10">
+      <code class="text-3xl tracking-wider text-amber-300">[1, 0, 1]</code>
+      <TrappingWater
+        client:load
+        heights={[1, 0, 1]}
+        showAlgorithm={false}
+        showWaterPreview={true}
+        showControls={false}
+        showRain={true}
+        scale={0.7}
+      />
+      <p class="text-xl text-gray-400 fragment">
+        Two walls, one gap. <span class="text-blue-400">One unit</span> of water.
+      </p>
+    </div>
+  </section>
+
+  <!-- Intro example: 1, 0, 2 — the key insight -->
+  <section>
+    <aside class="notes">
+      <p>
+        But what if the walls are not the same height? One on the left, two on
+        the right. The right wall is taller. Could we fill two blocks of water?
+      </p>
+      <p>
+        No. The water can only rise as high as the shorter wall. Think about it.
+        If you pour water into this gap, it overflows on the left side at height
+        one. The right wall being taller changes nothing. The bottleneck is the
+        shorter side.
+      </p>
+      <p>
+        So the water at any position is limited by the minimum of the tallest
+        wall on each side. This is the key insight.
+      </p>
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full gap-10">
+      <code class="text-3xl tracking-wider text-amber-300">[1, 0, 2]</code>
+      <TrappingWater
+        client:load
+        heights={[1, 0, 2]}
+        showAlgorithm={false}
+        showWaterPreview={true}
+        showControls={false}
+        showRain={true}
+        scale={0.7}
+      />
+      <p class="text-xl text-gray-400 fragment">
+        Still <span class="text-blue-400">one unit</span>. The water can only
+        rise to the <span class="text-amber-400">shorter wall</span>.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <aside class="notes"></aside>
+    <div class="flex flex-col items-center justify-center h-full gap-6">
+      <code class="text-3xl tracking-wider text-amber-300">[1, 0, 2]</code>
+      <TrappingWater
+        client:load
+        heights={[2, 1, 0, 1, 2]}
+        showAlgorithm={false}
+        showWaterPreview={true}
+        showControls={false}
+        showRain={true}
+        scale={0.7}
+      />
+      <p class="text-xl text-gray-400 fragment">
+        Still <span class="text-blue-400">one unit</span>. The water can only
+        rise to the <span class="text-amber-400">shorter wall</span>.
+      </p>
+    </div>
+  </section>
+  <!-- Two pointers idea -->
+  <section>
+    <aside class="notes">
+      <p>
+        So how do we solve this for a larger terrain? We could check every
+        single column, find the tallest wall to its left, the tallest to its
+        right, take the minimum, and subtract the column's own height. That
+        gives us the water at that position.
+      </p>
+      <p>
+        But there is a more elegant way. Imagine two people standing at opposite
+        ends of the valley. One on the left, one on the right. They start
+        walking toward each other.
+      </p>
+      <p>
+        Each one remembers the tallest wall they have seen so far. That memory
+        is what tells them how much water could be held at their current
+        position.
+      </p>
+      <p>
+        The one standing behind the shorter wall moves first. Why? Because the
+        shorter side is the bottleneck. We already saw this with our small
+        example. Water can only be held up to the height of the shorter wall. So
+        we always know exactly how much water fits there.
+      </p>
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full gap-4">
       <TrappingWater
         client:load
         heights={DEFAULT_HEIGHTS}
@@ -94,66 +264,26 @@ import {
     </div>
   </section>
 
-  <!-- Slide 6: Algorithm Rules -->
+  <!-- Auto-play -->
   <section>
-    <div class="flex flex-col items-center justify-center h-full gap-8">
-      <h2 class="text-4xl font-bold">📜 Game Rules</h2>
-      <div class="grid grid-cols-2 gap-8 text-xl">
-        <div class="bg-green-900/30 p-6 rounded-xl border border-green-500/30">
-          <h3 class="text-2xl font-bold text-green-400 mb-4">
-            🟢 Left Pointer
-          </h3>
-          <ul class="space-y-2 text-gray-300">
-            <li>• Tracks <code class="text-green-300">leftMax</code></li>
-            <li>• Moves when leftMax ≤ rightMax</li>
-            <li>• Adds water: leftMax - height</li>
-          </ul>
-        </div>
-        <div class="bg-amber-900/30 p-6 rounded-xl border border-amber-500/30">
-          <h3 class="text-2xl font-bold text-amber-400 mb-4">
-            🟡 Right Pointer
-          </h3>
-          <ul class="space-y-2 text-gray-300">
-            <li>• Tracks <code class="text-amber-300">rightMax</code></li>
-            <li>• Moves when rightMax &lt; leftMax</li>
-            <li>• Adds water: rightMax - height</li>
-          </ul>
-        </div>
-      </div>
-      <p class="text-lg text-gray-400 mt-4 fragment">
-        The pointers meet in the middle → <span class="text-emerald-400"
-          >Game Complete!</span
-        >
+    <aside class="notes">
+      <p>
+        Let's spell out the rules. Each pointer keeps track of the tallest
+        column it has seen. That is its maximum. When a pointer steps forward,
+        it looks down. If the ground is lower than its maximum, the difference
+        is water. Simple subtraction.
       </p>
-    </div>
-  </section>
-
-  <!-- Slide 7: Interactive Demo -->
-  <section>
-    <div class="flex flex-col items-center justify-center h-full gap-4">
-      <h2 class="text-3xl font-bold mb-2">🕹️ Try It Yourself!</h2>
-      <TrappingWater
-        client:load
-        heights={DEFAULT_HEIGHTS}
-        showAlgorithm={true}
-        showWaterPreview={false}
-        showControls={true}
-        showHeightEditor={true}
-        autoPlay={false}
-        scale={0.375}
-      />
-      <p class="text-lg text-gray-400 mt-2">
-        Edit the heights above, then click <strong>Step</strong> or <strong
-          >Play</strong
-        >!
+      <p>
+        And the key question at every step: who moves? The one behind the
+        shorter wall. Always. Because we are certain about how much water fits
+        on the shorter side. The taller side might still grow.
       </p>
-    </div>
-  </section>
-
-  <!-- Slide 8: Auto-play Demo -->
-  <section>
+      <p>
+        They keep walking. One step at a time. Until they meet in the middle.
+        Let's watch it play out.
+      </p>
+    </aside>
     <div class="flex flex-col items-center justify-center h-full gap-4">
-      <h2 class="text-3xl font-bold mb-2">🎬 Watch It Run</h2>
       <TrappingWater
         client:load
         heights={DEFAULT_HEIGHTS}
@@ -167,10 +297,14 @@ import {
     </div>
   </section>
 
-  <!-- Slide 9: Different Heights -->
+  <!-- Different terrain -->
   <section>
+    <aside class="notes">
+      What about a different landscape? Taller peaks, deeper valleys. The
+      algorithm doesn't care. The same two pointers. The same simple rule. It
+      works regardless of the shape. That's the beauty of it.
+    </aside>
     <div class="flex flex-col items-center justify-center h-full gap-4">
-      <h2 class="text-3xl font-bold mb-2">🗻 Different Terrain</h2>
       <TrappingWater
         client:load
         heights={[3, 0, 2, 0, 4, 0, 1, 0, 3, 0, 2]}
@@ -183,20 +317,64 @@ import {
     </div>
   </section>
 
-  <!-- Slide 10: Code -->
+  <!-- Interactive -->
   <section>
-    <div class="flex flex-col items-center justify-center h-full w-full">
-      <pre
-        class="bg-gray-900 rounded-xl text-left"><code class="language-python">{`def trap(height):
+    <aside class="notes">
+      Now it's your turn. Change the heights. Build your own terrain. Step
+      through the algorithm and watch how the water fills in. Try making a deep
+      valley. Try a single tall peak. Try something flat. See what happens.
+    </aside>
+    <div class="flex flex-col items-center justify-center h-full gap-4">
+      <TrappingWater
+        client:load
+        heights={DEFAULT_HEIGHTS}
+        showAlgorithm={true}
+        showWaterPreview={false}
+        showControls={true}
+        showHeightEditor={true}
+        autoPlay={false}
+        scale={0.375}
+      />
+    </div>
+  </section>
+
+  <!-- Code -->
+  <section id="code" class="text-lg">
+    <aside class="notes">
+      <p>
+        Let's see the code. We start with two pointers, one at each end. We also
+        keep track of the tallest wall each pointer has seen. And a counter for
+        the total water.
+      </p>
+      <p>
+        At each step, we compare the heights at both pointers. The side with the
+        shorter column moves inward. If the column is shorter than the tallest
+        wall on that side, we add the difference as water. If it is taller, we
+        update the maximum.
+      </p>
+      <p>
+        We repeat until the pointers meet. One pass. No extra memory. Linear
+        time, constant space. Elegant.
+      </p>
+    </aside>
+    <RevealCode
+      client:only="react"
+      animation="fade"
+      code={`def trap(height):
     if not height:
         return 0
-    
+
+    # STEP: Two pointers, one at each end
     left, right = 0, len(height) - 1
+    # STEP: Each remembers the tallest wall it has seen
     left_max = right_max = 0
     water = 0
-    
+
+    # STEP: Walk toward each other
     while left < right:
+        # STEP: The shorter side moves
         if height[left] <= height[right]:
+            # STEP: New wall? Update max. Otherwise, add water.
             if height[left] >= left_max:
                 left_max = height[left]
             else:
@@ -208,13 +386,18 @@ import {
             else:
                 water += right_max - height[right]
             right -= 1
-    
-    return water`}</code></pre>
-      <p class="text-xl text-gray-300">
-        Time: <span class="text-green-400">O(n)</span> • Space: <span
-          class="text-green-400">O(1)</span
-        >
-      </p>
-    </div>
+
+    # STEP: Done. One pass, constant space.
+    return water`}
+    />
+  </section>
+
+  <!-- Closing -->
+  <section>
+    <aside class="notes">
+      This was today's Cheese Byte. A landscape of numbers, a storm of rain, and
+      two travelers walking toward each other, measuring puddles as they go.
+      Sometimes the simplest walk reveals the deepest answer.
+    </aside>
   </section>
 </RevealLayout>
