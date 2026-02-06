@@ -89,7 +89,7 @@ for s, expected in test_cases:
 
 mo.md(
     f"""
-    ### Test Results
+    Test Results:
 
     {"\n".join(rows)}
     """
