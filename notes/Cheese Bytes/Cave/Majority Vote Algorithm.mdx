@@ -301,6 +301,9 @@ each new element until the true majority stabilizes:
   <MajorityVote client:load initialMajority={true} />
 </div>
 
+This [[Algorithm]] is known as the **Boyer–Moore majority vote algorithm**. It
+is elegant, efficient, and surprisingly powerful.
+
 # Can We Trust the Result?
 
 As discussed before, we cannot assume the strength is going to be the same as
@@ -311,11 +314,12 @@ output _something_ — a leftover that happened to survive by luck.
 <div>
   For example, in a stream like
   <InlineSequence sequence={[SHAPES[0], SHAPES[1], SHAPES[2]]} />
-  the algorithm will output a candidate, but none of the three has a majority.
+  the algorithm will output triangle with strength 1, but none of the three has
+  a majority.
 </div>
 
 To be certain, you'd need a **second pass** to count the actual occurrences of
-the candidate. But that's $O(N)$ additional work. Note this is still better than
+the triangle. But that's $O(N)$ additional work. Note this is still better than
 the naive counting approach, which needs to keep track of all candidates from
 the start. This second pass only needs to count one type of shape, ignoring the
 rest.
