@@ -207,14 +207,33 @@ def is_valid_parentheses(text: str) -> bool:
         if char in "([{":
             stack.append(char)
         else:
-            if not stack: return False
+            if not stack:
+                return False
             last_open = stack.pop()
-            # ASCII Magic
             diff = ord(char) - ord(last_open)
             if diff != 1 and diff != 2:
                 return False
     return len(stack) == 0
 ```
+
+<details>
+  <summary>Show explanation (ASCII trick)</summary>
+
+In ASCII, the matching closing characters happen to be right after their opening
+counterparts: `)` is right after `(` (diff = 1), and both `]`/`[` and `}`/`{`
+are two positions apart (diff = 2). So instead of a dictionary lookup, the code
+checks whether `ord(close) - ord(open)` is `1` or `2`.
+
+| Pair              | Open | `ord(open)` | Close | `ord(close)` | `ord(close) - ord(open)` |
+| ----------------- | ---- | ----------- | ----- | ------------ | ------------------------ |
+| Round parentheses | `(`  | 40          | `)`   | 41           | 1                        |
+| Square brackets   | `[`  | 91          | `]`   | 93           | 2                        |
+| Curly braces      | `{`  | 123         | `}`   | 125          | 2                        |
+
+Note: this “ASCII diff” trick only works for these three specific pairs, and the
+`else:` branch assumes the input contains only bracket characters.
+
+</details>
 
 And that's it! The next time you struggle with nested parentheses, remember:
 it's just a matter of getting dressed and undressed in the right order.
