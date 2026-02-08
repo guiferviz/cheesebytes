@@ -3,3 +3,4 @@ covered in Cheese Bytes:
 
 - LeetCode 20 - Valid Parentheses:
   [[You Cannot Take Off a Jacket You Never Wore]]
+- LeetCode 169 - Majority Element: [[Majority Vote Algorithm]]
