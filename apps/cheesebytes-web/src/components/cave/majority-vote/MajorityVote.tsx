@@ -1,41 +1,57 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { CheeseControlBar, CheeseCard } from "../shared/CheeseUI";
 import { CHEESE_ANIMATIONS } from "../shared/theme";
+import { ARTICLE_SEQUENCE, SHAPES } from "./MajorityVoteConstants";
+import type { Shape } from "./MajorityVoteConstants";
+
+export { SHAPES };
+export type { Shape };
 
 // ===========================================
 // TYPES & EXPORTS
 // ===========================================
 
-export interface Shape {
-  type: "circle" | "square" | "triangle" | "diamond";
-  color: string;
-  bgClass: string;
-  label: string;
-}
-
-export const SHAPES: Shape[] = [
-  { type: "circle", color: "#e57373", bgClass: "bg-red-400", label: "Circle" },
-  { type: "square", color: "#64b5f6", bgClass: "bg-blue-400", label: "Square" },
-  {
-    type: "triangle",
-    color: "#81c784",
-    bgClass: "bg-green-400",
-    label: "Triangle",
-  },
-  {
-    type: "diamond",
-    color: "#ffb74d",
-    bgClass: "bg-amber-400",
-    label: "Diamond",
-  },
-];
-
 export const ShapeSVG: React.FC<{
-  shape: Shape;
+  shape: Shape | null;
   size?: number;
   className?: string;
 }> = ({ shape, size = 28, className = "" }) => {
   const half = size / 2;
+
+  if (!shape) {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className={className}
+      >
+        <rect
+          x={1.5}
+          y={1.5}
+          width={size - 3}
+          height={size - 3}
+          rx={4}
+          fill="none"
+          stroke="#d6d3d1"
+          strokeWidth="2"
+          strokeDasharray="3 3"
+        />
+        <text
+          x="50%"
+          y="55%"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize={size * 0.6}
+          fontWeight="bold"
+          fill="#d6d3d1"
+        >
+          ?
+        </text>
+      </svg>
+    );
+  }
+
   return (
     <svg
       width={size}
@@ -101,9 +117,7 @@ interface MajorityVoteProps {
 export const MajorityVote: React.FC<MajorityVoteProps> = ({
   initialMajority = true,
 }) => {
-  const [sequence, setSequence] = useState<Shape[]>(() =>
-    generateSequence(12, initialMajority),
-  );
+  const [sequence, setSequence] = useState<Shape[]>(() => ARTICLE_SEQUENCE);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [candidate, setCandidate] = useState<Shape | null>(null);
   const [count, setCount] = useState(0);
@@ -229,7 +243,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
         .anim-pop { animation: shapePop 0.3s ease-out forwards; }
       `}</style>
 
-      <div className="flex flex-col gap-3 select-none not-prose">
+      <div className="flex flex-col gap-10 select-none not-prose">
         {/* ===== INPUT SEQUENCE ===== */}
         <CheeseCard variant="default" className="!p-4">
           {/* Inputs Toolbar: Always visible when not playing (to allow setup) */}
@@ -266,7 +280,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
                 </button>
                 <button
                   onClick={() => regenerate(true)}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-all shadow-sm"
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white dark:bg-stone-700 border border-stone-200 dark:border-stone-600 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-600 hover:border-stone-300 dark:hover:border-stone-500 transition-all shadow-sm"
                   title="Generate sequence with guaranteed majority"
                 >
                   🎲 Majority
@@ -429,7 +443,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
             </span>
             {candidate ? (
               <div className="anim-pop">
-                <ShapeSVG shape={candidate} size={44} />
+                <ShapeSVG shape={candidate} size={34} />
               </div>
             ) : (
               <div className="w-11 h-11 rounded-xl border-2 border-dashed border-stone-200 dark:border-stone-600 flex items-center justify-center">
@@ -466,7 +480,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
 
         {/* ===== RESULT ===== */}
         {isFinished && (
-          <div className="border-t border-stone-100 dark:border-stone-700 pt-4">
+          <CheeseCard variant="default">
             {candidate ? (
               <>
                 {/* Actual count */}
@@ -559,7 +573,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
                 No candidate survived (total tie)
               </div>
             )}
-          </div>
+          </CheeseCard>
         )}
       </div>
     </>

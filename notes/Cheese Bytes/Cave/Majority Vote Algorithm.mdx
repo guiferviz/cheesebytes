@@ -1,158 +1,374 @@
 import {
   MajorityVote,
   MajorityVoteMerged,
-  CancellationViz,
   SHAPES,
   ShapeSVG,
+  InlineSequence,
+  NaiveCounter,
+  PairList,
+  SurvivorList,
 } from "../../../apps/cheesebytes-web/src/components/cave/majority-vote";
 
-In large-scale data engineering, finding the most frequent element is trivial if
-you have infinite memory: just use a hash map. But what if you are processing a
-**stream** of terabytes of data, or if your dataset is distributed across a
-thousand worker nodes?
+Imagine you have a stream of shapes:
 
-The naive approach requires **shuffling** data: sending all occurrences of "A"
-to one worker node, "B" to another to count them. This is expensive in terms of
-network bandwidth and latency.
+<div style={{ margin: "1.5rem 0" }}>
+  <InlineSequence client:load />
+</div>
 
-The **Boyer-Moore Voting Algorithm** solves this by maintaining a tiny **summary
-state**: just one candidate and one counter ($O(1)$ space). Crucially, this
-summary is **additive**. You can process partitions of data independently and
-cheapy merge their summaries without ever moving the raw data.
+A simple question: **is there any shape that appears more than half the time?**
+In other words, does any shape win by _absolute majority_?
 
-# The Logic
+# The Obvious Solution
 
-Imagine a stream of shapes coming in one by one:
+Easy. Build a counter — a dictionary that tracks how many times each shape
+appears:
 
-<ul className="list-none pl-0 space-y-2 my-4">
-  <li className="flex items-center gap-2">
-    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-    <ShapeSVG shape={SHAPES[1]} size={20} />
-    <span>Blue Square</span>
-  </li>
-  <li className="flex items-center gap-2">
-    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-    <ShapeSVG shape={SHAPES[0]} size={20} />
-    <span>Red Circle</span>
-  </li>
-  <li className="flex items-center gap-2">
-    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-    <ShapeSVG shape={SHAPES[3]} size={20} />
-    <span>Yellow Diamond</span>
-  </li>
-  <li className="flex items-center gap-2">
-    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-    <ShapeSVG shape={SHAPES[2]} size={20} />
-    <span>Green Triangle</span>
-  </li>
-</ul>
+<div style={{ margin: "1.5rem 0" }}>
+  <NaiveCounter client:load />
+</div>
 
-The algorithm **does not count** shapes, keeping a dictionary of counts in
-memory might be prohibitive if the number of shapes is extremely large. Instead,
-it **eliminates pairs of distinct shapes**.
+This works perfectly. Scan the stream once, increment a counter for each shape,
+and at the end check which (if any) exceeds $N/2$.
 
-It maintains only a minimal state: a **candidate shape** and a **strength**.
+Time: $O(N)$. Space: $O(K)$, where $K$ is the number of distinct shapes.
 
-1.  **New Candidate:** When there is no strength (0), the next shape becomes the
-    candidate.
-2.  **Reinforcement:** If the incoming shape matches the candidate, the strength
-    increases.
-3.  **Cancellation:** If a different shape arrives, they **cancel each other
-    out** and the strength decreases.
+For 4 shapes, this is trivial. **But what if $K$ is enormous?**
 
-This process simulates eliminating conflicting shapes, one pair at a time.
+# When Counting Breaks
 
-- If a shape exists that appears **more than all other shapes combined**, it
-  cannot be fully eliminated.
-- At the end of the stream, that shape is the only one that can survive.
-- If **no majority exists**, the algorithm returns whatever remnant survives,
-  with no guarantee.
+Imagine your shapes are not 4 types but millions — user IDs, IP addresses, DNA
+sequences. The dictionary grows to hold every unique key in memory. At some
+point, **the counter itself doesn't fit in RAM**.
 
-# Interactive Single-Stream Demo
+And there's a second problem. What if your data is so large it's split across
+hundreds of machines?
 
-Visualize the state transitions as the stream is processed. Notice how the
-candidate changes until the true majority stabilizes.
+Each node could build its own local dictionary, but to find the global majority
+you'd need to **send all the dictionaries to one place and merge them**. That
+means moving potentially gigabytes of key-value pairs over the network — slow,
+expensive, and fragile.
+
+We need something smaller. Something that compresses the answer into a
+**constant-size summary** that's cheap to compute, cheap to send, and cheap to
+merge.
+
+# The Intuition: Cancellation
+
+Before looking at any algorithm, let's build an intuition for what "majority"
+really means — and why it's structurally different from "most common".
+
+Consider a sequence of 10 shapes where squares appear exactly 5 times — half the
+sequence:
+
+export const SEQ_HALF = [
+  SHAPES[1],
+  SHAPES[0],
+  SHAPES[1],
+  SHAPES[3],
+  SHAPES[0],
+  SHAPES[1],
+  SHAPES[3],
+  SHAPES[1],
+  SHAPES[0],
+  SHAPES[1],
+];
+
+<InlineSequence client:load sequence={SEQ_HALF} />
+
+We can pair every square with a non-square:
+
+<PairList
+  client:load
+  pairs={[
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[3]],
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[3]],
+    [SHAPES[1], SHAPES[0]],
+  ]}
+/>
+
+This way of reordering and grouping elements clearly shows that half of the
+elements are squares, but it also reveals something deeper: **every square can
+be cancelled out by a non-square**. There is no "excess" square that stands
+alone.
+
+Now change just one non-square into a square, so squares appear 6 out of 10
+times:
+
+export const SEQ_MAJORITY = [
+  SHAPES[1],
+  SHAPES[0],
+  SHAPES[1],
+  SHAPES[3],
+  SHAPES[0],
+  SHAPES[1],
+  SHAPES[3],
+  SHAPES[1],
+  SHAPES[1],
+  SHAPES[1],
+];
+
+<InlineSequence client:load sequence={SEQ_MAJORITY} />
+
+Try the same pairing strategy:
+
+<PairList
+  client:load
+  pairs={[
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[3]],
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[3]],
+  ]}
+/>
+
+Four pairs cancel, but two squares have no opponent. They cannot be cancelled
+out.
+
+<SurvivorList client:load survivors={[SHAPES[1], SHAPES[1]]} />
+
+This leftover is _unavoidable_. It doesn't depend on how you form the pairs of
+different elements. It's a direct consequence of the
+[pigeonhole principle](https://en.wikipedia.org/wiki/Pigeonhole_principle):
+there simply aren't enough "attackers" to destroy all copies of the majority.
+
+What if we go in the other direction? Change a square into another shape:
+
+export const SEQ_NO_MAJORITY = [
+  SHAPES[1],
+  SHAPES[0],
+  SHAPES[1],
+  SHAPES[3],
+  SHAPES[0],
+  SHAPES[1],
+  SHAPES[3],
+  SHAPES[0],
+  SHAPES[0],
+  SHAPES[1],
+];
+
+<InlineSequence client:load sequence={SEQ_NO_MAJORITY} />
+
+<PairList
+  client:load
+  pairs={[
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[3]],
+    [SHAPES[0], SHAPES[3]],
+  ]}
+/>
+
+In this example, not all pairs contain a square, but the idea is the same:
+**every square can be cancelled out by a non-square**.
+
+Does this mean that, when no shape is a majority, any way of pairing the
+elements will cancel everything out? Not really. Look at different ways of
+pairing the same sequence and see how the "survivor" shape changes:
+
+<InlineSequence client:load sequence={SEQ_NO_MAJORITY} />
+
+<PairList
+  client:load
+  pairs={[
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[0]],
+    [SHAPES[1], SHAPES[3]],
+    [SHAPES[1], SHAPES[3]],
+  ]}
+/>
+
+<SurvivorList
+  client:load
+  survivors={[SHAPES[0], SHAPES[0]]}
+  message="Two circles cannot be paired up"
+/>
+
+Or this other way:
+
+<InlineSequence client:load sequence={SEQ_NO_MAJORITY} />
+
+<PairList
+  client:load
+  pairs={[
+    [SHAPES[0], SHAPES[1]],
+    [SHAPES[0], SHAPES[1]],
+    [SHAPES[0], SHAPES[3]],
+    [SHAPES[0], SHAPES[3]],
+  ]}
+/>
+
+<SurvivorList
+  client:load
+  survivors={[SHAPES[1], SHAPES[1]]}
+  message="Two squares cannot be paired up"
+/>
+
+When a majority exists, **perfect cancellation is impossible** — at least one
+copy must survive. When no majority exists, **the outcome is ambiguous** — any
+leftover is a coincidence, not a guarantee.
+
+Now suppose the sequence is unknown. You only know there are 10 elements total,
+and that exactly two squares survived. What can we infer?
+
+<InlineSequence
+  client:load
+  sequence={[null, null, null, null, null, null, null, null, null, null]}
+/>
+
+<PairList
+  client:load
+  pairs={[
+    [null, null],
+    [null, null],
+    [null, null],
+    [null, null],
+  ]}
+/>
+
+<SurvivorList
+  client:load
+  survivors={[SHAPES[1], SHAPES[1]]}
+  message="Two squares cannot be paired up"
+/>
+
+We know there must be **at least 2** squares — the survivors themselves. But
+what about the maximum? Since 2 items were left unpaired, 8 items were paired
+off — forming 4 pairs. It is possible for every pair to consist of one square
+and one non-square. That means at most 4 squares could have been cancelled.
+Adding the survivors back in, the total count of squares cannot exceed
+$4 + 2 = 6$.
+
+<InlineSequence
+  client:load
+  sequence={[null, null, null, null, null, null, null, null, null, null]}
+/>
+
+<PairList
+  client:load
+  pairs={[
+    [SHAPES[1], null],
+    [SHAPES[1], null],
+    [SHAPES[1], null],
+    [SHAPES[1], null],
+  ]}
+/>
+
+<SurvivorList
+  client:load
+  survivors={[SHAPES[1], SHAPES[1]]}
+  message="Two squares cannot be paired up"
+/>
+
+When no majority exists, the pairing process can look arbitrary, but it is not
+meaningless. Cancellation still removes matched pairs, which constrains how
+often the final survivor could have appeared.
+
+We cannot recover the order or the exact count, but we can place the survivor's
+true frequency within a bounded range.
+
+# Turning Cancellation into a Streaming Algorithm
+
+The cancellation idea is beautiful, but pairing up elements requires seeing them
+all at once. Can we do it **one element at a time**, using only constant space?
+
+Yes. We just need two variables:
+
+- A **candidate** shape (our current best guess).
+- A **strength** counter (how many unmatched copies we've seen).
+
+The rules are simple:
+
+1. If strength is **0**, the incoming shape becomes the new candidate (strength
+   = 1).
+2. If the incoming shape **matches** the candidate, strength goes up (+1).
+3. If it **doesn't match**, they cancel each other out and strength goes down
+   (−1).
+
+Step 3 is the key — it's the pairwise cancellation happening _implicitly_. Every
+decrement simulates throwing away one copy of the candidate and one of the
+incoming shape.
+
+At the end, whatever candidate remains **survived all cancellations**. If a
+majority existed, it's guaranteed to be this survivor.
+
+Try stepping through the algorithm below. Watch how the candidate changes with
+each new element until the true majority stabilizes:
 
 <div style={{ margin: "2rem 0" }}>
   <MajorityVote client:load initialMajority={true} />
 </div>
 
-# Distributed Processing & Merging
+# Can We Trust the Result?
 
-Because the algorithm is associative, it is perfectly suited for **MapReduce**
-architectures. We can split the input into arbitrary partitions, compute a local
-`(candidate, strength)` for each, and then reduce them.
+As discussed before, we cannot assume the strength is going to be the same as
+the actual count. The algorithm guarantees that **if** a majority exists, it
+will be the surviving candidate. But if **no** majority exists, it will still
+output _something_ — a leftover that happened to survive by luck.
 
-The merge logic for two summaries $(C_1, S_1)$ and $(C_2, S_2)$ is simple:
+<div>
+  For example, in a stream like
+  <InlineSequence sequence={[SHAPES[0], SHAPES[1], SHAPES[2]]} />
+  the algorithm will output a candidate, but none of the three has a majority.
+</div>
 
-- If $C_1 = C_2$, sum the strengths: $(C_1, S_1 + S_2)$.
-- If $C_1 \neq C_2$, the one with higher strength survives with the difference:
-  $(C_w, |S_1 - S_2|)$ (where $C_w$ is the winner).
+To be certain, you'd need a **second pass** to count the actual occurrences of
+the candidate. But that's $O(N)$ additional work. Note this is still better than
+the naive counting approach, which needs to keep track of all candidates from
+the start. This second pass only needs to count one type of shape, ignoring the
+rest.
 
-Try generating random partitions below. Even if specialized "local majorities"
-win in their shards, the **global merge** correctly identifies the potential
-majority element (if stronger than the noise).
+Can we avoid this second pass? Not with certainty — but we can **bound** the
+true count using only the final strength $s$ and total length $N$:
+
+$$
+s \leq C \leq s + \lfloor (N - s) / 2 \rfloor
+$$
+
+Where $C$ is the actual count of the candidate.
+
+- The **minimum** is $s$: each unit of strength is one net unmatched copy.
+- The **maximum** adds back the cancellations: each consumed one candidate and
+  one other shape, so at most $\lfloor (N - s) / 2 \rfloor$ candidates were
+  cancelled.
+
+If the lower bound already exceeds $N/2$, you have a **guaranteed majority
+without any second pass**. The demo above shows these bounds when the algorithm
+finishes.
+
+# Going Distributed
+
+Here's where this gets powerful. The state of the algorithm is just two values:
+`(candidate, strength)`. This tiny summary is **mergeable**.
+
+Suppose you split the data into partitions and run the algorithm independently
+on each. To combine two summaries $(C_1, S_1)$ and $(C_2, S_2)$:
+
+- If $C_1 = C_2$: they agree — sum the strengths → $(C_1, S_1 + S_2)$.
+- If $C_1 \neq C_2$: they disagree — the stronger one survives with the
+  difference → $(C_w, |S_1 - S_2|)$.
+
+This is exactly the cancellation principle again, applied to summaries instead
+of individual shapes. The merge itself is $O(1)$.
+
+Compare this to the naive approach: sending entire dictionaries and merging
+millions of key-value pairs. Here, you're sending and merging **two numbers**.
+
+Try it below. Even when different partitions produce different local winners,
+the global merge correctly surfaces the true majority:
 
 <div style={{ margin: "2rem 0" }}>
   <MajorityVoteMerged client:load />
 </div>
 
-# Why Does This Work? Cancellation Principle
+# Implementation
 
-The core idea is the **pigeonhole principle applied to cancellation**. Every
-element that is _different_ from the majority can cancel at most one copy of it.
-Since the majority has $> N/2$ copies, and all minorities combined have $< N/2$,
-there are simply not enough "attackers" to eliminate the majority.
-
-The visualization below makes this concrete. Click **Show Cancellations** to
-pair up distinct elements. After all pairs cancel, only the majority survivors
-remain:
-
-<div style={{ margin: "2rem 0" }}>
-  <CancellationViz client:load />
-</div>
-
-# Probabilistic Bounds (Skipping the Second Pass)
-
-A full second pass over the data costs $O(N)$ time. In a distributed setting,
-this means another round of network traffic. Can we avoid it?
-
-Not with certainty — but we can bound the candidate's real count without
-re-reading the data.
-
-After the algorithm finishes with `(candidate, strength)` on $N$ elements:
-
-- **Minimum count:** The candidate appeared at least **strength** times. Every
-  unit of strength represents one net "unmatched" occurrence.
-- **Maximum count:** Each cancellation consumed one occurrence of the candidate
-  and one of something else. There were at most $(N - s) / 2$ such
-  cancellations. So the candidate appeared at most $s + (N - s) / 2$ times
-  (rounded down).
-
-$s \leq C \leq s + (N - s) / 2$
-
-(Where $C$ is the actual count).
-
-If the **lower bound** already exceeds $N/2$, you have a guaranteed majority
-without any verification. The interactive demo above shows these bounds
-automatically when the algorithm finishes.
-
-# The Catch: False Positives
-
-The algorithm guarantees that **IF** a majority exists, it will be the surviving
-candidate. However, if **NO** majority exists, it will still output a
-statistically "strong" noise candidate.
-
-For example, in `[A, B, C]`, the algorithm will output _some_ candidate, but
-none of them is a majority. Without verification, you'd return a wrong answer.
-
-In practice, if the probabilistic bounds do not give you certainty, a second
-pass (or a final `GROUP BY` count) is needed.
-
-# Code Implementation
+The entire algorithm fits in a few lines:
 
 ```python
-def majority_vote_stream(stream):
+def majority_vote(stream):
     candidate = None
     strength = 0
 
@@ -165,21 +381,62 @@ def majority_vote_stream(stream):
         else:
             strength -= 1
 
-    return candidate
+    return candidate, strength
+```
+
+And the merge:
+
+```python
+def merge(summary_a, summary_b):
+    c1, s1 = summary_a
+    c2, s2 = summary_b
+
+    if c1 == c2:
+        return c1, s1 + s2
+    elif s1 >= s2:
+        return c1, s1 - s2
+    else:
+        return c2, s2 - s1
 ```
 
 # Complexity
 
 |                  | Time          | Space  |
 | ---------------- | ------------- | ------ |
-| Naive (counting) | $O(n)$        | $O(n)$ |
-| Sorting          | $O(n \log n)$ | $O(1)$ |
-| **Boyer-Moore**  | $O(n)$        | $O(1)$ |
+| Naive (counting) | $O(N)$        | $O(K)$ |
+| Sorting          | $O(N \log N)$ | $O(1)$ |
+| **Boyer-Moore**  | $O(N)$        | $O(1)$ |
 
-The algorithm is optimal in both dimensions: linear time, constant space. You
-can't do better.
+Linear time, constant space. You literally can't do better.
+
+And for distributed workloads, the merge cost per pair of partitions is $O(1)$
+instead of $O(K)$. When $K$ is in the millions, this is the difference between a
+query that takes hours and one that takes seconds.
+
+# Pushing the idea further
+
+The algorithm keeps a single candidate and a single counter. That choice is
+deliberate — it is the smallest possible summary. But it naturally raises a
+question: what if we kept more than one candidate?
+
+With two or more candidates, fewer shapes would be forced to compete for the
+same slot. Intuitively, this could preserve more information about the stream
+and improve the quality of the estimate when no strict majority exists. Whether
+that extra precision is worth the extra state is a separate question.
+
+A similar question appears if we relax another assumption. So far, every shape
+contributes a unit count. But what if shapes carried weights instead? The
+problem then becomes identifying which shape contributes more than half of the
+total weight, not just half of the appearances.
+
+Both ideas point in the same direction: Boyer–Moore is not an isolated trick,
+but the simplest instance of a broader family of cancellation-based summaries.
+What changes is not the core logic, but how much state we are willing to keep —
+and what kind of dominance we want to detect.
 
 # References
 
+- [Misra-Gries Summaries](https://people.csail.mit.edu/rrw/6.045-2019/encalgs-mg.pdf).
+  I heard about this algorithm for the first time in this paper, which describes
+  at extension of the majority vote idea to track multiple candidates.
 - [LeetCode Problem 169 - Majority Element](https://leetcode.com/problems/majority-element/)
-- Boyer, R. S.; Moore, J. S. (1991). _MJRTY — A Fast Majority Vote Algorithm_.

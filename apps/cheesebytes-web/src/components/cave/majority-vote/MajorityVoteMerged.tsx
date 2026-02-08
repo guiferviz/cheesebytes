@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { SHAPES, ShapeSVG } from "./MajorityVote";
-import type { Shape } from "./MajorityVote";
+import { ShapeSVG } from "./MajorityVote";
 import { CheeseCard } from "../shared/CheeseUI";
+import { ARTICLE_SEQUENCE, SHAPES } from "./MajorityVoteConstants";
+import type { Shape } from "./MajorityVoteConstants";
 
 // ===========================================
 // TYPES
@@ -90,14 +91,19 @@ function mergeSummaries(s1: Summary, s2: Summary): Summary {
 
 export const MajorityVoteMerged: React.FC = () => {
   const [numPartitions, setNumPartitions] = useState(3);
-  const [partitionSize, setPartitionSize] = useState(8);
-  const [partitions, setPartitions] = useState<Shape[][]>([]);
+  const [partitionSize, setPartitionSize] = useState(4);
+  const [partitions, setPartitions] = useState<Shape[][]>(() => {
+    const size = 4;
+    const parts: Shape[][] = [];
+    for (let i = 0; i < ARTICLE_SEQUENCE.length; i += size) {
+      parts.push(ARTICLE_SEQUENCE.slice(i, i + size));
+    }
+    // Ensure we match numPartitions even if ARTICLE_SEQUENCE runs out or has extra
+    // ARTICLE_SEQUENCE is 12, so 3 chunks of 4. Matches defaults perfectly.
+    return parts;
+  });
   const [isEditing, setIsEditing] = useState(false);
-
-  // Initial load
-  useEffect(() => {
-    onRegenerate(false);
-  }, []); // Run once on mount
+  const isFirstRender = React.useRef(true);
 
   const generateWithMode = (isMajority: boolean) => {
     let globalMajority: Shape | undefined;
@@ -114,6 +120,10 @@ export const MajorityVoteMerged: React.FC = () => {
 
   // Re-run when config changes
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     generateWithMode(false);
   }, [numPartitions, partitionSize]);
 
@@ -220,7 +230,7 @@ export const MajorityVoteMerged: React.FC = () => {
             </button>
             <button
               onClick={() => onRegenerate(true)}
-              className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-all shadow-sm"
+              className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white dark:bg-stone-700 border border-stone-200 dark:border-stone-600 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-600 hover:border-stone-300 dark:hover:border-stone-500 transition-all shadow-sm"
               title="Generate sequence with guaranteed majority"
             >
               🎲 Majority
@@ -328,14 +338,18 @@ export const MajorityVoteMerged: React.FC = () => {
                   →
                 </div>
 
-                {/* Local Result: clean minimal style */}
-                <div className="flex items-center gap-6 px-4 py-2 shrink-0">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider">
-                      Candidate
-                    </span>
+                {/* Local Result: 2x2 Grid for perfect alignment of labels and content */}
+                <div className="grid grid-cols-[auto_auto] gap-x-8 gap-y-1 px-4 py-2 shrink-0">
+                  <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider text-center">
+                    Candidate
+                  </span>
+                  <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider text-center">
+                    Strength
+                  </span>
+
+                  <div className="flex items-center justify-center min-h-[36px]">
                     {summary.candidate ? (
-                      <ShapeSVG shape={summary.candidate} size={32} />
+                      <ShapeSVG shape={summary.candidate} size={26} />
                     ) : (
                       <div className="w-8 h-8 rounded-lg border-2 border-dashed border-stone-300 dark:border-stone-600 flex items-center justify-center">
                         <span className="text-sm text-stone-400 dark:text-stone-600">
@@ -344,11 +358,9 @@ export const MajorityVoteMerged: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider">
-                      Strength
-                    </span>
-                    <span className="text-3xl font-black tabular-nums text-stone-600 dark:text-stone-300">
+
+                  <div className="flex items-center justify-center min-h-[36px]">
+                    <span className="text-3xl font-black tabular-nums text-stone-600 dark:text-stone-300 leading-none">
                       {summary.count}
                     </span>
                   </div>

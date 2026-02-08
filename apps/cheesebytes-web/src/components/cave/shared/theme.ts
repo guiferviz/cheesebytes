@@ -136,7 +136,8 @@ export const CONTAINER_STYLES = {
 export const TEXT_STYLES = {
   title: "text-2xl font-bold text-amber-800 dark:text-amber-200",
   subtitle: "text-lg font-semibold text-amber-700 dark:text-amber-300",
-  label: "text-sm font-medium text-stone-600 dark:text-stone-400 uppercase tracking-wider",
+  label:
+    "text-sm font-medium text-stone-600 dark:text-stone-400 uppercase tracking-wider",
   body: "text-base text-stone-700 dark:text-stone-300",
   mono: "font-mono text-sm text-stone-600 dark:text-stone-400",
 } as const;
