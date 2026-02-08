@@ -229,7 +229,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
         .anim-pop { animation: shapePop 0.3s ease-out forwards; }
       `}</style>
 
-      <div className="flex flex-col gap-3 select-none">
+      <div className="flex flex-col gap-3 select-none not-prose">
         {/* ===== INPUT SEQUENCE ===== */}
         <CheeseCard variant="default" className="!p-4">
           {/* Inputs Toolbar: Always visible when not playing (to allow setup) */}
@@ -285,14 +285,31 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
                 >
                   {isEditing ? (
                     <>
-                      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="2 8 6 12 14 4" />
                       </svg>
                       <span>Done</span>
                     </>
                   ) : (
                     <>
-                      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
                         <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" />
                       </svg>
                       <span>Manual Edit</span>
@@ -352,7 +369,8 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
                 );
               }
 
-              const isProcessed = idx < currentIndex || (isFinished && idx <= currentIndex);
+              const isProcessed =
+                idx < currentIndex || (isFinished && idx <= currentIndex);
               const isCurrent = !isFinished && idx === currentIndex;
               const isPending = idx > currentIndex;
               return (
@@ -448,50 +466,42 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
 
         {/* ===== RESULT ===== */}
         {isFinished && (
-          <div className="text-center p-4 rounded-2xl border-2 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border-amber-300 dark:border-amber-700 shadow-md anim-pop">
-            <div className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center justify-center gap-1.5">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              Algorithm Complete
-            </div>
+          <div className="border-t border-stone-100 dark:border-stone-700 pt-4">
             {candidate ? (
               <>
-                <div className="flex items-center justify-center gap-3">
-                  <ShapeSVG shape={candidate} size={36} />
-                  <div className="text-left">
-                    <div className="text-stone-700 dark:text-stone-200 font-bold text-sm">
-                      {candidate.label}
-                    </div>
-                    <div className="text-xs text-stone-500 dark:text-stone-400">
-                      Final strength: {count}
-                    </div>
-                  </div>
-                </div>
-                {/* --- Actual count verification line --- */}
-                <div className="flex items-center justify-center gap-2 mt-2 py-1 px-3 bg-stone-100 dark:bg-stone-800 rounded-lg text-xs">
+                {/* Actual count */}
+                <div className="flex items-center justify-center gap-2 py-1 px-3 bg-stone-100 dark:bg-stone-800 rounded-lg text-xs mx-auto w-fit">
                   <span className="text-stone-500 dark:text-stone-400 uppercase tracking-wider font-bold">
-                    Actual Count in Sequence:
+                    Actual Count:
                   </span>
-                  <span className={`font-mono font-bold text-sm ${
-                    sequence.filter((s) => s.type === candidate.type).length > sequence.length / 2
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-stone-700 dark:text-stone-300"
-                  }`}>
+                  <span
+                    className={`font-mono font-bold text-sm ${
+                      sequence.filter((s) => s.type === candidate.type).length >
+                      sequence.length / 2
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-stone-700 dark:text-stone-300"
+                    }`}
+                  >
                     {sequence.filter((s) => s.type === candidate.type).length}
                   </span>
                   <span className="text-stone-400 dark:text-stone-500">
                     / {sequence.length}
                   </span>
+                  {sequence.filter((s) => s.type === candidate.type).length >
+                  sequence.length / 2 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                      ✓ Majority
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-500 text-[10px] font-bold">
+                      Not majority
+                    </span>
+                  )}
                 </div>
-                
-                <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
-                  <div className="text-xs font-bold text-stone-600 dark:text-stone-300 mb-2">
+
+                {/* Estimated range */}
+                <div className="mt-4">
+                  <div className="text-xs font-bold text-stone-600 dark:text-stone-300 mb-2 text-center">
                     Without a second pass, the true count is bounded:
                   </div>
                   <div className="flex items-center justify-center gap-4">
@@ -515,7 +525,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
                       </span>
                     </div>
                   </div>
-                  <div className="text-[10px] text-stone-400 mt-2 font-mono">
+                  <div className="text-[10px] text-stone-400 mt-2 font-mono text-center">
                     count in [{count},{" "}
                     {count + Math.floor((sequence.length - count) / 2)}] out of{" "}
                     {sequence.length}
@@ -545,7 +555,7 @@ export const MajorityVote: React.FC<MajorityVoteProps> = ({
                 </div>
               </>
             ) : (
-              <div className="text-stone-500 dark:text-stone-400 italic text-sm">
+              <div className="text-center text-stone-500 dark:text-stone-400 italic text-sm">
                 No candidate survived (total tie)
               </div>
             )}

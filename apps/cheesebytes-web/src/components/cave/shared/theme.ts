@@ -81,28 +81,28 @@ export const CHEESE_GRADIENTS = {
 
 export const BUTTON_STYLES = {
   primary: {
-    base: "bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold shadow-md hover:shadow-lg",
-    hover: "hover:from-amber-500 hover:to-orange-500",
+    base: "bg-amber-400 text-white font-bold shadow-md hover:shadow-lg dark:bg-amber-600 transition-colors",
+    hover: "hover:bg-amber-500 dark:hover:bg-amber-500",
     disabled:
-      "disabled:from-gray-300 disabled:to-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none",
+      "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
   },
   secondary: {
-    base: "bg-gradient-to-r from-stone-200 to-stone-300 text-stone-700 font-medium shadow-sm",
-    hover: "hover:from-stone-300 hover:to-stone-400",
+    base: "bg-stone-200 text-stone-700 font-medium shadow-sm dark:bg-stone-700 dark:text-stone-200 transition-colors",
+    hover: "hover:bg-stone-300 dark:hover:bg-stone-600",
     disabled:
-      "disabled:from-gray-200 disabled:to-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed",
+      "disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-stone-800 dark:disabled:text-stone-600",
   },
   success: {
-    base: "bg-gradient-to-r from-emerald-400 to-green-500 text-white font-bold shadow-md",
-    hover: "hover:from-emerald-500 hover:to-green-600",
+    base: "bg-emerald-500 text-white font-bold shadow-md dark:bg-emerald-600 transition-colors",
+    hover: "hover:bg-emerald-600 dark:hover:bg-emerald-500",
     disabled:
-      "disabled:from-gray-300 disabled:to-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed",
+      "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700",
   },
   danger: {
-    base: "bg-gradient-to-r from-red-400 to-rose-500 text-white font-bold shadow-md",
-    hover: "hover:from-red-500 hover:to-rose-600",
+    base: "bg-rose-500 text-white font-bold shadow-md dark:bg-rose-600 transition-colors",
+    hover: "hover:bg-rose-600 dark:hover:bg-rose-500",
     disabled:
-      "disabled:from-gray-300 disabled:to-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed",
+      "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700",
   },
 } as const;
 
@@ -113,18 +113,18 @@ export const BUTTON_STYLES = {
 export const CONTAINER_STYLES = {
   slide: `
     flex flex-col items-center gap-5 p-6 
-    bg-gradient-to-b from-amber-50/80 to-orange-50/60
+    bg-gradient-to-b from-amber-50/80 to-orange-50/60 dark:from-stone-900/90 dark:to-stone-950/90
     rounded-3xl
     select-none
   `,
   card: `
-    bg-white/95 backdrop-blur-sm
-    border border-amber-200/50
+    bg-white/95 backdrop-blur-sm dark:bg-stone-800/95
+    border border-amber-200/50 dark:border-amber-700/30
     rounded-2xl shadow-lg p-5
   `,
   panel: `
-    bg-gradient-to-br from-stone-50 to-stone-100
-    border border-stone-200
+    bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-900
+    border border-stone-200 dark:border-stone-700
     rounded-xl shadow-inner p-4
   `,
 } as const;
@@ -134,11 +134,11 @@ export const CONTAINER_STYLES = {
 // ===========================================
 
 export const TEXT_STYLES = {
-  title: "text-2xl font-bold text-amber-800",
-  subtitle: "text-lg font-semibold text-amber-700",
-  label: "text-sm font-medium text-stone-600 uppercase tracking-wider",
-  body: "text-base text-stone-700",
-  mono: "font-mono text-sm text-stone-600",
+  title: "text-2xl font-bold text-amber-800 dark:text-amber-200",
+  subtitle: "text-lg font-semibold text-amber-700 dark:text-amber-300",
+  label: "text-sm font-medium text-stone-600 dark:text-stone-400 uppercase tracking-wider",
+  body: "text-base text-stone-700 dark:text-stone-300",
+  mono: "font-mono text-sm text-stone-600 dark:text-stone-400",
 } as const;
 
 // ===========================================

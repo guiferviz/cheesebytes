@@ -2,6 +2,8 @@ import {
   MajorityVote,
   MajorityVoteMerged,
   CancellationViz,
+  SHAPES,
+  ShapeSVG,
 } from "../../../apps/cheesebytes-web/src/components/cave/majority-vote";
 
 In large-scale data engineering, finding the most frequent element is trivial if
@@ -20,24 +22,58 @@ cheapy merge their summaries without ever moving the raw data.
 
 # The Logic
 
-The algorithm processes elements sequentially, maintaining a
-`(candidate, strength)` tuple.
+Imagine a stream of shapes coming in one by one:
 
-1.  **Empty State:** If strength is 0, the current element becomes the candidate
-    with strength 1.
-2.  **Reinforcement:** If the current element matches the candidate, strength
-    increments (+1).
-3.  **Cancellation:** If it differs, strength decrements (-1).
+<ul className="list-none pl-0 space-y-2 my-4">
+  <li className="flex items-center gap-2">
+    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+    <ShapeSVG shape={SHAPES[1]} size={20} />
+    <span>Blue Square</span>
+  </li>
+  <li className="flex items-center gap-2">
+    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+    <ShapeSVG shape={SHAPES[0]} size={20} />
+    <span>Red Circle</span>
+  </li>
+  <li className="flex items-center gap-2">
+    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+    <ShapeSVG shape={SHAPES[3]} size={20} />
+    <span>Yellow Diamond</span>
+  </li>
+  <li className="flex items-center gap-2">
+    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+    <ShapeSVG shape={SHAPES[2]} size={20} />
+    <span>Green Triangle</span>
+  </li>
+</ul>
 
-Conceptually, distinct elements "cancel" each other out. If a majority element
-exists (appears $> N/2$ times), it will inevitably survive all cancellations.
+The algorithm **does not count** shapes, keeping a dictionary of counts in
+memory might be prohibitive if the number of shapes is extremely large. Instead,
+it **eliminates pairs of distinct shapes**.
+
+It maintains only a minimal state: a **candidate shape** and a **strength**.
+
+1.  **New Candidate:** When there is no strength (0), the next shape becomes the
+    candidate.
+2.  **Reinforcement:** If the incoming shape matches the candidate, the strength
+    increases.
+3.  **Cancellation:** If a different shape arrives, they **cancel each other
+    out** and the strength decreases.
+
+This process simulates eliminating conflicting shapes, one pair at a time.
+
+- If a shape exists that appears **more than all other shapes combined**, it
+  cannot be fully eliminated.
+- At the end of the stream, that shape is the only one that can survive.
+- If **no majority exists**, the algorithm returns whatever remnant survives,
+  with no guarantee.
 
 # Interactive Single-Stream Demo
 
 Visualize the state transitions as the stream is processed. Notice how the
 candidate changes until the true majority stabilizes.
 
-<div style={{ margin: "2rem 0" }} className="not-prose">
+<div style={{ margin: "2rem 0" }}>
   <MajorityVote client:load initialMajority={true} />
 </div>
 

@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { SHAPES, ShapeSVG } from "./MajorityVote";
 import type { Shape } from "./MajorityVote";
-import { CheeseCard, CheeseButton } from "../shared/CheeseUI";
+import { CheeseCard } from "../shared/CheeseUI";
 
 // ===========================================
 // TYPES
@@ -22,22 +22,15 @@ interface Pair {
 // HELPERS
 // ===========================================
 
-function generateWithMajority(length: number): Shape[] {
-  // Pick a majority shape and give it ~60% presence
-  const majority = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+function generateSequence(length: number, forceMajority: boolean): Shape[] {
   const seq: Shape[] = [];
-  const majCount = Math.floor(length * 0.58) + 1; // guarantee > N/2
-
-  for (let i = 0; i < majCount; i++) seq.push(majority);
-  for (let i = majCount; i < length; i++) {
-    const others = SHAPES.filter((s) => s.type !== majority.type);
-    seq.push(others[Math.floor(Math.random() * others.length)]);
-  }
-
-  // Shuffle (Fisher-Yates)
-  for (let i = seq.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [seq[i], seq[j]] = [seq[j], seq[i]];
+  const majorityShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  for (let i = 0; i < length; i++) {
+    if (forceMajority && Math.random() < 0.6) {
+      seq.push(majorityShape);
+    } else {
+      seq.push(SHAPES[Math.floor(Math.random() * SHAPES.length)]);
+    }
   }
   return seq;
 }
@@ -82,28 +75,71 @@ function computeCancellations(seq: Shape[]) {
 export const CancellationViz: React.FC = () => {
   const [length, setLength] = useState(16);
   const [sequence, setSequence] = useState<Shape[]>(() =>
-    generateWithMajority(16),
+    generateSequence(16, true),
   );
   const [step, setStep] = useState(0); // 0 = initial, 1 = paired, 2 = cancelled
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hoveredPairIndex, setHoveredPairIndex] = useState<number | null>(null);
 
   const { pairs, survivors } = useMemo(
     () => computeCancellations(sequence),
     [sequence],
   );
 
-  const regenerate = useCallback(() => {
-    const seq = generateWithMajority(length);
-    setSequence(seq);
+  const regenerate = useCallback(
+    (majority: boolean) => {
+      const seq = generateSequence(length, majority);
+      setSequence(seq);
+      setStep(0);
+      setIsEditing(false);
+      setIsAnimating(false);
+      if (animRef.current) clearTimeout(animRef.current);
+    },
+    [length],
+  );
+
+  const handleSizeChange = useCallback((newSize: number) => {
+    setLength(newSize);
     setStep(0);
     setIsAnimating(false);
     if (animRef.current) clearTimeout(animRef.current);
-  }, [length]);
+    setSequence((prev) => {
+      if (newSize > prev.length) {
+        const extra: Shape[] = [];
+        for (let i = 0; i < newSize - prev.length; i++) {
+          extra.push(SHAPES[Math.floor(Math.random() * SHAPES.length)]);
+        }
+        return [...prev, ...extra];
+      } else if (newSize < prev.length) {
+        return prev.slice(0, newSize);
+      }
+      return prev;
+    });
+  }, []);
 
-  useEffect(() => {
-    regenerate();
-  }, [length, regenerate]);
+  const toggleEdit = useCallback(() => {
+    setIsEditing((prev) => !prev);
+    setStep(0); // Reset animation when editing
+    setIsAnimating(false);
+    if (animRef.current) clearTimeout(animRef.current);
+  }, []);
+
+  const removeShape = useCallback((idx: number) => {
+    setSequence((prev) => prev.filter((_, i) => i !== idx));
+    setStep(0);
+  }, []);
+
+  const cycleShape = useCallback((idx: number) => {
+    setSequence((prev) => {
+      const next = [...prev];
+      const ci = SHAPES.findIndex((s) => s.type === next[idx].type);
+      next[idx] = SHAPES[(ci + 1) % SHAPES.length];
+      return next;
+    });
+    setStep(0);
+  }, []);
 
   const animate = useCallback(() => {
     setIsAnimating(true);
@@ -113,6 +149,11 @@ export const CancellationViz: React.FC = () => {
       setIsAnimating(false);
     }, 1200);
   }, []);
+
+  // Update length state if sequence length changes due to editing
+  useEffect(() => {
+    setLength(sequence.length);
+  }, [sequence.length]);
 
   // Build lookup: which original indices are in which pair?
   const pairMap = useMemo(() => {
@@ -146,6 +187,94 @@ export const CancellationViz: React.FC = () => {
   return (
     <div className="flex flex-col gap-4 select-none">
       <CheeseCard variant="default" className="!p-4">
+        {/* Toolbar: Size, Buttons, Edit */}
+        {step === 0 && (
+          <div className="flex flex-wrap items-center gap-3 mb-4 p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+            {/* Size Slider */}
+            <div className="flex items-center gap-2 px-2">
+              <label className="text-[10px] font-bold text-stone-400 dark:text-stone-500 uppercase">
+                Size
+              </label>
+              <input
+                type="range"
+                min="3"
+                max="50"
+                value={length}
+                onChange={(e) => handleSizeChange(Number(e.target.value))}
+                className="w-24 h-1.5 bg-stone-200 dark:bg-stone-600 rounded-full appearance-none cursor-pointer accent-amber-500"
+              />
+              <span className="text-[10px] font-mono font-bold text-stone-500 dark:text-stone-400 w-5 text-right">
+                {length}
+              </span>
+            </div>
+
+            <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-1" />
+
+            {/* Random Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => regenerate(false)}
+                className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-white dark:bg-stone-700 border border-stone-200 dark:border-stone-600 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-600 hover:border-stone-300 dark:hover:border-stone-500 transition-all shadow-sm"
+                title="Generate random sequence (uniform distribution)"
+              >
+                🎲 Uniform
+              </button>
+              <button
+                onClick={() => regenerate(true)}
+                className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-all shadow-sm"
+                title="Generate sequence with guaranteed majority"
+              >
+                🎲 Majority
+              </button>
+            </div>
+
+            {/* Edit Button */}
+            <div className="ml-auto">
+              <button
+                onClick={toggleEdit}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm ${
+                  isEditing
+                    ? "bg-stone-800 text-stone-200 dark:bg-stone-200 dark:text-stone-800 ring-2 ring-stone-900/10 dark:ring-stone-100/20"
+                    : "bg-stone-100 border border-transparent text-stone-500 hover:bg-stone-200 dark:bg-stone-700 dark:text-stone-400 dark:hover:bg-stone-600"
+                }`}
+              >
+                {isEditing ? (
+                  <>
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="2 8 6 12 14 4" />
+                    </svg>
+                    <span>Done</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" />
+                    </svg>
+                    <span>Manual Edit</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3">
           Sequence ({sequence.length} elements)
         </div>
@@ -158,34 +287,72 @@ export const CancellationViz: React.FC = () => {
             const isPaired = pi !== undefined;
             const showPair = step >= 1 && isPaired;
             const cancelled = step >= 2 && isPaired;
+            const isHovered = pi !== undefined && pi === hoveredPairIndex;
 
             return (
               <div
                 key={idx}
+                onClick={isEditing ? () => cycleShape(idx) : undefined}
                 className={`
-                  relative flex items-center justify-center
+                  group relative flex items-center justify-center
                   w-10 h-10 rounded-xl border-2
-                  transition-all duration-700
+                  transition-all duration-300
                   ${
-                    cancelled
-                      ? "opacity-10 scale-75 border-stone-200 bg-stone-100 dark:border-stone-800 dark:bg-stone-900"
-                      : showPair
-                        ? `${pairColors[pi! % pairColors.length]} scale-100`
-                        : isSurvivor && step >= 1
-                          ? "border-amber-400 bg-amber-50 dark:border-amber-500 dark:bg-amber-900/40 shadow-md scale-110"
-                          : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-800"
+                    isEditing
+                      ? "cursor-pointer hover:scale-110 hover:shadow-lg active:scale-95"
+                      : ""
+                  }
+                  ${
+                    isHovered
+                      ? "scale-125 z-20 shadow-xl ring-2 ring-offset-2 ring-amber-400 dark:ring-amber-500"
+                      : ""
+                  }
+                  ${
+                    showPair
+                      ? `${pairColors[pi! % pairColors.length]} ${
+                          cancelled ? "" : "scale-100"
+                        }`
+                      : isSurvivor && step >= 1
+                        ? "border-amber-400 bg-amber-50 dark:border-amber-500 dark:bg-amber-900/40 shadow-md shadow-amber-200/30 dark:shadow-amber-900/30 scale-110"
+                        : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-800"
+                  }
+                  ${
+                    cancelled && !isHovered
+                      ? "scale-90 opacity-90 grayscale-[0.3]"
+                      : ""
                   }
                 `}
               >
-                <ShapeSVG shape={shape} size={22} />
-                {cancelled && (
-                  <div className="absolute inset-0 flex items-center justify-center text-red-400 dark:text-red-500 text-xl font-bold">
-                    ✕
-                  </div>
+                <ShapeSVG shape={shape} size={22} className="" />
+                {isEditing && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeShape(idx);
+                    }}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] hover:scale-125 transition-all shadow-sm z-20"
+                  >
+                    ×
+                  </button>
                 )}
+                {/* Removed the strikethrough logic here */}
               </div>
             );
           })}
+
+          {isEditing && (
+            <button
+              onClick={() => {
+                setSequence((prev) => [
+                  ...prev,
+                  SHAPES[Math.floor(Math.random() * SHAPES.length)],
+                ]);
+              }}
+              className="w-10 h-10 rounded-xl border-2 border-dashed border-stone-300 dark:border-stone-700 flex items-center justify-center text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 hover:border-amber-400 transition-all"
+            >
+              +
+            </button>
+          )}
         </div>
 
         {/* Pair matchups */}
@@ -193,26 +360,33 @@ export const CancellationViz: React.FC = () => {
           <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-700">
             <div className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-2">
               Cancelling Pairs ({pairs.length})
+              <span className="ml-2 normal-case font-normal text-[10px] text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-100 dark:border-amber-800">
+                Note: In each cancelled pair, at most one item can be the
+                majority candidate.
+              </span>
             </div>
             <div className="flex flex-wrap gap-2 justify-center">
               {pairs.map((pair, pi) => (
                 <div
                   key={pi}
+                  onMouseEnter={() => setHoveredPairIndex(pi)}
+                  onMouseLeave={() => setHoveredPairIndex(null)}
                   className={`
-                    flex items-center gap-1 px-2 py-1 rounded-lg border-2
-                    transition-all duration-500
+                    relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 cursor-pointer
+                    transition-all duration-300 hover:scale-110 hover:shadow-md hover:z-10
                     ${
                       step >= 2
-                        ? "opacity-30 line-through border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-900"
+                        ? `${pairColors[pi % pairColors.length]} opacity-80`
                         : `${pairColors[pi % pairColors.length]}`
                     }
                   `}
                 >
-                  <ShapeSVG shape={pair.a.shape} size={18} />
-                  <span className="text-stone-400 dark:text-stone-500 text-xs">
+                  <ShapeSVG shape={pair.a.shape} size={20} />
+                  <span className="text-stone-400 dark:text-stone-500 text-xs font-bold">
                     ⚔
                   </span>
-                  <ShapeSVG shape={pair.b.shape} size={18} />
+                  <ShapeSVG shape={pair.b.shape} size={20} />
+                  {/* Removed the red line strike-through */}
                 </div>
               ))}
             </div>
@@ -254,42 +428,30 @@ export const CancellationViz: React.FC = () => {
         )}
       </CheeseCard>
 
-      {/* Controls */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2 p-2 bg-stone-50 dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700">
-          <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase">
-            Size:
-          </label>
-          <input
-            type="range"
-            min="8"
-            max="40"
-            value={length}
-            onChange={(e) => setLength(Number(e.target.value))}
-            className="w-32 h-2 bg-stone-200 dark:bg-stone-600 rounded-lg appearance-none cursor-pointer accent-amber-500"
-          />
-          <span className="text-xs font-mono font-bold w-6 text-right text-stone-600 dark:text-stone-300">
-            {length}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <CheeseButton
-            variant="primary"
-            size="sm"
+      {/* Action Button */}
+      {step === 0 && !isEditing && (
+        <div className="flex justify-center">
+          <button
             onClick={animate}
-            disabled={isAnimating || step >= 2}
+            disabled={isAnimating}
+            className="px-5 py-2 rounded-xl text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {step === 0
-              ? "⚔ Show Cancellations"
-              : step === 1
-                ? "Cancelling..."
-                : "✓ Done"}
-          </CheeseButton>
-          <CheeseButton variant="secondary" size="sm" onClick={regenerate}>
-            ↺ New Sequence
-          </CheeseButton>
+            ⚔ Show Cancellations
+          </button>
         </div>
-      </div>
+      )}
+      {step >= 2 && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => {
+              setStep(0);
+            }}
+            className="px-4 py-1.5 rounded-lg text-xs font-bold bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-all"
+          >
+            ↺ Reset
+          </button>
+        </div>
+      )}
     </div>
   );
 };
