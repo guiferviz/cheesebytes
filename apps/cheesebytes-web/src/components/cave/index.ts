@@ -6,4 +6,5 @@ export * from "./nombres-elementales";
 export * from "./the-apartment-that-never-sleeps";
 export * from "./you-cannot-take-off-a-jacket-you-never-wore";
 export * from "./trapping-rain-water";
+export * from "./majority-vote";
 export * from "./shared";

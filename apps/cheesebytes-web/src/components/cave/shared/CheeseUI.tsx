@@ -1,38 +1,38 @@
 /**
  * CheeseBytes UI Components
- * 
+ *
  * Reusable React components with consistent CheeseBytes styling.
  */
 
-import React from 'react';
-import { BUTTON_STYLES, CHEESE_ANIMATIONS } from './theme';
+import React from "react";
+import { BUTTON_STYLES, CHEESE_ANIMATIONS } from "./theme";
 
 // ===========================================
 // BUTTON
 // ===========================================
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'success' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: "primary" | "secondary" | "success" | "danger";
+  size?: "sm" | "md" | "lg";
   children: React.ReactNode;
 }
 
 export const CheeseButton: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   children,
-  className = '',
+  className = "",
   disabled,
   ...props
 }) => {
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm rounded-lg',
-    md: 'px-5 py-2.5 text-base rounded-xl',
-    lg: 'px-7 py-3 text-lg rounded-2xl',
+    sm: "px-3 py-1.5 text-sm rounded-lg",
+    md: "px-5 py-2.5 text-base rounded-xl",
+    lg: "px-7 py-3 text-lg rounded-2xl",
   };
-  
+
   const styles = BUTTON_STYLES[variant];
-  
+
   return (
     <button
       className={`
@@ -63,7 +63,7 @@ interface ControlBarProps {
   canStep?: boolean;
   stepLabel?: string;
   resetLabel?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
@@ -74,10 +74,10 @@ export const CheeseControlBar: React.FC<ControlBarProps> = ({
   isPlaying = false,
   isComplete = false,
   canStep = true,
-  stepLabel = 'Step →',
-  resetLabel = '↺ Reset',
-  size = 'md',
-  className = '',
+  stepLabel = "Step →",
+  resetLabel = "↺ Reset",
+  size = "md",
+  className = "",
 }) => {
   return (
     <div className={`flex gap-3 items-center justify-center ${className}`}>
@@ -86,7 +86,7 @@ export const CheeseControlBar: React.FC<ControlBarProps> = ({
           {resetLabel}
         </CheeseButton>
       )}
-      
+
       {onStep && (
         <CheeseButton
           variant="primary"
@@ -94,18 +94,18 @@ export const CheeseControlBar: React.FC<ControlBarProps> = ({
           onClick={onStep}
           disabled={isComplete || isPlaying || !canStep}
         >
-          {isComplete ? '✓ Done!' : stepLabel}
+          {isComplete ? "✓ Done!" : stepLabel}
         </CheeseButton>
       )}
-      
+
       {onPlayPause && (
         <CheeseButton
-          variant={isPlaying ? 'danger' : 'success'}
+          variant={isPlaying ? "danger" : "success"}
           size={size}
           onClick={onPlayPause}
           disabled={isComplete}
         >
-          {isPlaying ? '⏸ Pause' : '▶ Play'}
+          {isPlaying ? "⏸ Pause" : "▶ Play"}
         </CheeseButton>
       )}
     </div>
@@ -127,24 +127,28 @@ interface TitleBadgeProps {
 export const CheeseTitleBadge: React.FC<TitleBadgeProps> = ({
   children,
   emoji,
-  className = '',
+  className = "",
   compact = false,
 }) => {
   return (
-    <div className={`
-      bg-gradient-to-r from-amber-100 to-yellow-100
-      border border-amber-300/50
-      ${compact ? 'px-4 py-1.5' : 'px-6 py-2.5'} 
+    <div
+      className={`
+      bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900 dark:to-yellow-900
+      border border-amber-300/50 dark:border-amber-700
+      ${compact ? "px-4 py-1.5" : "px-6 py-2.5"} 
       rounded-full shadow-md
       flex-shrink-0
       ${className}
-    `}>
-      <h2 className={`
-        ${compact ? 'text-base' : 'text-xl'} 
-        font-bold text-amber-800 
+    `}
+    >
+      <h2
+        className={`
+        ${compact ? "text-base" : "text-xl"} 
+        font-bold text-amber-800 dark:text-amber-200
         flex items-center gap-2
         !m-0 !p-0
-      `}>
+      `}
+      >
         {emoji && <span>{emoji}</span>}
         {children}
         {emoji && <span>{emoji}</span>}
@@ -159,41 +163,43 @@ export const CheeseTitleBadge: React.FC<TitleBadgeProps> = ({
 
 interface CardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'info' | 'highlight' | 'glass';
+  variant?: "default" | "info" | "highlight" | "glass";
   className?: string;
 }
 
 export const CheeseCard: React.FC<CardProps> = ({
   children,
-  variant = 'default',
-  className = '',
+  variant = "default",
+  className = "",
 }) => {
   const variantStyles = {
     default: `
-      bg-white/95 backdrop-blur-sm
-      border border-amber-200/50
+      bg-white/95 backdrop-blur-sm dark:bg-stone-900/95
+      border border-amber-200/50 dark:border-stone-700/50
     `,
     info: `
-      bg-gradient-to-br from-stone-50 to-stone-100
-      border border-stone-200
+      bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-900
+      border border-stone-200 dark:border-stone-700
       shadow-inner
     `,
     highlight: `
-      bg-gradient-to-r from-amber-50 to-yellow-50
-      border-2 border-amber-200
+      bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/40
+      border-2 border-amber-200 dark:border-amber-800/60
     `,
     glass: `
-      bg-white/60 backdrop-blur-md
-      border border-white/40
+      bg-white/60 backdrop-blur-md dark:bg-black/40
+      border border-white/40 dark:border-white/10
     `,
   };
-  
+
   return (
-    <div className={`
+    <div
+      className={`
       rounded-2xl shadow-lg p-5
       ${variantStyles[variant]}
       ${className}
-    `}>
+    `}
+    >
       {children}
     </div>
   );
@@ -206,8 +212,8 @@ export const CheeseCard: React.FC<CardProps> = ({
 interface StatProps {
   label: string;
   value: React.ReactNode;
-  variant?: 'default' | 'success' | 'warning' | 'info';
-  color?: 'amber' | 'green' | 'blue' | 'purple' | 'pink' | 'orange';
+  variant?: "default" | "success" | "warning" | "info";
+  color?: "amber" | "green" | "blue" | "purple" | "pink" | "orange";
   highlight?: boolean;
   className?: string;
 }
@@ -215,42 +221,73 @@ interface StatProps {
 export const CheeseStat: React.FC<StatProps> = ({
   label,
   value,
-  variant = 'default',
+  variant = "default",
   color,
   highlight = false,
-  className = '',
+  className = "",
 }) => {
   const variantStyles = {
-    default: 'bg-amber-50 border-amber-200',
-    success: 'bg-emerald-50 border-emerald-200',
-    warning: 'bg-orange-50 border-orange-200',
-    info: 'bg-blue-50 border-blue-200',
+    default: "bg-amber-50 border-amber-200",
+    success: "bg-emerald-50 border-emerald-200",
+    warning: "bg-orange-50 border-orange-200",
+    info: "bg-blue-50 border-blue-200",
   };
-  
-  const colorStyles: Record<string, { bg: string; text: string; highlightBg: string }> = {
-    amber: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-600', highlightBg: 'bg-amber-100' },
-    green: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-600', highlightBg: 'bg-emerald-100' },
-    blue: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-600', highlightBg: 'bg-blue-100' },
-    purple: { bg: 'bg-purple-50 border-purple-200', text: 'text-purple-600', highlightBg: 'bg-purple-100' },
-    pink: { bg: 'bg-pink-50 border-pink-200', text: 'text-pink-600', highlightBg: 'bg-pink-100' },
-    orange: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-600', highlightBg: 'bg-orange-100' },
+
+  const colorStyles: Record<
+    string,
+    { bg: string; text: string; highlightBg: string }
+  > = {
+    amber: {
+      bg: "bg-amber-50 border-amber-200",
+      text: "text-amber-600",
+      highlightBg: "bg-amber-100",
+    },
+    green: {
+      bg: "bg-emerald-50 border-emerald-200",
+      text: "text-emerald-600",
+      highlightBg: "bg-emerald-100",
+    },
+    blue: {
+      bg: "bg-blue-50 border-blue-200",
+      text: "text-blue-600",
+      highlightBg: "bg-blue-100",
+    },
+    purple: {
+      bg: "bg-purple-50 border-purple-200",
+      text: "text-purple-600",
+      highlightBg: "bg-purple-100",
+    },
+    pink: {
+      bg: "bg-pink-50 border-pink-200",
+      text: "text-pink-600",
+      highlightBg: "bg-pink-100",
+    },
+    orange: {
+      bg: "bg-orange-50 border-orange-200",
+      text: "text-orange-600",
+      highlightBg: "bg-orange-100",
+    },
   };
-  
+
   const colorStyle = color ? colorStyles[color] : null;
-  const baseStyle = colorStyle 
-    ? `${highlight ? colorStyle.highlightBg : colorStyle.bg.split(' ')[0]} ${colorStyle.bg.split(' ')[1]}`
+  const baseStyle = colorStyle
+    ? `${highlight ? colorStyle.highlightBg : colorStyle.bg.split(" ")[0]} ${colorStyle.bg.split(" ")[1]}`
     : variantStyles[variant];
-  
+
   return (
-    <div className={`
+    <div
+      className={`
       p-3 rounded-xl border transition-colors
       ${baseStyle}
       ${className}
-    `}>
+    `}
+    >
       <div className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">
         {label}
       </div>
-      <div className={`text-xl font-bold tabular-nums ${colorStyle ? colorStyle.text : 'text-stone-800'}`}>
+      <div
+        className={`text-xl font-bold tabular-nums ${colorStyle ? colorStyle.text : "text-stone-800"}`}
+      >
         {value}
       </div>
     </div>
@@ -284,21 +321,23 @@ export const CheeseStepLog: React.FC<StepLogProps> = ({
   currentStep,
   isComplete = false,
   maxVisible = 5,
-  title = 'History',
-  className = '',
+  title = "History",
+  className = "",
 }) => {
   const allLogs = logs || entries || [];
   const visibleLogs = allLogs.slice(-maxVisible);
-  
+
   return (
-    <div className={`
+    <div
+      className={`
       bg-gradient-to-br from-stone-50 to-stone-100
       rounded-xl p-4 border border-stone-200
       ${className}
-    `}>
+    `}
+    >
       {currentStep !== undefined ? (
         <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">
-          Step {currentStep} {isComplete && '(Done!)'}
+          Step {currentStep} {isComplete && "(Done!)"}
         </div>
       ) : (
         <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">
@@ -311,13 +350,17 @@ export const CheeseStepLog: React.FC<StepLogProps> = ({
             key={log.key}
             className={`
               text-xs font-mono px-2 py-1.5 rounded
-              ${log.highlight
-                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                : 'bg-white text-stone-600 border border-stone-100'
+              ${
+                log.highlight
+                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                  : "bg-white text-stone-600 border border-stone-100"
               }
             `}
           >
-            {log.step !== undefined && <span className="opacity-50">#{log.step}</span>} {log.text}
+            {log.step !== undefined && (
+              <span className="opacity-50">#{log.step}</span>
+            )}{" "}
+            {log.text}
           </div>
         ))}
         {visibleLogs.length === 0 && (
@@ -341,23 +384,23 @@ interface FormulaBoxProps {
 export const CheeseFormulaBox: React.FC<FormulaBoxProps> = ({
   children,
   label,
-  className = '',
+  className = "",
 }) => {
   return (
-    <div className={`
+    <div
+      className={`
       bg-gradient-to-r from-blue-50 to-indigo-50
       border border-blue-200
       rounded-xl p-4
       ${className}
-    `}>
+    `}
+    >
       {label && (
         <div className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-2">
           {label}
         </div>
       )}
-      <div className="font-mono text-sm text-blue-800">
-        {children}
-      </div>
+      <div className="font-mono text-sm text-blue-800">{children}</div>
     </div>
   );
 };
@@ -375,7 +418,7 @@ interface SVGBackgroundProps {
 export const CheeseSVGBackground: React.FC<SVGBackgroundProps> = ({
   width = 800,
   height = 400,
-  className = '',
+  className = "",
 }) => {
   return (
     <svg
@@ -386,8 +429,14 @@ export const CheeseSVGBackground: React.FC<SVGBackgroundProps> = ({
     >
       <defs>
         <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#FFF8DC', stopOpacity: 0.5 }} />
-          <stop offset="100%" style={{ stopColor: '#FFE4B5', stopOpacity: 0.3 }} />
+          <stop
+            offset="0%"
+            style={{ stopColor: "#FFF8DC", stopOpacity: 0.5 }}
+          />
+          <stop
+            offset="100%"
+            style={{ stopColor: "#FFE4B5", stopOpacity: 0.3 }}
+          />
         </linearGradient>
         <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
           <circle cx="10" cy="10" r="1" fill="#DAA520" opacity="0.2" />
@@ -409,17 +458,19 @@ interface CompletionBadgeProps {
 }
 
 export const CheeseCompletionBadge: React.FC<CompletionBadgeProps> = ({
-  message = '✓ Complete!',
-  className = '',
+  message = "✓ Complete!",
+  className = "",
 }) => {
   return (
-    <div className={`
+    <div
+      className={`
       bg-gradient-to-r from-emerald-400 to-green-500
       text-white px-6 py-2 rounded-full
       font-bold text-lg shadow-lg
       animate-bounce
       ${className}
-    `}>
+    `}
+    >
       {message}
     </div>
   );
@@ -436,7 +487,7 @@ interface SlideContainerProps {
 
 export const CheeseSlideContainer: React.FC<SlideContainerProps> = ({
   children,
-  className = '',
+  className = "",
 }) => {
   return (
     <>
@@ -457,13 +508,15 @@ export const CheeseSlideContainer: React.FC<SlideContainerProps> = ({
           max-height: none !important;
         }
       `}</style>
-      <div className={`
+      <div
+        className={`
         cheese-slide-container
         flex flex-col items-center justify-center gap-4
         w-full h-full
         select-none
         ${className}
-      `}>
+      `}
+      >
         {children}
       </div>
     </>

@@ -1,0 +1,149 @@
+import {
+  MajorityVote,
+  MajorityVoteMerged,
+  CancellationViz,
+} from "../../../apps/cheesebytes-web/src/components/cave/majority-vote";
+
+In large-scale data engineering, finding the most frequent element is trivial if
+you have infinite memory: just use a hash map. But what if you are processing a
+**stream** of terabytes of data, or if your dataset is distributed across a
+thousand worker nodes?
+
+The naive approach requires **shuffling** data: sending all occurrences of "A"
+to one worker node, "B" to another to count them. This is expensive in terms of
+network bandwidth and latency.
+
+The **Boyer-Moore Voting Algorithm** solves this by maintaining a tiny **summary
+state**: just one candidate and one counter ($O(1)$ space). Crucially, this
+summary is **additive**. You can process partitions of data independently and
+cheapy merge their summaries without ever moving the raw data.
+
+# The Logic
+
+The algorithm processes elements sequentially, maintaining a
+`(candidate, strength)` tuple.
+
+1.  **Empty State:** If strength is 0, the current element becomes the candidate
+    with strength 1.
+2.  **Reinforcement:** If the current element matches the candidate, strength
+    increments (+1).
+3.  **Cancellation:** If it differs, strength decrements (-1).
+
+Conceptually, distinct elements "cancel" each other out. If a majority element
+exists (appears $> N/2$ times), it will inevitably survive all cancellations.
+
+# Interactive Single-Stream Demo
+
+Visualize the state transitions as the stream is processed. Notice how the
+candidate changes until the true majority stabilizes.
+
+<div style={{ margin: "2rem 0" }} className="not-prose">
+  <MajorityVote client:load initialMajority={true} />
+</div>
+
+# Distributed Processing & Merging
+
+Because the algorithm is associative, it is perfectly suited for **MapReduce**
+architectures. We can split the input into arbitrary partitions, compute a local
+`(candidate, strength)` for each, and then reduce them.
+
+The merge logic for two summaries $(C_1, S_1)$ and $(C_2, S_2)$ is simple:
+
+- If $C_1 = C_2$, sum the strengths: $(C_1, S_1 + S_2)$.
+- If $C_1 \neq C_2$, the one with higher strength survives with the difference:
+  $(C_w, |S_1 - S_2|)$ (where $C_w$ is the winner).
+
+Try generating random partitions below. Even if specialized "local majorities"
+win in their shards, the **global merge** correctly identifies the potential
+majority element (if stronger than the noise).
+
+<div style={{ margin: "2rem 0" }}>
+  <MajorityVoteMerged client:load />
+</div>
+
+# Why Does This Work? Cancellation Principle
+
+The core idea is the **pigeonhole principle applied to cancellation**. Every
+element that is _different_ from the majority can cancel at most one copy of it.
+Since the majority has $> N/2$ copies, and all minorities combined have $< N/2$,
+there are simply not enough "attackers" to eliminate the majority.
+
+The visualization below makes this concrete. Click **Show Cancellations** to
+pair up distinct elements. After all pairs cancel, only the majority survivors
+remain:
+
+<div style={{ margin: "2rem 0" }}>
+  <CancellationViz client:load />
+</div>
+
+# Probabilistic Bounds (Skipping the Second Pass)
+
+A full second pass over the data costs $O(N)$ time. In a distributed setting,
+this means another round of network traffic. Can we avoid it?
+
+Not with certainty — but we can bound the candidate's real count without
+re-reading the data.
+
+After the algorithm finishes with `(candidate, strength)` on $N$ elements:
+
+- **Minimum count:** The candidate appeared at least **strength** times. Every
+  unit of strength represents one net "unmatched" occurrence.
+- **Maximum count:** Each cancellation consumed one occurrence of the candidate
+  and one of something else. There were at most $(N - s) / 2$ such
+  cancellations. So the candidate appeared at most $s + (N - s) / 2$ times
+  (rounded down).
+
+$s \leq C \leq s + (N - s) / 2$
+
+(Where $C$ is the actual count).
+
+If the **lower bound** already exceeds $N/2$, you have a guaranteed majority
+without any verification. The interactive demo above shows these bounds
+automatically when the algorithm finishes.
+
+# The Catch: False Positives
+
+The algorithm guarantees that **IF** a majority exists, it will be the surviving
+candidate. However, if **NO** majority exists, it will still output a
+statistically "strong" noise candidate.
+
+For example, in `[A, B, C]`, the algorithm will output _some_ candidate, but
+none of them is a majority. Without verification, you'd return a wrong answer.
+
+In practice, if the probabilistic bounds do not give you certainty, a second
+pass (or a final `GROUP BY` count) is needed.
+
+# Code Implementation
+
+```python
+def majority_vote_stream(stream):
+    candidate = None
+    strength = 0
+
+    for element in stream:
+        if strength == 0:
+            candidate = element
+            strength = 1
+        elif element == candidate:
+            strength += 1
+        else:
+            strength -= 1
+
+    return candidate
+```
+
+# Complexity
+
+|                  | Time          | Space  |
+| ---------------- | ------------- | ------ |
+| Naive (counting) | $O(n)$        | $O(n)$ |
+| Sorting          | $O(n \log n)$ | $O(1)$ |
+| **Boyer-Moore**  | $O(n)$        | $O(1)$ |
+
+The algorithm is optimal in both dimensions: linear time, constant space. You
+can't do better.
+
+# References
+
+- [LeetCode Problem 169 - Majority Element](https://leetcode.com/problems/majority-element/)
+- Boyer, R. S.; Moore, J. S. (1991). _MJRTY — A Fast Majority Vote Algorithm_.
