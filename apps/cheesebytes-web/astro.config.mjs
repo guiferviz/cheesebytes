@@ -6,6 +6,8 @@ import remarkMarimoIsland from './src/plugins/remark-marimo-island.js';
 import remarkObsidianCallout from 'remark-obsidian-callout';
 import { wikiLinkPlugin } from 'remark-wiki-link';
 import rehypeMermaid from 'rehype-mermaid';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
@@ -84,6 +86,7 @@ export default defineConfig({
   site: 'https://cheesebytes.com/',
   markdown: {
     remarkPlugins: [
+      remarkMath,
       [wikiLinkPlugin, {
         permalinks,
         pageResolver,
@@ -94,7 +97,7 @@ export default defineConfig({
       remarkObsidianCallout,
       remarkMarimoIsland,
     ],
-    rehypePlugins: [rehypeExternalLinks, [rehypeMermaid, {strategy: 'img-svg'}]],
+    rehypePlugins: [rehypeExternalLinks, rehypeKatex, [rehypeMermaid, {strategy: 'img-svg'}]],
     syntaxHighlight: {
       type: 'shiki',
       excludeLangs: ['mermaid', 'math'],
