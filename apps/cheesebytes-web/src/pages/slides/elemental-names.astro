@@ -1,0 +1,332 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import {
+  PeriodicTable as PeriodicTableContainer,
+  ElementalNamesTree as ElementTree,
+  ElementalNamesSingleChar as ArrayVisualizer,
+  ElementalNamesAllPossibilities,
+  ComplexityBenchmark,
+  ElementSlotMachine,
+  EricaBacktrackVisualizer,
+  ElementalNameChecker,
+} from "../../components/cave/nombres-elementales";
+import RevealCode from "../../components/RevealCode";
+---
+
+<RevealLayout
+  title="Elemental Names"
+  description="Form names using the initials of chemical elements"
+  theme="dark"
+>
+  <section>
+    <aside class="notes">
+      <p>
+        Among beakers and test tubes, two chemists are about to welcome their
+        newborns. Everything is ready. Except the names. Each name must use
+        chemical symbols. If it can't be broken down, it doesn't pass.
+      </p>
+    </aside>
+    <div class="fragment">
+      <PeriodicTableContainer interactive={false} client:load />
+    </div>
+  </section>
+  <section>
+    <aside class="notes">
+      <pre>
+        - "I like Liam."
+        — "Lithium. Americium. Perfect."
+      </pre>
+    </aside>
+    <div class="flex items-center justify-center h-full">
+      <ElementSlotMachine
+        client:load
+        name="Liam"
+        tokens={[{ symbol: "Li" }, { symbol: "Am" }]}
+        playOn="revealVisible"
+      />
+    </div>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>"What about Nora?" — "Nitrogen. Oxygen. Radium. That works."</p>
+    </aside>
+    <div class="flex items-center justify-center h-full">
+      <ElementSlotMachine
+        client:load
+        name="Nora"
+        tokens={[{ symbol: "N" }, { symbol: "O" }, { symbol: "Ra" }]}
+        playOn="revealVisible"
+      />
+    </div>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>"Emma is a nice name too." — "Hmm... no. That doesn't work."</p>
+      <p>
+        They can't keep checking names by hand. They need an automated way to
+        spot elemental names.
+      </p>
+    </aside>
+    <div class="flex items-center justify-center h-full">
+      <ElementSlotMachine
+        client:load
+        name="Emma"
+        tokens={[null, null]}
+        playOn="revealVisible"
+      />
+    </div>
+  </section>
+
+  <section>
+    <!-- Cheese Bytes Intro -->
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        My first thought was: this is trivial. We just scan the name, letter by
+        letter. For each letter, we check if it matches an element in the
+        periodic table. For example, let's try the name "Coco".
+        <span>Coco</span>
+        We could form it using: carbon, oxygen, carbon, oxygen.
+      </p>
+      <p>
+        That seems to work. Some other names work too.
+        <span>Whisky</span>
+        So far, everything looks easy. But then we hit a problem. Take a name like
+        "Erica". If we only take one letter at a time, there is no element with symbol
+        "E". No "R". No "A". Can we say for sure that "Erica" is not elemental?
+      </p>
+    </aside>
+    <ArrayVisualizer client:load />
+  </section>
+  <section>
+    <aside class="notes">
+      <p>
+        In the periodic table, there are 14 single-letter elements and 104
+        two-letter elements. None with three or more, that's also an important
+        detail. If we look closely, we find Erbium and Calcium. These two
+        elements, along with Iodine, allow us to form Erica.
+      </p>
+    </aside>
+    <PeriodicTableContainer client:load />
+  </section>
+  <section>
+    <div style="height: 14em">
+      <ElementalNamesAllPossibilities initialText="Erica" showInput={false} />
+    </div>
+  </section>
+  <section>
+    <aside class="notes">
+      <p>
+        We now know Erica is elemental, but how can we validate this in an
+        systematic way? We can start from the left and remove characters if they
+        match an element, starting from single letter elements first and, if not
+        possible, from two-letter elements.
+      </p>
+      <p>
+        "E" does not exist as a chemical symbol. So we try two letters. "Er".
+        That works. Erbium. So we move forward. Now we are left with "ica". "I"
+        works. Iodine. We move forward again. Now we are left with "ca". "C"
+        works. Carbon. We move forward. Now we are left with "a". "A" does not
+        exist. So this path fails. And if we stop here, we conclude that "Erica"
+        does not work. But that conclusion is wrong. This greedy implementation
+        fails. The mistake happened earlier. When we matched "C", we had another
+        valid option. Instead of taking "C", we could have taken "Ca". Calcium.
+        And that would have finished the name.
+      </p>
+      <p>
+        The problem is not choosing one or two letters. The problem is that when
+        more than one option works, we must try all of them. If we commit to the
+        first one and never go back, we can miss a valid solution.
+      </p>
+    </aside>
+    <div class="flex items-center justify-center h-full">
+      <EricaBacktrackVisualizer client:load playOn="revealVisible" />
+    </div>
+  </section>
+  <section>
+    <aside class="notes">
+      <p>
+        Instead of committing to a single path, we can represent all
+        possibilities at once. Each node represents a position in the name. From
+        that position, we branch on every valid symbol. One branch takes one
+        letter. Another branch takes two. Some branches fail. Others continue.
+        As soon as one branch reaches the end, we know the name is elemental.
+      </p>
+      <p>
+        Look at this point. From here, both choices are valid. C works. Ca also
+        works. But choosing C leads to a dead end. Choosing Ca finishes the
+        name. The problem is not that one option is wrong. The problem is that
+        we chose too early. When more than one choice works, we must explore
+        them all.
+      </p>
+    </aside>
+    <div style={{ height: "70vh" }}>
+      <ElementTree showInput={true} initialText="Erica" client:load />
+    </div>
+  </section>
+  <section id="code-naive-recursion" class="text-left text-sm">
+    <RevealCode
+      client:only="react"
+      animation="typing"
+      code={`ELEMENTS = {
+    'h','he',
+    'li','be','b','c','n','o','f','ne',
+    'na','mg','al','si','p','s','cl','ar',
+    'k','ca','sc','ti','v','cr','mn','fe','co','ni','cu','zn','ga','ge','as','se','br','kr',
+    'rb','sr','y','zr','nb','mo','tc','ru','rh','pd','ag','cd','in','sn','sb','te','i','xe',
+    'cs','ba','la','ce','pr','nd','pm','sm','eu','gd','tb','dy','ho','er','tm','yb','lu',
+    'hf','ta','w','re','os','ir','pt','au','hg','tl','pb','bi','po','at','rn',
+    'fr','ra','ac','th','pa','u','np','pu','am','cm','bk','cf','es','fm','md','no','lr',
+    'rf','db','sg','bh','hs','mt','ds','rg','cn','fl','lv','ts','og'
+  }
+
+def is_elemental(name: str) -> bool:  # assume name is lowercase
+    # STEP-1
+    if name == "":
+        return True
+
+    # STEP-2
+    if name[:1] in ELEMENTS and is_elemental(name[1:]):
+        return True
+
+    # STEP-3
+    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
+        return True
+
+    # STEP-4
+    return False`}
+    />
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        Liam, Nora. They are elemental and it works fast. Emma is not elemental
+        but is also fast. Coco, lovely name, is elemental. Is also pretty fast.
+        How well this scales? Let's see. cococococo works fast, cococococo+A
+        don't. Why?
+      </p>
+    </aside>
+    <div class="flex items-center justify-center h-full">
+      <ElementalNameChecker client:visible initialValue="" debounceMs={200} />
+    </div>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        Some names like Liam do not branch that much, only one path is valid.
+        Coco is the opposite, every step branches into two possibilities. This
+        generates a wide tree of possibilities. If we have that many
+        possibilities, why it takes no time to say it is elemental? The reason
+        is that we are doing a depth-first search. We explore one path at a
+        time, and as soon as we find a valid path, we stop. In the case of
+        cococococo, the first path we try is the correct one. We never explore
+        the other possibilities. But if we add an "a" at the end, we are forced
+        to explore all paths, and that takes a lot of time. if insead of
+        finishing in coa we add a ca, then, it's also fast because it's fast to
+        find a valid path. The problem is not the number of possibilities. The
+        problem is how many of them we need to explore before finding a valid
+        one, if any.
+      </p>
+      <p>
+        Some branches are repeated, they are the same. We are indeed solving the
+        same problem multiple times. We need to be smarter. We can save the
+        result of each position in the name. If we reach the same position
+        again, we can reuse the saved result instead of recalculating it. This
+        technique is called memoization, and it can make a huge difference in
+        performance.
+      </p>
+    </aside>
+    <div style={{ height: "70vh" }}>
+      <ElementTree showInput={true} initialText="Coco" client:load />
+    </div>
+  </section>
+
+  <section id="code-final" class="text-left text-sm">
+    <RevealCode
+      client:only="react"
+      animation="typing"
+      code={`ELEMENTS = {
+    'h','he',
+    'li','be','b','c','n','o','f','ne',
+    'na','mg','al','si','p','s','cl','ar',
+    'k','ca','sc','ti','v','cr','mn','fe','co','ni','cu','zn','ga','ge','as','se','br','kr',
+    'rb','sr','y','zr','nb','mo','tc','ru','rh','pd','ag','cd','in','sn','sb','te','i','xe',
+    'cs','ba','la','ce','pr','nd','pm','sm','eu','gd','tb','dy','ho','er','tm','yb','lu',
+    'hf','ta','w','re','os','ir','pt','au','hg','tl','pb','bi','po','at','rn',
+    'fr','ra','ac','th','pa','u','np','pu','am','cm','bk','cf','es','fm','md','no','lr',
+    'rf','db','sg','bh','hs','mt','ds','rg','cn','fl','lv','ts','og'
+  }
+
+# STEP-1
+memo: dict[str, bool] = {}
+
+# STEP-0
+def is_elemental(name: str) -> bool:  # assume name is lowercase
+    # STEP-2
+    if name in memo:
+        return memo[name]
+
+    # STEP-0
+    if name == "":
+        return True
+
+    if name[:1] in ELEMENTS and is_elemental(name[1:]):
+        # STEP-3
+        memo[name] = True
+        # STEP-0
+        return True
+
+    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
+        # STEP-4
+        memo[name] = True
+        # STEP-0
+        return True
+
+    # STEP-5
+    memo[name] = False
+    # STEP-0
+    return False`}
+    />
+  </section>
+
+  <section style={{ height: "60vh" }}>
+    <aside class="notes">
+      <p>
+        With memoization, we avoid redundant calculations. Each position in the
+        name is solved only once. This makes the algorithm much faster, even for
+        names with many possibilities. The performance is no longer determined
+        by the number of possibilities, but by the length of the name and the
+        number of unique subproblems.
+      </p>
+    </aside>
+    <div class="flex items-center justify-center h-full">
+      <ElementalNameChecker
+        client:visible
+        initialValue=""
+        debounceMs={200}
+        showMemoToggle={true}
+      />
+    </div>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        DP can also solve this. There is an implementation detail that makes the
+        complexity not linear, leave you that for you to discover and read you
+        in the comments.
+      </p>
+      <p>
+        This was todays cheese bytes. Remember, the code matters but the idea
+        comes first.
+      </p>
+    </aside>
+    <!-- Interactive demo -->
+  </section>
+</RevealLayout>

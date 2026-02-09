@@ -2,10 +2,22 @@
 // Esto permite importar todos los componentes desde una sola ubicación:
 // import { ElementalNamesTree, PeriodicTable } from '@/components/cave/nombres-elementales';
 
-export { default as ElementalNamesTree } from './ElementalNamesTree';
-export { default as PeriodicTable, elementsData, categoryColors, ElementTileSVG } from './PeriodicTable';
-export type { ElementData, Category } from './PeriodicTable';
-export { default as ElementalNamesSingleChar } from './ElementalNamesSingleChar';
-export { default as ElementalNamesDPArray } from './ElementalNamesDPArray';
-export { default as ElementalNamesAllPossibilities } from './ElementalNamesAllPossibilities';
-export { default as ComplexityBenchmark } from './ComplexityBenchmark';
+export { default as ElementalNamesTree } from "./ElementalNamesTree";
+export {
+  default as PeriodicTable,
+  elementsData,
+  categoryColors,
+  ElementTileSVG,
+} from "./PeriodicTable";
+export type { ElementData, Category } from "./PeriodicTable";
+export { default as ElementalNamesSingleChar } from "./ElementalNamesSingleChar";
+export { default as ElementalNamesDPArray } from "./ElementalNamesDPArray";
+export { default as ElementalNamesAllPossibilities } from "./ElementalNamesAllPossibilities";
+export { default as ComplexityBenchmark } from "./ComplexityBenchmark";
+export { default as ElementSlotMachine } from "./ElementSlotMachine";
+export type {
+  ElementSlotMachineProps,
+  ElementToken,
+} from "./ElementSlotMachine";
+export { default as EricaBacktrackVisualizer } from "./EricaBacktrackVisualizer";
+export { default as ElementalNameChecker } from "./ElementalNameChecker";

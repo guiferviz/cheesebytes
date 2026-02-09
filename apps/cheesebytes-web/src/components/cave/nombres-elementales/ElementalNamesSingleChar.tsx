@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { gsap } from "gsap";
+import React, { useState, useEffect } from "react";
 import { ElementTileSVG, elementsData } from "./PeriodicTable";
+import { CheeseTickIcon, CheeseCrossIcon } from "../../icons/CheeseIcons";
 
 // Crear un map para búsqueda rápida por símbolo
 const elementMap = Object.fromEntries(
-  elementsData.map((e) => [e.symbol.toUpperCase(), e])
+  elementsData.map((e) => [e.symbol.toUpperCase(), e]),
 );
 
 interface AnalyzedChar {
@@ -18,19 +18,48 @@ interface ArrayVisualizerProps {
   showInput?: boolean;
 }
 
+// ── CSS keyframes (inyectadas una sola vez) ─────────────────────────────────
+const STYLE_ID = "elemental-single-char-anims";
+function ensureStyles() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = `
+    @keyframes eschar-drop {
+      0%   { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes eschar-color {
+      0%   { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes eschar-tile {
+      0%   { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes eschar-fade-up {
+      0%   { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   initialText = "Whisky",
   showInput = true,
 }) => {
-  // Si es interactivo, usa estado; si no, usa solo la prop
   const [text, setText] = useState<string>(initialText);
   const effectiveText = showInput ? text : initialText;
   const [debouncedText, setDebouncedText] = useState<string>(effectiveText);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const TILE_SIZE = 95;
   const GAP = 16;
   const TOTAL_CELL_WIDTH = TILE_SIZE + GAP;
+
+  // Inyectar estilos al montar
+  useEffect(() => ensureStyles(), []);
 
   useEffect(() => {
     if (!showInput) {
@@ -52,76 +81,18 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
 
   const svgContainerWidth = debouncedText.length * TOTAL_CELL_WIDTH;
 
-  // Animaciones solo si están habilitadas y showInput está activo
-  useLayoutEffect(() => {
-    if (!showInput) return;
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-      const charContainers = gsap.utils.toArray(".char-container");
-      const charRects = gsap.utils.toArray(".char-rect");
-      const statusIcons = gsap.utils.toArray(".status-icon");
-      const conclusionText = document.querySelector(".conclusion-text");
+  // Timing de la animación secuencial (solo en modo interactivo)
+  const STAGGER = 0.12; // segundos entre cada letra
+  const DROP_DUR = 0.45;
+  // Para cada char: cuándo arranca su "drop" y cuándo arranca su "análisis"
+  const charDelay = (i: number) => i * STAGGER;
+  const analysisDelay = (i: number) => charDelay(i) + DROP_DUR;
+  const tileDelay = (i: number) => analysisDelay(i);
+  const totalAnimTime =
+    analyzedText.length > 0 ? analysisDelay(analyzedText.length - 1) + 0.5 : 0;
 
-      tl.from(charContainers, {
-        opacity: 0,
-        y: -30,
-        scale: 0.8,
-        transformOrigin: "50% 50%", // Crecer desde el centro
-        duration: 0.5,
-        ease: "back.out(1.7)",
-        stagger: { amount: 0.8, from: "start" },
-      });
-
-      analyzedText.forEach((item, index) => {
-        const charRect = charRects[index];
-        const statusIcon = statusIcons[index];
-        const color = item.isElement ? "#4ade80" : "#f87171";
-        const analysisTl = gsap.timeline();
-        analysisTl
-          .to(charRect, {
-            attr: { fill: color },
-            duration: 0.4,
-          })
-          .to(
-            statusIcon,
-            {
-              opacity: 1,
-              duration: 0.4,
-            },
-            "<"
-          );
-
-        if (item.isElement) {
-          const elementTile = gsap.utils.toArray(
-            `.element-tile[data-index="${index}"]`
-          )[0];
-          if (elementTile) {
-            tl.from(elementTile, {
-              opacity: 0,
-              scale: 0.5,
-              transformOrigin: "50% 50%", // Crecer desde el centro
-              duration: 0.5,
-              ease: "back.out(1.4)",
-            }).add(analysisTl, "<");
-          }
-        } else {
-          tl.add(analysisTl);
-        }
-      });
-
-      if (conclusionText) {
-        tl.fromTo(
-          conclusionText,
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: 0.5 }
-        );
-      }
-    }, containerRef);
-    return () => ctx.revert();
-  }, [debouncedText, analyzedText, showInput]);
-
-  const charRectHeight = 80;
-  const elementTileHeight = 110; // Aproximado del ElementTileSVG
+  const charRectHeight = 95;
+  const elementTileHeight = 110;
   const tileGap = 15;
   const hasAnyElement = analyzedText.some((t) => t.isElement);
   const svgContainerHeight = hasAnyElement
@@ -131,96 +102,142 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   return (
     <div className="not-prose">
       {showInput && (
-        <div className="mb-8 text-center">
-          <p className="text-gray-400 text-sm sm:text-base pb-4">
-            Escribe para ver qué letras son elementos químicos.
-          </p>
+        <div className="mb-12 text-center">
           <input
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 text-lg w-full max-w-xs focus:ring-2 focus:ring-sky-500 focus:outline-none text-slate-900 dark:text-slate-100"
-            placeholder="Escribe algo..."
+            className="text-4xl text-center p-4 rounded-xl border-2 outline-none transition-colors bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:border-amber-500 dark:focus:border-amber-400"
+            placeholder="Write a name..."
           />
         </div>
       )}
 
-      <div ref={containerRef} className="w-full flex justify-center">
+      <div className="w-full flex justify-center">
         <div style={{ maxWidth: `${svgContainerWidth}px`, width: "100%" }}>
+          {/* key = debouncedText fuerza un remount completo del SVG,
+              arrancando todas las animaciones CSS desde cero */}
           <svg
+            key={debouncedText}
             viewBox={`0 0 ${svgContainerWidth} ${svgContainerHeight}`}
             style={{ height: svgContainerHeight, width: "100%" }}
             className="h-auto overflow-visible"
           >
             {analyzedText.map(({ char, isElement, elementInfo }, index) => {
               const x = index * TOTAL_CELL_WIDTH;
-              const charRectHeight = 95;
-              // Declarativo: si no hay input, siempre color y opacidad finales
-              const fillColor = !showInput
-                ? isElement
-                  ? "#4ade80"
-                  : "#f87171"
-                : "#4c566a";
-              const statusOpacity = !showInput ? 1 : 0;
+              const animate = showInput;
+
+              // Colores finales
+              const finalColor = isElement ? "#4ade80" : "#f87171";
+              const fillColor = !animate ? finalColor : "#4c566a";
+              const statusOpacity = !animate ? 1 : 0;
+
               return (
                 <g key={`${char}-${index}`}>
-                  <g
-                    className="char-container"
-                    transform={`translate(${x}, 0)`}
-                  >
-                    <rect
-                      className="char-rect"
-                      width={TILE_SIZE}
-                      height={charRectHeight}
-                      rx="8"
-                      ry="8"
-                      fill={fillColor}
-                      stroke="rgba(0,0,0,0.2)"
-                      strokeWidth="2"
-                    />
-                    <text
-                      x={TILE_SIZE / 2}
-                      y={charRectHeight / 2}
-                      dominantBaseline="middle"
-                      textAnchor="middle"
-                      className="text-4xl font-bold"
-                      fill="white"
-                    >
-                      {char}
-                    </text>
+                  {/* ── Contenedor del carácter ── */}
+                  {/* <g> externo: posición SVG. <g> interno: animación CSS */}
+                  <g transform={`translate(${x}, 0)`}>
                     <g
-                      className="status-icon"
-                      opacity={statusOpacity}
-                      transform={`translate(${TILE_SIZE - 20}, ${charRectHeight - 20}) scale(0.8)`}
+                      style={
+                        animate
+                          ? {
+                              opacity: 0,
+                              animation: `eschar-drop ${DROP_DUR}s ease-out ${charDelay(index)}s forwards`,
+                            }
+                          : undefined
+                      }
                     >
-                      {isElement ? (
-                        <path
-                          d="M1 5L5 9L13 1"
-                          stroke="white"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                      ) : (
-                        <path
-                          d="M1 1L9 9M9 1L1 9"
-                          stroke="white"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
+                      {/* Rect base (gris) */}
+                      <rect
+                        width={TILE_SIZE}
+                        height={charRectHeight}
+                        rx="8"
+                        ry="8"
+                        fill={fillColor}
+                        stroke="rgba(0,0,0,0.2)"
+                        strokeWidth="2"
+                      />
+                      {/* Rect de color superpuesto (se anima la opacidad) */}
+                      {animate && (
+                        <rect
+                          width={TILE_SIZE}
+                          height={charRectHeight}
+                          rx="8"
+                          ry="8"
+                          fill={finalColor}
+                          stroke="rgba(0,0,0,0.2)"
+                          strokeWidth="2"
+                          style={{
+                            opacity: 0,
+                            animation: `eschar-color 0.4s ease ${analysisDelay(index)}s forwards`,
+                          }}
                         />
                       )}
+                      <text
+                        x={TILE_SIZE / 2}
+                        y={charRectHeight / 2}
+                        dominantBaseline="middle"
+                        textAnchor="middle"
+                        className="text-4xl font-bold"
+                        fill="white"
+                      >
+                        {char}
+                      </text>
+                      {/* Icono de estado (check / cross) */}
+                      <g
+                        transform={`translate(${TILE_SIZE - 20}, ${charRectHeight - 20}) scale(0.8)`}
+                      >
+                        <g
+                          style={
+                            animate
+                              ? {
+                                  opacity: 0,
+                                  animation: `eschar-color 0.4s ease ${analysisDelay(index)}s forwards`,
+                                }
+                              : { opacity: statusOpacity }
+                          }
+                        >
+                          {isElement ? (
+                            <path
+                              d="M1 5L5 9L13 1"
+                              stroke="white"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          ) : (
+                            <path
+                              d="M1 1L9 9M9 1L1 9"
+                              stroke="white"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          )}
+                        </g>
+                      </g>
                     </g>
                   </g>
+
+                  {/* ── Tile del elemento ── */}
                   {isElement && elementInfo && (
                     <g
-                      className="element-tile"
-                      data-index={index}
                       transform={`translate(${x}, ${charRectHeight + tileGap})`}
                     >
-                      <ElementTileSVG element={elementInfo} />
+                      <g
+                        style={
+                          animate
+                            ? {
+                                opacity: 0,
+                                animation: `eschar-tile 0.5s ease-out ${tileDelay(index)}s forwards`,
+                              }
+                            : undefined
+                        }
+                      >
+                        <ElementTileSVG element={elementInfo} />
+                      </g>
                     </g>
                   )}
                 </g>
@@ -232,21 +249,27 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
 
       {debouncedText.length > 0 && showInput && (
         <div
-          className="conclusion-text text-center max-w-lg mx-auto"
-          style={
-            showInput
-              ? { opacity: 1, transform: "none", transition: "none" }
-              : {}
-          }
+          key={debouncedText}
+          className="conclusion-text flex flex-col items-center justify-center mt-8"
+          style={{
+            opacity: 0,
+            animation: `eschar-fade-up 0.5s ease ${totalAnimTime}s forwards`,
+          }}
         >
           {canBeFormed ? (
-            <p className="p-3 m-6 rounded-lg text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-800/60 font-semibold">
-              ¡Sí! ¡Es Elemental!
-            </p>
+            <>
+              <CheeseTickIcon className="w-24 h-24 mb-2" />
+              <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                Elemental Name!
+              </p>
+            </>
           ) : (
-            <p className="p-3 m-6 rounded-lg text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-800/60 font-semibold">
-              No, no es Elemental.
-            </p>
+            <>
+              <CheeseCrossIcon className="w-24 h-24 mb-2" />
+              <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                Not an Elemental Name
+              </p>
+            </>
           )}
         </div>
       )}
