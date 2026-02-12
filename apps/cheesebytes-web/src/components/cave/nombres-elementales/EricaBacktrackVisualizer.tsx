@@ -757,11 +757,6 @@ const EricaBacktrackVisualizer: React.FC<EricaBacktrackVisualizerProps> = ({
         }
       `}</style>
 
-      {/* ── Title ── */}
-      <h1 className="text-3xl font-bold dark:text-gray-100 text-gray-800">
-        Greedy Approach
-      </h1>
-
       {/* ── Letter Tape ── */}
       <div className="relative flex items-center justify-center gap-4">
         {visibleTiles

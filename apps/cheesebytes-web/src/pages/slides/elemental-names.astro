@@ -22,8 +22,9 @@ import RevealCode from "../../components/RevealCode";
     <aside class="notes">
       <p>
         Among beakers and test tubes, two chemists are about to welcome their
-        newborns. Everything is ready. Except the names. Each name must use
-        chemical symbols. If it can't be broken down, it doesn't pass.
+        babies. Everything is ready. Except the names. They want the names to
+        use chemical symbols only. If a name can't be broken down, it doesn't
+        pass.
       </p>
     </aside>
     <div class="fragment">
@@ -32,6 +33,7 @@ import RevealCode from "../../components/RevealCode";
   </section>
   <section>
     <aside class="notes">
+      <p></p>
       <pre>
         - "I like Liam."
         — "Lithium. Americium. Perfect."
@@ -49,7 +51,11 @@ import RevealCode from "../../components/RevealCode";
 
   <section>
     <aside class="notes">
-      <p>"What about Nora?" — "Nitrogen. Oxygen. Radium. That works."</p>
+      <p></p>
+      <pre>
+        - "What about Nora?"
+        — "Nitrogen. Oxygen. Radium. That works."
+      </pre>
     </aside>
     <div class="flex items-center justify-center h-full">
       <ElementSlotMachine
@@ -63,7 +69,10 @@ import RevealCode from "../../components/RevealCode";
 
   <section>
     <aside class="notes">
-      <p>"Emma is a nice name too." — "Hmm... no. That doesn't work."</p>
+      <pre>
+        - "Emma is a nice name too."
+        — "Hmm... no. That doesn't work."
+      </pre>
       <p>
         They can't keep checking names by hand. They need an automated way to
         spot elemental names.
@@ -86,18 +95,18 @@ import RevealCode from "../../components/RevealCode";
   <section>
     <aside class="notes">
       <p>
-        My first thought was: this is trivial. We just scan the name, letter by
-        letter. For each letter, we check if it matches an element in the
-        periodic table. For example, let's try the name "Coco".
+        My first thought was: this is trivial. We just scan the name from left
+        to right. Letter by letter. If it matches an element, we move forward.
+        Let's try "Coco".
         <span>Coco</span>
-        We could form it using: carbon, oxygen, carbon, oxygen.
+        Carbon, oxygen, carbon, oxygen.
       </p>
       <p>
         That seems to work. Some other names work too.
         <span>Whisky</span>
-        So far, everything looks easy. But then we hit a problem. Take a name like
-        "Erica". If we only take one letter at a time, there is no element with symbol
-        "E". No "R". No "A". Can we say for sure that "Erica" is not elemental?
+        So far, everything looks easy. But then we hit a problem. Take the name "Erica".
+        If we only take one letter at a time, it fails. There is no element with symbol
+        E. No R. No A. So, is "Erica" really not elemental?
       </p>
     </aside>
     <ArrayVisualizer client:load />
@@ -105,10 +114,9 @@ import RevealCode from "../../components/RevealCode";
   <section>
     <aside class="notes">
       <p>
-        In the periodic table, there are 14 single-letter elements and 104
-        two-letter elements. None with three or more, that's also an important
-        detail. If we look closely, we find Erbium and Calcium. These two
-        elements, along with Iodine, allow us to form Erica.
+        Let's look closer. The periodic table does not only have one-letter
+        symbols. It also has many two-letter symbols. For example, Erbium. And
+        Calcium. With those, "Erica" can be formed.
       </p>
     </aside>
     <PeriodicTableContainer client:load />
@@ -121,26 +129,20 @@ import RevealCode from "../../components/RevealCode";
   <section>
     <aside class="notes">
       <p>
-        We now know Erica is elemental, but how can we validate this in an
-        systematic way? We can start from the left and remove characters if they
-        match an element, starting from single letter elements first and, if not
-        possible, from two-letter elements.
+        So now we know "Erica" is elemental. But how do we validate this in a
+        systematic way? Let's start from the left. "E" does not exist. So we try
+        two letters. "Er". That works. We move forward. Now we have "ica". "I"
+        works. Iodine. We move forward again. Now we have "ca". "C" works.
+        Carbon. We move forward. Now we have "a". "A" does not exist. So this
+        fails. If we stop here, we conclude that "Erica" does not work. But that
+        conclusion is wrong.
       </p>
       <p>
-        "E" does not exist as a chemical symbol. So we try two letters. "Er".
-        That works. Erbium. So we move forward. Now we are left with "ica". "I"
-        works. Iodine. We move forward again. Now we are left with "ca". "C"
-        works. Carbon. We move forward. Now we are left with "a". "A" does not
-        exist. So this path fails. And if we stop here, we conclude that "Erica"
-        does not work. But that conclusion is wrong. This greedy implementation
-        fails. The mistake happened earlier. When we matched "C", we had another
-        valid option. Instead of taking "C", we could have taken "Ca". Calcium.
-        And that would have finished the name.
-      </p>
-      <p>
-        The problem is not choosing one or two letters. The problem is that when
-        more than one option works, we must try all of them. If we commit to the
-        first one and never go back, we can miss a valid solution.
+        The mistake happened earlier. When we matched "C", we had another valid
+        option. Instead of taking "C", we could have taken "Ca". Calcium. And
+        that would have finished the name. The question is not whether we take
+        one or two letters. We need to try both. If we commit too early and
+        never go back, we can miss a valid solution.
       </p>
     </aside>
     <div class="flex items-center justify-center h-full">
@@ -150,29 +152,38 @@ import RevealCode from "../../components/RevealCode";
   <section>
     <aside class="notes">
       <p>
-        Instead of committing to a single path, we can represent all
-        possibilities at once. Each node represents a position in the name. From
-        that position, we branch on every valid symbol. One branch takes one
-        letter. Another branch takes two. Some branches fail. Others continue.
-        As soon as one branch reaches the end, we know the name is elemental.
+        We can represent all possibilities as a tree. Each node represents a
+        remaining name. From that position, we branch on every valid symbol.
+        Some branches fail. Others continue. As soon as one branch reaches the
+        end, we know the name is elemental.
       </p>
-      <p>
-        Look at this point. From here, both choices are valid. C works. Ca also
-        works. But choosing C leads to a dead end. Choosing Ca finishes the
-        name. The problem is not that one option is wrong. The problem is that
-        we chose too early. When more than one choice works, we must explore
-        them all.
-      </p>
+      <p></p>
     </aside>
     <div style={{ height: "70vh" }}>
       <ElementTree showInput={true} initialText="Erica" client:load />
     </div>
   </section>
   <section id="code-naive-recursion" class="text-left text-sm">
+    <aside class="notes">
+      <p>
+        We can implement this with a recursive function. We start with a set of
+        valid symbols, all in lower case. We also assume the input name is in
+        lower case.
+      </p>
+      <p>
+        First, we define the base case. An empty name is elemental. Then we try
+        to match one letter. If it matches a symbol, we recursively check the
+        rest of the name. If that returns true, we return true. If that fails,
+        we try two letters. Again, if it matches a symbol, we recursively check
+        the rest. If that returns true, we return true. If neither option works,
+        we return false.
+      </p>
+    </aside>
     <RevealCode
       client:only="react"
       animation="typing"
-      code={`ELEMENTS = {
+      code={`#STEP-1
+ELEMENTS = {
     'h','he',
     'li','be','b','c','n','o','f','ne',
     'na','mg','al','si','p','s','cl','ar',
@@ -182,22 +193,24 @@ import RevealCode from "../../components/RevealCode";
     'hf','ta','w','re','os','ir','pt','au','hg','tl','pb','bi','po','at','rn',
     'fr','ra','ac','th','pa','u','np','pu','am','cm','bk','cf','es','fm','md','no','lr',
     'rf','db','sg','bh','hs','mt','ds','rg','cn','fl','lv','ts','og'
-  }
+}
 
 def is_elemental(name: str) -> bool:  # assume name is lowercase
-    # STEP-1
+    # STEP-2
     if name == "":
         return True
 
-    # STEP-2
-    if name[:1] in ELEMENTS and is_elemental(name[1:]):
-        return True
-
     # STEP-3
-    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
+    if name[:1] in ELEMENTS and is_elemental(name[1:]):
+        # STEP-4
         return True
 
-    # STEP-4
+    # STEP-5
+    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
+        # STEP-6
+        return True
+
+    # STEP-7
     return False`}
     />
   </section>
@@ -205,10 +218,16 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
   <section>
     <aside class="notes">
       <p>
-        Liam, Nora. They are elemental and it works fast. Emma is not elemental
-        but is also fast. Coco, lovely name, is elemental. Is also pretty fast.
-        How well this scales? Let's see. cococococo works fast, cococococo+A
-        don't. Why?
+        For many names, this works just fine. Liam is fast. Nora is fast. Emma
+        is fast. Even Coco is fast. But how well does this scale? Let's try
+        longer inputs. We keep repeating "coco". Again and again. Still fast.
+        Almost the same time.
+      </p>
+      <p>
+        Now we add one more letter at the end. Just one "A". Suddenly... it
+        explodes. Same code. Same logic. One extra letter. So maybe the "A" is
+        the problem? Let's remove one "o". Now it ends in "Ca". Fast again.
+        That's strange. What's happening?
       </p>
     </aside>
     <div class="flex items-center justify-center h-full">
@@ -219,27 +238,34 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
   <section>
     <aside class="notes">
       <p>
-        Some names like Liam do not branch that much, only one path is valid.
-        Coco is the opposite, every step branches into two possibilities. This
-        generates a wide tree of possibilities. If we have that many
-        possibilities, why it takes no time to say it is elemental? The reason
-        is that we are doing a depth-first search. We explore one path at a
-        time, and as soon as we find a valid path, we stop. In the case of
-        cococococo, the first path we try is the correct one. We never explore
-        the other possibilities. But if we add an "a" at the end, we are forced
-        to explore all paths, and that takes a lot of time. if insead of
-        finishing in coa we add a ca, then, it's also fast because it's fast to
-        find a valid path. The problem is not the number of possibilities. The
-        problem is how many of them we need to explore before finding a valid
-        one, if any.
+        Some names do not branch much.
+        <span>Sophia</span>
+        There is only one valid path. "Coco" is different. At every step, there are
+        two valid choices. Co. Or C and O. This creates a very wide tree. So why is
+        a very long repetition of "Coco" still fast?
       </p>
       <p>
-        Some branches are repeated, they are the same. We are indeed solving the
-        same problem multiple times. We need to be smarter. We can save the
-        result of each position in the name. If we reach the same position
-        again, we can reuse the saved result instead of recalculating it. This
-        technique is called memoization, and it can make a huge difference in
-        performance.
+        The algorithm explores one branch at a time. As soon as it finds a valid
+        one, it stops. In this case, the first branch succeeds. But when we add
+        an "A" at the end, none of them works. Now it has to explore the entire
+        tree. That's why it explodes.
+      </p>
+      <p>
+        If instead we end with "Ca", a valid path appears again. The algorithm
+        stops early. It's not about how many branches exist. It's about how many
+        we must explore before we can stop.
+      </p>
+      <p>
+        At first glance, this looks unavoidable. If the tree grows wide, we must
+        explore all possibilities. But not necessarily. If we look closely, many
+        branches are actually the same. We are solving the same subproblems
+        again and again. We can be smarter.
+      </p>
+      <p>
+        We can save the result for each remaining name. If we reach the same
+        position again, we reuse the result. This technique is called
+        memoization. With memoization, each position is solved only once. The
+        algorithm becomes much faster. Even for names with many possibilities.
       </p>
     </aside>
     <div style={{ height: "70vh" }}>
@@ -248,6 +274,19 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
   </section>
 
   <section id="code-final" class="text-left text-sm">
+    <aside class="notes">
+      <p>
+        Let's translate this into code. We create an empty dictionary for
+        memoization. At the start of the function, we check if this remaining
+        name was already solved. If it was, we return the stored result
+        immediately.
+      </p>
+      <p>
+        Then we run the same logic as before. But before returning, we store the
+        result in the dictionary. This way, each remaining name is computed only
+        once. We avoid repeating the same work.
+      </p>
+    </aside>
     <RevealCode
       client:only="react"
       animation="typing"
@@ -261,7 +300,7 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
     'hf','ta','w','re','os','ir','pt','au','hg','tl','pb','bi','po','at','rn',
     'fr','ra','ac','th','pa','u','np','pu','am','cm','bk','cf','es','fm','md','no','lr',
     'rf','db','sg','bh','hs','mt','ds','rg','cn','fl','lv','ts','og'
-  }
+}
 
 # STEP-1
 memo: dict[str, bool] = {}
@@ -298,11 +337,8 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
   <section style={{ height: "60vh" }}>
     <aside class="notes">
       <p>
-        With memoization, we avoid redundant calculations. Each position in the
-        name is solved only once. This makes the algorithm much faster, even for
-        names with many possibilities. The performance is no longer determined
-        by the number of possibilities, but by the length of the name and the
-        number of unique subproblems.
+        The algorithm becomes much faster. Performance now depends mainly on the
+        length of the name, not on the size of the tree.
       </p>
     </aside>
     <div class="flex items-center justify-center h-full">
@@ -315,17 +351,53 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
     </div>
   </section>
 
-  <section>
+  <section class="text-sm">
     <aside class="notes">
       <p>
-        DP can also solve this. There is an implementation detail that makes the
-        complexity not linear, leave you that for you to discover and read you
-        in the comments.
+        And with that, we have solved the problem. There are other ways to
+        approach it as well, but this idea is the key. Before we finish, take a
+        closer look at the implementation. Some Python-specific details affect
+        time complexity. If you figured it out, let me know in the comments.
       </p>
       <p>
-        This was todays cheese bytes. Remember, the code matters but the idea
+        This was today's cheese bytes. Remember, the code matters but the idea
         comes first.
       </p>
     </aside>
+    <RevealCode
+      client:only="react"
+      animation="typing"
+      code={`ELEMENTS = {
+    'h','he',
+    'li','be','b','c','n','o','f','ne',
+    'na','mg','al','si','p','s','cl','ar',
+    'k','ca','sc','ti','v','cr','mn','fe','co','ni','cu','zn','ga','ge','as','se','br','kr',
+    'rb','sr','y','zr','nb','mo','tc','ru','rh','pd','ag','cd','in','sn','sb','te','i','xe',
+    'cs','ba','la','ce','pr','nd','pm','sm','eu','gd','tb','dy','ho','er','tm','yb','lu',
+    'hf','ta','w','re','os','ir','pt','au','hg','tl','pb','bi','po','at','rn',
+    'fr','ra','ac','th','pa','u','np','pu','am','cm','bk','cf','es','fm','md','no','lr',
+    'rf','db','sg','bh','hs','mt','ds','rg','cn','fl','lv','ts','og'
+  }
+
+memo: dict[str, bool] = {}
+
+def is_elemental(name: str) -> bool:  # assume name is lowercase
+    if name in memo:
+        return memo[name]
+
+    if name == "":
+        return True
+
+    if name[:1] in ELEMENTS and is_elemental(name[1:]):
+        memo[name] = True
+        return True
+
+    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
+        memo[name] = True
+        return True
+
+    memo[name] = False
+    return False`}
+    />
   </section>
 </RevealLayout>
