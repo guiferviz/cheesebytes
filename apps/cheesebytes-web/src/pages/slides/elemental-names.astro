@@ -77,6 +77,9 @@ import RevealCode from "../../components/RevealCode";
         They can't keep checking names by hand. They need an automated way to
         spot elemental names.
       </p>
+      <p>
+        Guessing is not enough. They need a way to validate elemental names.
+      </p>
     </aside>
     <div class="flex items-center justify-center h-full">
       <ElementSlotMachine
@@ -359,10 +362,6 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
         closer look at the implementation. Some Python-specific details affect
         time complexity. If you figured it out, let me know in the comments.
       </p>
-      <p>
-        This was today's cheese bytes. Remember, the code matters but the idea
-        comes first.
-      </p>
     </aside>
     <RevealCode
       client:only="react"
@@ -399,5 +398,17 @@ def is_elemental(name: str) -> bool:  # assume name is lowercase
     memo[name] = False
     return False`}
     />
+  </section>
+  <section>
+    <aside class="notes">
+      <p>
+        And with that, we have solved the problem. Now there is only one
+        question left. Is your name elemental?
+      </p>
+      <p>
+        This was today's cheese bytes. Remember, the code matters but the idea
+        comes first.
+      </p>
+    </aside>
   </section>
 </RevealLayout>
