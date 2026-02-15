@@ -192,7 +192,7 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
   const renderStatus = () => {
     if (status === "loading-python") {
       return (
-        <div className="flex items-center gap-3 text-amber-400 animate-pulse">
+        <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 animate-pulse">
           <span className="text-lg">⏳</span>
           <span className="font-mono text-lg">Loading Python…</span>
         </div>
@@ -201,7 +201,7 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
 
     if (status === "running") {
       return (
-        <div className="flex items-center gap-3 text-amber-400 animate-pulse">
+        <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 animate-pulse">
           <span className="text-lg">⏳</span>
           <span className="font-mono text-lg">Running…</span>
         </div>
@@ -218,7 +218,9 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
           )}
           <span
             className={`font-mono text-base font-semibold ${
-              result ? "text-green-400" : "text-red-400"
+              result
+                ? "text-green-700 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
             }`}
           >
             {result ? "Elemental" : "Not elemental"}
@@ -229,7 +231,7 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
 
     if (status === "idle" && input.trim() === "") {
       return (
-        <div className="flex items-center gap-3 text-gray-500">
+        <div className="flex items-center gap-3 text-slate-500 dark:text-gray-500">
           <span className="font-mono text-lg">Type a name…</span>
         </div>
       );
@@ -250,9 +252,9 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
         spellCheck={false}
         autoComplete="off"
         className="w-full text-center text-3xl font-mono px-6 py-4 rounded-xl
-          bg-gray-900/60 border-2 border-amber-500/40
-          text-amber-100 placeholder-gray-600
-          outline-none focus:border-amber-400 focus:shadow-[0_0_20px_rgba(245,158,11,0.15)]
+          bg-white/95 dark:bg-gray-900/60 border-2 border-amber-500/35 dark:border-amber-500/40
+          text-slate-900 dark:text-amber-100 placeholder-slate-400 dark:placeholder-gray-600
+          outline-none focus:border-amber-500 dark:focus:border-amber-400 focus:shadow-[0_0_20px_rgba(245,158,11,0.12)] dark:focus:shadow-[0_0_20px_rgba(245,158,11,0.15)]
           transition-all duration-200"
       />
 
@@ -265,8 +267,8 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
           <span
             className={`inline-block w-14 h-8 rounded-full relative transition-colors duration-200 ${
               memoEnabled
-                ? "bg-green-600"
-                : "bg-gray-700/50 group-hover:bg-gray-700"
+                ? "bg-green-600 dark:bg-green-600"
+                : "bg-slate-300 group-hover:bg-slate-400 dark:bg-gray-700/50 dark:group-hover:bg-gray-700"
             }`}
           >
             <span
@@ -278,8 +280,8 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
           <span
             className={`font-mono text-lg transition-colors duration-200 ${
               memoEnabled
-                ? "text-green-400"
-                : "text-gray-500 group-hover:text-gray-400"
+                ? "text-green-700 dark:text-green-400"
+                : "text-slate-500 group-hover:text-slate-700 dark:text-gray-500 dark:group-hover:text-gray-400"
             }`}
           >
             memo
@@ -290,9 +292,9 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
       {/* Time — the star of the show */}
       {status === "done" && timeMs !== null && (
         <div className="flex flex-col items-center gap-1">
-          <span className="font-mono text-7xl font-bold tabular-nums text-amber-400">
+          <span className="font-mono text-7xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
             {timeMs}
-            <span className="text-3xl font-normal text-amber-500/70 ml-2">
+            <span className="text-3xl font-normal text-amber-700/70 dark:text-amber-500/70 ml-2">
               ms
             </span>
           </span>
@@ -309,7 +311,7 @@ export const ElementalNameChecker: React.FC<ElementalNameCheckerProps> = ({
 
       {/* Error area */}
       {error && (
-        <div className="w-full px-4 py-2 rounded-lg bg-red-900/30 border border-red-700/50 text-red-300 text-xs font-mono break-all">
+        <div className="w-full px-4 py-2 rounded-lg bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-700/50 dark:text-red-300 text-xs font-mono break-all">
           {error}
         </div>
       )}

@@ -31,11 +31,12 @@ function findAllElementalCombinations(text: string): ElementData[][] {
 interface ElementalNamesAllPossibilitiesProps {
   initialText?: string;
   showInput?: boolean;
+  maxCombinations?: number;
 }
 
 const ElementalNamesAllPossibilities: React.FC<
   ElementalNamesAllPossibilitiesProps
-> = ({ initialText = "Snack", showInput = true }) => {
+> = ({ initialText = "Snack", showInput = true, maxCombinations = 30 }) => {
   // Si es interactivo, usa estado; si no, usa solo la prop
   const [text, setText] = useState<string>(initialText);
   const effectiveText = showInput ? text : initialText;
@@ -43,7 +44,7 @@ const ElementalNamesAllPossibilities: React.FC<
     effectiveText && effectiveText.length > 0
       ? findAllElementalCombinations(effectiveText)
       : [];
-  const combosToShow = combinations.slice(0, 30);
+  const combosToShow = combinations.slice(0, maxCombinations);
 
   // Usar dimensiones relativas que se adapten al contenedor
   const numRows = combosToShow.length || 1;

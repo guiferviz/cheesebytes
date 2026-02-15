@@ -243,8 +243,8 @@ Try it yourself in the box below. Copy and paste these examples and compare
 execution times:
 
 - `Cocococococococococococococococococo`
-- `Cococococococococococococococococoa`
-- `Cococococococococococococococococa`
+- `Cocococococococococococococococococoa`
+- `Cocococococococococococococococococa`
 
 Notice what happens: changing only the ending can change runtime dramatically.
 
@@ -252,19 +252,36 @@ Notice what happens: changing only the ending can change runtime dramatically.
   <ElementalNameChecker client:visible initialValue="" debounceMs={200} />
 </div>
 
-Why? The recursive algorithm explores one branch at a time and can stop early if
-it finds a valid solution quickly. But when a name has no valid decomposition,
-it may need to explore almost the whole decision tree.
+Let's follow exactly what is happening:
 
-Now we can visualize that tree using "Coco", where both `Co` and `C` + `O` are
-valid at many steps:
+- Repeating `coco` many times can still be fast.
+- Add just one final `a` (`...cocoa`) and runtime explodes.
+- Remove one `o` so it ends in `ca` (`...coca`) and it becomes fast again.
+
+So the issue is not simply length.
+
+The recursive algorithm explores one branch at a time and can stop early if it
+finds a valid solution quickly. If no valid decomposition exists, it may need to
+explore almost the whole decision tree before returning `False`.
+
+Now we can visualize the branching with "Coco", where both `Co` and `C` + `O`
+are valid at many steps:
 
 <div style={{ height: "20em" }}>
   <ElementalTree initialText="Coco" showInput={false} client:load />
 </div>
 
-Soon we discover something curious: different branches reach exactly the same
-remaining suffix. We are solving the same subproblem again and again.
+When a valid path is found quickly, recursion stops early. But in names like
+`...cocoa`, many branches look promising until very late, so the algorithm does
+much more work.
+
+<div style={{ height: "20em" }}>
+  <ElementalTree initialText="Cocoa" showInput={false} client:load />
+</div>
+
+Now look closely at these two branches of the `Coco` tree: they arrive at the
+same remaining suffix. That means we are solving the same subproblem again and
+again.
 
 <div style={{ height: "20em" }}>
   <ElementalTree
@@ -275,49 +292,54 @@ remaining suffix. We are solving the same subproblem again and again.
   />
 </div>
 
-That is the core issue with naive recursion: repeated subproblems.
+That is the core issue with naive recursion: repeated subproblems. You can
+explore any tree you want using the tool below.
+
+<div>
+  <ElementalTree initialText="Francisco" showInput={true} client:load />
+</div>
 
 ## Memoization Implementation
 
-To avoid repeating work, we cache the result of each subproblem. A clean way is
-to memoize by index: index `i` means "can we form the name from position `i`
-until the end?".
+We don't need a brand-new algorithm. We can keep the exact same recursive logic
+with slicing, and just add a cache.
 
 ```python
+memo: dict[str, bool] = {}
+
 def is_elemental(name: str) -> bool:
-  name = name.lower()
-  n = len(name)
-  memo = {}
+    name = name.lower()
 
-  def dfs(i: int) -> bool:
-    if i == n:
-      return True
-    if i in memo:
-      return memo[i]
+    if name in memo:
+        return memo[name]
 
-    ok = False
-    if name[i:i+1] in ELEMENTS and dfs(i + 1):
-      ok = True
-    elif i + 1 < n and name[i:i+2] in ELEMENTS and dfs(i + 2):
-      ok = True
+    if name == "":
+        return True
 
-    memo[i] = ok
-    return ok
+    if name[:1] in ELEMENTS and is_elemental(name[1:]):
+        memo[name] = True
+        return True
 
-  return dfs(0)
+    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
+        memo[name] = True
+        return True
+
+    memo[name] = False
+    return False
 ```
 
-Now each index is solved once, so we remove the exponential blow-up caused by
-recomputing the same branches many times.
+This is the same function as before, plus memoization. The key idea is: each
+remaining suffix (for example `"coco"`, `"oco"`, `"co"`) is solved once, then
+reused.
 
 # Dynamic Programming (Iterative)
 
-We have solved the problem using **recursion with memoization** (also known as
-_Top-Down Dynamic Programming_). But there is another way.
+We have solved the problem using **recursion with memoization**. This works well
+for relatively large inputs, but we hit recursion limits for very long names. So
+there is a risk of hitting a Python `RecursionError` if the name is too long.
 
-We can solve the problem iteratively (Bottom-Up). Instead of asking "Can we form
-the rest of the name starting from here?", we can build the solution from left
-to right.
+We can solve the problem iteratively. Instead of asking "Can we form the rest of
+the name starting from here?", we can build the solution from left to right.
 
 We can use an array of booleans, let's call it `dp`, where each position `dp[i]`
 tells us if the prefix of length `i` is a valid elemental name.
@@ -334,7 +356,30 @@ By the end of the loop, if the last position `dp[n]` is `True`, then the whole
 name is elemental. This approach avoids recursion limits and is often more
 efficient in practice.
 
+```python
+ELEMENTS = {
+    'h','he', ...
+}
+
+def is_elemental(name):
+    name = name.lower()
+    n = len(name)
+    dp = [False] * (n + 1)
+    dp[0] = True
+
+    for i in range(n):
+        if dp[i]:
+            if i + 1 <= n and name[i:i+1] in ELEMENTS:
+                dp[i+1] = True
+            if i + 2 <= n and name[i:i+2] in ELEMENTS:
+                dp[i+2] = True
+
+    return dp[n]
+```
+
 # Solution
+
+Test your implementation with the code editor below.
 
 ```python {.marimo}
 import marimo as mo
