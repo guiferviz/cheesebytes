@@ -54,9 +54,7 @@ export const SeaViews: React.FC<SeaViewsProps> = ({
       {/* Height editor */}
       {showEditor && (
         <div className="flex items-center justify-center gap-3 mb-4">
-          <label className="text-sm font-medium text-gray-300">
-            heights =
-          </label>
+          <label className="text-sm font-medium text-gray-300">heights =</label>
           <input
             type="text"
             value={heightInput}
@@ -69,9 +67,7 @@ export const SeaViews: React.FC<SeaViewsProps> = ({
       )}
 
       <div className="flex gap-4 items-start justify-center">
-        <div className="flex-shrink-0">
-          {renderWorld()}
-        </div>
+        <div className="flex-shrink-0">{renderWorld()}</div>
       </div>
     </CheeseSlideContainer>
   );
