@@ -1,9 +1,10 @@
 import {
   ElementalNamesTree as ElementalTree,
-  ElementalNamesDPArray as DPWordBreakViz,
   PeriodicTable as PeriodicTableContainer,
   ElementalNamesSingleChar as ArrayVisualizer,
   ElementalNamesAllPossibilities,
+  EricaBacktrackVisualizer,
+  ElementalNameChecker,
 } from "../../../apps/cheesebytes-web/src/components/cave/nombres-elementales";
 
 Among beakers and test tubes, two chemists are about to welcome their newborns.
@@ -13,45 +14,45 @@ Everything is ready. Except the names.
 Each name must use chemical symbols. If it can't be broken down, it doesn't
 pass.
 
-- "I like Liam."
-- "Lithium. Americium. Perfect."
+Liam qualifies. `Li` (lithium) and `Am` (americium) are elements:
 
-- "What about Nora?"
-- "Nitrogen. Oxygen. Radium. That works."
+<div style={{ height: "6em" }}>
+  <ElementalNamesAllPossibilities initialText="Liam" showInput={false} />
+</div>
 
-- "Emma is a nice name too."
-- "Hmm... no. That doesn't work."
+Nora is also elemental. It can be formed using `N` (nitrogen), `O` (oxygen),
+`Ra` (radium):
+
+<div style={{ height: "6em" }}>
+  <ElementalNamesAllPossibilities
+    initialText="Nora"
+    showInput={false}
+    maxCombinations={1}
+  />
+</div>
+
+Emma doesn't work. `E` is not an element, `Em` is also not an element, so there
+is no way to break it down.
 
 They can't keep checking names by hand. They need an automated way to spot
-elemental names.
+elemental names. They need an algorithm!
 
 # First Try: One Element at a Time
 
-My first thought was: this is trivial.
+My first thought was: this is trivial. We just scan the name, letter by letter.
+For each letter, we check if it matches an element in the periodic table.
 
-We just scan the name, letter by letter. For each letter, we check if it matches
-an element in the periodic table.
+For example, let's try the name "Coco":
 
-For example, let's try the name "Coco".
+<ArrayVisualizer initialText="Coco" showInput={false} />
 
-We could form it using: carbon, oxygen, carbon, oxygen.
-
-C. O. C. O.
-
-That seems to work.
-
-Let us try another one: "Whisky".
+That seems to work. Let us try another one: "Whisky".
 
 Yes, it sounds more like a pet name... but it is actually a real name.
 
-We could form it using: tungsten, hydrogen, iodine, sulfur, potassium, and
-yttrium.
+<ArrayVisualizer initialText="Whisky" showInput={false} />
 
-W. H. I. S. K. Y.
-
-So far, everything looks easy.
-
-But then we hit a problem.
+So far, everything looks easy. But then we hit a problem.
 
 Take a name like "Erica".
 
@@ -65,8 +66,11 @@ attempts to form it with periodic table symbols one character at a time:
 
 <ArrayVisualizer initialText="Erica" client:load />
 
-In the periodic table, there are 14 single-letter elements and 104 two-letter
-elements. None with three or more, that's also an important detail.
+# Two-Letter Elements
+
+Let's look closer. The periodic table does not only have one-letter symbols.
+There are 14 single-letter elements and 104 two-letter elements. None with three
+or more, that's also an important detail.
 
 <PeriodicTableContainer client:load />
 
@@ -77,38 +81,28 @@ elements, along with iodine (`I`), allow us to form "Erica".
   <ElementalNamesAllPossibilities initialText="Erica" showInput={false} />
 </div>
 
-It seems the key is taking **one or two letters** at a time. That is the
-decision: one or two? When should we take one? When two? Can this decision
-affect the result?
+So now we know "Erica" is elemental. But how do we validate this in a systematic
+way?
 
-And then I wonder: Is there more than one way to form a name with elements?
+Let's try a simple strategy: scan from left to right.
 
-The case of "Coco" is very interesting. `Co` can be formed in two ways: with
-carbon (`C`) and oxygen (`O`), or with cobalt (`Co`):
+1. Try the first letter "E". It does not exist.
+2. So we try two letters "Er". That works (Erbium). We move forward. Now we have
+   "ica".
+3. Try "i". Works (Iodine). We move forward. Now we have "ca".
+4. Try "c". Works (Carbon). We move forward. Now we have "a".
+5. "a" does not exist. And "a\_" (two letters) is not possible either.
 
-<div style={{ height: "12em" }}>
-  <ElementalNamesAllPossibilities initialText="Co" showInput={false} />
-</div>
+So this path fails. If we stop here, we conclude that "Erica" does not work. But
+that conclusion is wrong.
 
-Therefore, "Coco" can be formed in 4 different ways:
+The mistake happened earlier. When we matched "c", we had another valid option.
+Instead of taking "c", we could have taken "ca" (Calcium). And that would have
+finished the name successfully.
 
-<div style={{ height: "24em" }}>
-  <ElementalNamesAllPossibilities initialText="Coco" showInput={false} />
-</div>
-
-Because there are two-letter elements, there are different paths to form a name.
-The problem becomes more complex, yes, but also more interesting.
-
-Below you can try any name you want and see all possibilities to form it with
-periodic table symbols, both single and double letters:
-
-<div style={{ height: "30em" }}>
-  <ElementalNamesAllPossibilities
-    initialText="Oscar"
-    showInput={true}
-    client:load
-  />
-</div>
+The question is not whether we take one _or_ two letters. We need to try _both_.
+If we commit too early to one option and never go back, we can miss a valid
+solution.
 
 # The Recursive Algorithm
 
@@ -198,7 +192,7 @@ symbol? If so, we try to solve the rest of the name, removing those two letters.
 If it works, we return `True`.
 
 ```python
-if name[:2] in ELEMENTS and is_elemental(name[2:]):
+if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
     return True
 ```
 
@@ -208,52 +202,69 @@ with elements. We return `False`.
 Thus, each call to the function represents a fork in our decision tree. We try
 all possibilities until we find one that works... or run out of options.
 
+The full code looks like this:
+
+```python
+ELEMENTS = {
+    'h','he',
+    'li','be','b','c','n','o','f','ne',
+    'na','mg','al','si','p','s','cl','ar',
+    'k','ca','sc','ti','v','cr','mn','fe','co','ni','cu','zn','ga','ge','as','se','br','kr',
+    'rb','sr','y','zr','nb','mo','tc','ru','rh','pd','ag','cd','in','sn','sb','te','i','xe',
+    'cs','ba','la','ce','pr','nd','pm','sm','eu','gd','tb','dy','ho','er','tm','yb','lu',
+    'hf','ta','w','re','os','ir','pt','au','hg','tl','pb','bi','po','at','rn',
+    'fr','ra','ac','th','pa','u','np','pu','am','cm','bk','cf','es','fm','md','no','lr',
+    'rf','db','sg','bh','hs','mt','ds','rg','cn','fl','lv','ts','og'
+}
+
+def is_elemental(name: str) -> bool:
+    name = name.lower()
+    if name == "":
+        return True
+
+    if name[:1] in ELEMENTS and is_elemental(name[1:]):
+        return True
+
+    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
+        return True
+
+    return False
+```
+
 ## Problems with Recursion
 
-Great, right? Let's see what a similar tree would look like for the name "Coco".
-As we saw before, this short name can be formed in up to four different ways. So
-the tree will look a bit more complex.
+Before looking at more trees, let's look at runtime.
 
-Both carbon (`C`) and cobalt (`Co`) are elements, so both branches are valid,
-reducing the problem to forming "oco" or forming "co" respectively.
+With short names, this recursive solution looks very fast: usually just a few
+milliseconds, even in Python running in the browser (which is typically slower
+than local Python).
 
-<div style={{ height: "10em" }}>
-  <ElementalTree
-    initialText="Coco"
-    showInput={false}
-    maxDepth={1}
-    client:load
-  />
+Try it yourself in the box below. Copy and paste these examples and compare
+execution times:
+
+- `Cocococococococococococococococococo`
+- `Cococococococococococococococococoa`
+- `Cococococococococococococococococa`
+
+Notice what happens: changing only the ending can change runtime dramatically.
+
+<div style={{ height: "16em" }}>
+  <ElementalNameChecker client:visible initialValue="" debounceMs={200} />
 </div>
 
-Let's follow an order and go for the upper paths first. "Oco" can be attempted
-to be decomposed into `O` and `Oc`. We quickly see that `Oc` is not an element,
-so the path ends there. But if we take `O`, the problem reduces to "co". Here we
-have two options: `C` and `Co`. `Co` takes us to the end, and if we follow the
-carbon branch we arrive at oxygen, which is also an element.
+Why? The recursive algorithm explores one branch at a time and can stop early if
+it finds a valid solution quickly. But when a name has no valid decomposition,
+it may need to explore almost the whole decision tree.
 
-<div style={{ height: "15em" }}>
-  <ElementalTree
-    initialText="Coco"
-    showInput={false}
-    collapsedNodes={["root-coco-Co-co"]}
-    client:load
-  />
-</div>
-
-At this point, we have to go back to the branch we left pending. The cobalt
-branch. Taking `Co` leaves us with "co" again. We have two options, `C` and
-`Co`. If we take `C`, the problem reduces to forming "o", which we can do with
-oxygen. And if we take `Co`, we reach the end of the name directly.
+Now we can visualize that tree using "Coco", where both `Co` and `C` + `O` are
+valid at many steps:
 
 <div style={{ height: "20em" }}>
   <ElementalTree initialText="Coco" showInput={false} client:load />
 </div>
 
-Soon we discover something curious. This branch here (the "co" subproblem) is
-exactly the same as this one down here (the other branch of the "co"
-subproblem). Different paths end up taking us to the same point. There are
-repeated subproblems.
+Soon we discover something curious: different branches reach exactly the same
+remaining suffix. We are solving the same subproblem again and again.
 
 <div style={{ height: "20em" }}>
   <ElementalTree
@@ -264,42 +275,64 @@ repeated subproblems.
   />
 </div>
 
-For most names this is not a problem. For example, "Erica" only has one valid
-path. Or names like "Francisco", despite being longer, hardly have repeated
-subproblems. But in the worst case, we could encounter names like "Cocococo",
-which have a huge tree, with many repeated subproblems.
+That is the core issue with naive recursion: repeated subproblems.
 
-<div style={{ height: "15em" }}>
-  <ElementalTree initialText="Francisco" showInput={false} client:load />
-</div>
+## Memoization Implementation
 
-It occurs to me that it is not even necessary to build the entire tree. We could
-stop building it as soon as we find a valid path. But would this help us in all
-cases? Could we avoid building the entire tree? With "Cocococo" it would
-certainly help because with the first valid path we would already know that yes,
-it is elemental. But what would happen if we add for example an `A` at the end?
-The tree of "Cocococoa" becomes complicated again and we can no longer avoid it.
-Not finding a valid branch quickly, we have no choice but to keep exploring. So,
-what can we do?
+To avoid repeating work, we cache the result of each subproblem. A clean way is
+to memoize by index: index `i` means "can we form the name from position `i`
+until the end?".
 
-To avoid repeating work, we could write down the subproblems we have already
-solved in a notebook, so that when we encounter them again we already know
-whether it is an elemental name or not.
+```python
+def is_elemental(name: str) -> bool:
+  name = name.lower()
+  n = len(name)
+  memo = {}
 
-> [!tip] Pro Tip
->
-> You don't need to write down whole words. Only the position of the name from
-> where the subproblem starts.
+  def dfs(i: int) -> bool:
+    if i == n:
+      return True
+    if i in memo:
+      return memo[i]
 
-If you want to play with other examples you can try entering names below:
+    ok = False
+    if name[i:i+1] in ELEMENTS and dfs(i + 1):
+      ok = True
+    elif i + 1 < n and name[i:i+2] in ELEMENTS and dfs(i + 2):
+      ok = True
 
-<div style={{ height: "50%" }}>
-  <ElementalTree initialText="Coco" showInput={true} client:load />
-</div>
+    memo[i] = ok
+    return ok
 
-# Dynamic Programming Visualizer
+  return dfs(0)
+```
 
-<DPWordBreakViz client:load />
+Now each index is solved once, so we remove the exponential blow-up caused by
+recomputing the same branches many times.
+
+# Dynamic Programming (Iterative)
+
+We have solved the problem using **recursion with memoization** (also known as
+_Top-Down Dynamic Programming_). But there is another way.
+
+We can solve the problem iteratively (Bottom-Up). Instead of asking "Can we form
+the rest of the name starting from here?", we can build the solution from left
+to right.
+
+We can use an array of booleans, let's call it `dp`, where each position `dp[i]`
+tells us if the prefix of length `i` is a valid elemental name.
+
+- `dp[0]` is `True` (an empty name is valid).
+- Then we iterate through the name. If we are at a valid position `i` (meaning
+  `dp[i]` is true), we try to extend it:
+  - Can we add a 1-letter element? If `name[i:i+1]` is an element, then
+    `dp[i+1]` becomes `True`.
+  - Can we add a 2-letter element? If `name[i:i+2]` is an element, then
+    `dp[i+2]` becomes `True`.
+
+By the end of the loop, if the last position `dp[n]` is `True`, then the whole
+name is elemental. This approach avoids recursion limits and is often more
+efficient in practice.
 
 # Solution
 
@@ -326,7 +359,7 @@ def is_elemental(name: str) -> bool:
     if name[:1] in ELEMENTS and is_elemental(name[1:]):
         return True
 
-    if name[:2] in ELEMENTS and is_elemental(name[2:]):
+    if len(name) >= 2 and name[:2] in ELEMENTS and is_elemental(name[2:]):
         return True
 
     return False"""
@@ -453,26 +486,43 @@ rows.append(f"| {custom_test_case} | - | `{actual}` | - | {time_str} |")
 mo.md("\n".join(rows))
 ```
 
+# Is your name elemental?
+
+Try your own name below and see every possible decomposition with chemical
+symbols.
+
+<div style={{ height: "30em" }}>
+  <ElementalNamesAllPossibilities
+    initialText="Oscar"
+    showInput={true}
+    client:load
+  />
+</div>
+
 # Complexity Analysis
 
-## Python Slicing
+The core logic of the recursive algorithm (assuming memoization) is linear,
+$\mathcal{O}(n)$, because there are $n$ distinct subproblems (suffixes starting
+at each index), and each subproblem takes constant time to process.
 
-In our recursive implementation, we use slicing to create the subproblems. For
-example, `name[1:]` creates a new string without the first character. Because
-strings in python are inmutable, the slicing operation takes O(n) time, where n
-is the length of the string being sliced. Since we perform slicing at each level
-of recursion, and in the worst case we could have a recursion depth of O(n)
-(when we take one letter at a time), the overall complexity of this approach
-could be O(n^2) due to slicing.
+However, in our implementation, we use **slicing** to create these subproblems.
+For example, `name[1:]` creates a new string without the first character.
+Because strings in Python are immutable, the slicing operation takes
+$\mathcal{O}(n)$ time, where $n$ is the length of the string being sliced.
 
-However, in practice, this O(n^2) complexity does not manifest as a bottleneck.
-This is because:
+Since we perform slicing at each level of recursion, and in the worst case we
+could have a recursion depth of $\mathcal{O}(n)$, the overall complexity of this
+implementation becomes $\mathcal{O}(n^2)$ due to the hidden cost of slicing.
 
-- Without memoization, the algorithm's time complexity is exponential due to the
-  branching factor of the decision tree.
-- With memoization, our Python implementation would hit the maximum recursion
-  depth for reasonably long names before the O(n^2) slicing cost becomes
-  significant.
+However, in practice, this $\mathcal{O}(n^2)$ complexity is rarely the
+bottleneck for this recursive implementation because Python's maximum recursion
+depth limits us to relatively short strings before the quadratic cost of slicing
+becomes significant.
+
+If we really want to avoid this overhead and restore the true $\mathcal{O}(n)$
+complexity for larger inputs (e.g. using an iterative approach), we can pass an
+integer index as a parameter instead of slicing the string. This way, we track
+where the current subproblem starts without copying the string data.
 
 # References
 
