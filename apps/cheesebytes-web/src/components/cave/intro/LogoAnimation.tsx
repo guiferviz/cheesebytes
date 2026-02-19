@@ -86,11 +86,21 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   const startRef = useRef<number>(0);
   const pixelsRef = useRef<Pixel[]>([]);
   const shardsRef = useRef<Shard[]>([]);
+  const hdImgRef = useRef<HTMLImageElement | null>(null);
 
   const logoRenderW = LOGO_W * pixelScale;
   const logoRenderH = LOGO_H * pixelScale;
   const logoOriginX = (width - logoRenderW) / 2;
   const logoOriginY = (height - logoRenderH) / 2;
+
+  // Load HD logo image
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/logo/hd_logo_bigger.png";
+    img.onload = () => {
+      hdImgRef.current = img;
+    };
+  }, []);
 
   /* ── Build pixel list with organic ordering ──────────────────────── */
   const buildPixels = useCallback(() => {
@@ -174,33 +184,83 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
 
       // Shards start at t=0. Logo starts forming after LOGO_DELAY so
       // the big rectangles mask most of the formation process.
-      const LOGO_DELAY = 0.2;
+      const LOGO_DELAY = 0.05;
       const logoT = Math.max(0, t - LOGO_DELAY) / (1 - LOGO_DELAY);
       const FORM_SPEED = 1.6; // logo finishes at ~62% of its window
       const waveFront = Math.min(1, logoT * FORM_SPEED);
 
-      // ── 1. Draw logo pixels (behind shards) ──
-      for (const p of pixels) {
-        if (waveFront < p.order) continue;
+      // ── Pulse + HD transition state ──
+      const LOGO_DONE_T = 0.78;
+      let pulseScale = 1;
+      let glowIntensity = 0;
+      let hdOpacity = 0;
 
-        // Quick pop-in
-        const age = waveFront - p.order;
-        const popT = Math.min(1, age / 0.04);
-
-        if (popT >= 1) {
-          ctx.fillStyle = p.color;
-          ctx.fillRect(p.tx, p.ty, pixelScale, pixelScale);
-        } else {
-          const scale = easeOutCubic(popT) * (1 + 0.25 * (1 - popT));
-          const sz = pixelScale * scale;
-          ctx.fillStyle = p.color;
-          ctx.fillRect(
-            p.tx + pixelScale / 2 - sz / 2,
-            p.ty + pixelScale / 2 - sz / 2,
-            sz,
-            sz,
-          );
+      if (t > LOGO_DONE_T) {
+        const postT = (t - LOGO_DONE_T) / (1 - LOGO_DONE_T);
+        // Pulse 1: subtle
+        const p1Center = 0.25,
+          p1Width = 0.18;
+        const p1Dist = Math.abs(postT - p1Center);
+        const p1 =
+          p1Dist < p1Width ? Math.cos((p1Dist / p1Width) * Math.PI * 0.5) : 0;
+        // Pulse 2: more intense + triggers HD swap
+        const p2Center = 0.6,
+          p2Width = 0.22;
+        const p2Dist = Math.abs(postT - p2Center);
+        const p2 =
+          p2Dist < p2Width ? Math.cos((p2Dist / p2Width) * Math.PI * 0.5) : 0;
+        pulseScale = 1 + p1 * 0.03 + p2 * 0.06;
+        glowIntensity = p1 * 0.15 + p2 * 0.4;
+        // HD crossfade starts at pulse 2 peak
+        if (postT > p2Center) {
+          hdOpacity = Math.min(1, (postT - p2Center) / 0.12);
         }
+      }
+
+      // Apply pulse scale from center
+      ctx.save();
+      if (pulseScale !== 1) {
+        ctx.translate(width / 2, height / 2);
+        ctx.scale(pulseScale, pulseScale);
+        ctx.translate(-width / 2, -height / 2);
+      }
+
+      // ── 1. Draw pixel logo (fades out during HD transition) ──
+      if (hdOpacity < 0.99) {
+        ctx.globalAlpha = 1 - hdOpacity;
+        for (const p of pixels) {
+          if (waveFront < p.order) continue;
+          const age = waveFront - p.order;
+          const popT = Math.min(1, age / 0.04);
+          if (popT >= 1) {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.tx, p.ty, pixelScale, pixelScale);
+          } else {
+            const scale = easeOutCubic(popT) * (1 + 0.25 * (1 - popT));
+            const sz = pixelScale * scale;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(
+              p.tx + pixelScale / 2 - sz / 2,
+              p.ty + pixelScale / 2 - sz / 2,
+              sz,
+              sz,
+            );
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // ── 1b. Draw HD logo (fades in during transition) ──
+      if (hdOpacity > 0.01 && hdImgRef.current) {
+        ctx.globalAlpha = hdOpacity;
+        ctx.drawImage(
+          hdImgRef.current,
+          logoOriginX,
+          logoOriginY,
+          logoRenderW,
+          logoRenderH,
+        );
+        ctx.globalAlpha = 1;
       }
 
       // ── 2. Draw shards (on top — they obscure logo while it forms) ──
@@ -246,76 +306,96 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
       }
 
       // ── 3. Draw text "CHEESE" (left) and "BYTES" (right) ──
-      const TEXT_DELAY = 0.08; // slight delay after shards
-      const TEXT_END = 0.66; // finish with logo formation
+      const TEXT_DELAY = 0.25;
+      const TEXT_END = 0.66;
       const textWindow = TEXT_END - TEXT_DELAY;
-
       const fontSize = Math.round(pixelScale * 24);
-      //ctx.font = `bold ${fontSize}px 'IosevkaTermSlab Nerd Font Mono', monospace`;
-      ctx.font = `bold ${fontSize}px 'BigBlueTerm437 Nerd Font Mono', monospace`;
-      ctx.textBaseline = "middle";
-      ctx.textAlign = "center";
-
       const textY = height / 2;
       const textGap = pixelScale * 1.5;
-      const charW = ctx.measureText("M").width; // monospace → all equal
 
-      // ── CHEESE (left of logo, outside→inside: C, H, E, E, S, E) ──
-      const cheeseChars = ["C", "H", "E", "E", "S", "E"];
-      const cheeseRight = logoOriginX - textGap;
+      // Helper: draw CHEESE + BYTES with a given font and alpha
+      const drawText = (font: string, alpha: number) => {
+        if (alpha < 0.01) return;
+        ctx.font = `bold ${fontSize}px '${font}', monospace`;
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        const cW = ctx.measureText("M").width;
 
-      for (let i = 0; i < cheeseChars.length; i++) {
-        const letterT =
-          TEXT_DELAY + (i / Math.max(1, cheeseChars.length - 1)) * textWindow;
-        if (t < letterT) continue;
+        const cheeseChars = ["C", "H", "E", "E", "S", "E"];
+        const cheeseRight = logoOriginX - textGap;
+        for (let i = 0; i < cheeseChars.length; i++) {
+          const letterT =
+            TEXT_DELAY + (i / Math.max(1, cheeseChars.length - 1)) * textWindow;
+          if (t < letterT) continue;
+          const age = (t - letterT) / 0.04;
+          const popT = Math.min(1, age);
+          const sc = easeOutCubic(popT);
+          const lx = cheeseRight - (cheeseChars.length - i - 0.5) * cW;
+          ctx.save();
+          ctx.globalAlpha = sc * alpha;
+          ctx.translate(lx, textY);
+          ctx.scale(sc, sc);
+          ctx.fillStyle = "white";
+          ctx.fillText(cheeseChars[i], 0, 0);
+          ctx.restore();
+        }
 
-        const age = (t - letterT) / 0.04;
-        const popT = Math.min(1, age);
-        const scale = easeOutCubic(popT);
+        const bytesChars = ["B", "Y", "T", "E", "S"];
+        const bytesLeft = logoOriginX + logoRenderW + textGap * 3;
+        for (let i = 0; i < bytesChars.length; i++) {
+          const appearIdx = bytesChars.length - 1 - i;
+          const letterT =
+            TEXT_DELAY +
+            (appearIdx / Math.max(1, bytesChars.length - 1)) * textWindow;
+          if (t < letterT) continue;
+          const age = (t - letterT) / 0.04;
+          const popT = Math.min(1, age);
+          const sc = easeOutCubic(popT);
+          const lx = bytesLeft + (i + 0.5) * cW;
+          ctx.save();
+          ctx.globalAlpha = sc * alpha;
+          ctx.translate(lx, textY);
+          ctx.scale(sc, sc);
+          ctx.fillStyle = "white";
+          ctx.fillText(bytesChars[i], 0, 0);
+          ctx.restore();
+        }
+      };
 
-        // Position: right-aligned against logo, character i from the left
-        const lx = cheeseRight - (cheeseChars.length - i - 0.5) * charW;
+      // 8-bit font (fades out during HD transition)
+      drawText("BigBlueTerm437 Nerd Font Mono", 1 - hdOpacity);
+      // HD font (fades in during transition)
+      drawText("IosevkaTermSlab Nerd Font Mono", hdOpacity);
 
-        ctx.save();
-        ctx.globalAlpha = scale;
-        ctx.translate(lx, textY);
-        ctx.scale(scale, scale);
-        //ctx.fillStyle = "#fce501";
-        ctx.fillStyle = "white";
-        ctx.fillText(cheeseChars[i], 0, 0);
-        ctx.restore();
+      // ── 4. Glow overlay ──
+      if (glowIntensity > 0) {
+        const grad = ctx.createRadialGradient(
+          width / 2,
+          height / 2,
+          0,
+          width / 2,
+          height / 2,
+          Math.max(logoRenderW, logoRenderH) * 0.8,
+        );
+        grad.addColorStop(0, `rgba(252, 229, 1, ${glowIntensity * 0.4})`);
+        grad.addColorStop(0.5, `rgba(254, 171, 2, ${glowIntensity * 0.15})`);
+        grad.addColorStop(1, "rgba(252, 229, 1, 0)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
       }
 
-      // ── BYTES (right of logo, outside→inside: S, E, T, Y, B) ──
-      const bytesChars = ["B", "Y", "T", "E", "S"];
-      const bytesLeft = logoOriginX + logoRenderW + textGap * 3;
-
-      for (let i = 0; i < bytesChars.length; i++) {
-        // Reverse: index 4 (S) appears first, index 0 (B) appears last
-        const appearIdx = bytesChars.length - 1 - i;
-        const letterT =
-          TEXT_DELAY +
-          (appearIdx / Math.max(1, bytesChars.length - 1)) * textWindow;
-        if (t < letterT) continue;
-
-        const age = (t - letterT) / 0.04;
-        const popT = Math.min(1, age);
-        const scale = easeOutCubic(popT);
-
-        // Position: left-aligned after logo, character i from the left
-        const lx = bytesLeft + (i + 0.5) * charW;
-
-        ctx.save();
-        ctx.globalAlpha = scale;
-        ctx.translate(lx, textY);
-        ctx.scale(scale, scale);
-        //ctx.fillStyle = "#fce501";
-        ctx.fillStyle = "white";
-        ctx.fillText(bytesChars[i], 0, 0);
-        ctx.restore();
-      }
+      ctx.restore(); // matches pulse scale save
     },
-    [width, height, pixelScale, duration, logoOriginX, logoRenderW],
+    [
+      width,
+      height,
+      pixelScale,
+      duration,
+      logoOriginX,
+      logoOriginY,
+      logoRenderW,
+      logoRenderH,
+    ],
   );
 
   /* ── Animation loop ──────────────────────────────────────────────── */
