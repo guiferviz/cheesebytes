@@ -1,0 +1,21 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import { LogoAnimation } from "../../components/cave/intro";
+---
+
+<RevealLayout
+  title="Cheese Bytes – Intro"
+  description="Pixel-art logo animation intro"
+  theme="dark"
+>
+  <section id="logo">
+    <LogoAnimation
+      client:load
+      width={2080}
+      height={600}
+      pixelScale={8}
+      duration={1500}
+      loop={true}
+    />
+  </section>
+</RevealLayout>
