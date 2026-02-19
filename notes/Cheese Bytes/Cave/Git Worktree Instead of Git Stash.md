@@ -14,7 +14,10 @@ and unstash changes.
 Commands:
 
 ```
-git worktree add -b <new-branch> ../<my-folder>
+git worktree add -b <new-branch> ../<my-folder> <base-branch>
 ```
+
+You can ommit the `-b <new-branch>` part if you want to check out an existing
+branch instead of creating a new one.
 
 Learned this from this nice video: https://www.youtube.com/watch?v=ntM7utSjeVU
