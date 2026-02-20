@@ -2,14 +2,16 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { SPRITES, BUILDINGS_KEY, SHEET_PATH } from "./sprites";
 import { parseHeights } from "./types";
 import { CheeseSlideContainer } from "../shared";
+import { CB_HEX } from "../../../styles/palette";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PhaserObj = any;
 
 // ── Reveal.js global type ──
 interface RevealApi {
-  on: (event: string, cb: () => void) => void;
-  off: (event: string, cb: () => void) => void;
+  on: (event: string, cb: (ev?: unknown) => void) => void;
+  off: (event: string, cb: (ev?: unknown) => void) => void;
+  sync?: () => void;
 }
 const getReveal = (): RevealApi | null =>
   (typeof window !== "undefined" &&
@@ -89,7 +91,17 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<PhaserObj>(null);
   const sceneRef = useRef<PhaserObj>(null);
+  const armedRef = useRef(true);
+  const triggerRef = useRef<HTMLSpanElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const hideDots = useCallback(() => {
+    const scene = sceneRef.current;
+    if (!scene || !scene.dots) return;
+    // Kill in-progress tweens FIRST so they don't override setScale(0)
+    scene.tweens.killAll();
+    for (const d of scene.dots as PhaserObj[]) d.setScale(0);
+  }, []);
 
   const replay = useCallback(() => {
     const scene = sceneRef.current;
@@ -121,21 +133,95 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
     }
   }, [heights]);
 
-  // RevealJS slide-visible trigger
+  // RevealJS trigger:
+  // - When slide becomes present: keep matrix visible but dots hidden.
+  // - When a specific fragment is revealed: play animation.
   useEffect(() => {
+    const ensureTriggerFragment = () => {
+      if (!containerRef.current) return;
+      const section = containerRef.current.closest("section");
+      if (!section) return;
+
+      const existing = section.querySelector(
+        ".fragment[data-cm-trigger]",
+      ) as HTMLSpanElement | null;
+      if (existing) {
+        triggerRef.current = existing;
+        return;
+      }
+
+      const frag = document.createElement("span");
+      frag.className = "fragment";
+      frag.setAttribute("data-cm-trigger", "auto");
+      frag.setAttribute("aria-hidden", "true");
+      frag.style.position = "absolute";
+      frag.style.width = "0";
+      frag.style.height = "0";
+      frag.style.overflow = "hidden";
+      frag.style.pointerEvents = "none";
+      section.appendChild(frag);
+      triggerRef.current = frag;
+
+      const reveal = getReveal();
+      reveal?.sync?.();
+    };
+
     const handleSlideChanged = () => {
       if (!containerRef.current) return;
       const activeSlide = document.querySelector(".reveal .present");
       if (activeSlide && activeSlide.contains(containerRef.current)) {
-        replay();
+        ensureTriggerFragment();
+        armedRef.current = true;
+        hideDots();
+      } else {
+        // Leaving this slide (e.g. going back): matrix must reset to empty
+        armedRef.current = true;
+        hideDots();
+
+        const section = containerRef.current.closest("section");
+        if (section) {
+          const trigger = section.querySelector(
+            ".fragment[data-cm-trigger]",
+          ) as HTMLSpanElement | null;
+          trigger?.classList.remove("visible", "current-fragment");
+        }
       }
     };
 
+    const handleFragmentShown = (ev?: unknown) => {
+      if (!containerRef.current || !armedRef.current) return;
+      const activeSlide = document.querySelector(".reveal .present");
+      if (!activeSlide || !activeSlide.contains(containerRef.current)) return;
+
+      const fragment = (ev as { fragment?: Element } | undefined)?.fragment;
+      if (!fragment) return;
+      const sameSlide = activeSlide.contains(fragment);
+      const isTrigger = fragment.hasAttribute("data-cm-trigger");
+      if (!sameSlide || !isTrigger) return;
+
+      replay();
+      armedRef.current = false;
+    };
+
+    const handleFragmentHidden = (ev?: unknown) => {
+      if (!containerRef.current) return;
+      const activeSlide = document.querySelector(".reveal .present");
+      if (!activeSlide || !activeSlide.contains(containerRef.current)) return;
+
+      const fragment = (ev as { fragment?: Element } | undefined)?.fragment;
+      if (!fragment || !fragment.hasAttribute("data-cm-trigger")) return;
+
+      armedRef.current = true;
+      hideDots();
+    };
+
+    ensureTriggerFragment();
     const initialCheck = setTimeout(handleSlideChanged, 300);
     const reveal = getReveal();
     if (reveal) {
       reveal.on("slidechanged", handleSlideChanged);
-      reveal.on("fragmentshown", handleSlideChanged);
+      reveal.on("fragmentshown", handleFragmentShown);
+      reveal.on("fragmenthidden", handleFragmentHidden);
     }
 
     return () => {
@@ -143,10 +229,15 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
       const r = getReveal();
       if (r) {
         r.off("slidechanged", handleSlideChanged);
-        r.off("fragmentshown", handleSlideChanged);
+        r.off("fragmentshown", handleFragmentShown);
+        r.off("fragmenthidden", handleFragmentHidden);
       }
+      if (triggerRef.current?.getAttribute("data-cm-trigger") === "auto") {
+        triggerRef.current.remove();
+      }
+      triggerRef.current = null;
     };
-  }, [replay]);
+  }, [hideDots, replay]);
 
   // Create Phaser game
   useEffect(() => {
@@ -249,7 +340,7 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
             for (let row = 0; row < col; row++) {
               const cx = gridLeft + col * cell + cell / 2;
               const cy = gridTop + row * cell + cell / 2;
-              const dot = this.add.circle(cx, cy, dotR, 0xffd54f, 0.9);
+              const dot = this.add.circle(cx, cy, dotR, CB_HEX.orange, 0.9);
               dot.setScale(0);
               dot.setData("col", col);
               dot.setData("row", row);
@@ -285,7 +376,7 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
 
           sceneRef.current = this;
           setIsLoading(false);
-          replay();
+          hideDots();
         }
 
         drawBuilding(cx: number, baseY: number, h: number, sc: number) {
@@ -354,7 +445,7 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
       gameRef.current = null;
       sceneRef.current = null;
     };
-  }, [heights, width, height, replay]);
+  }, [heights, width, height, hideDots]);
 
   return (
     <div

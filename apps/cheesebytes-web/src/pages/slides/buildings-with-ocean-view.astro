@@ -6,6 +6,7 @@ import {
   ComplexityMatrix,
 } from "../../components/cave/buildings-with-ocean-view";
 import RevealCode from "../../components/RevealCode";
+import { LogoAnimation } from "../../components/cave/intro";
 ---
 
 <RevealLayout
@@ -26,8 +27,15 @@ import RevealCode from "../../components/RevealCode";
     <!-- hook -->
   </section>
 
-  <section>
-    <!-- intro -->
+  <section id="logo">
+    <LogoAnimation
+      client:load
+      width={2080}
+      height={600}
+      pixelScale={8}
+      duration={2700}
+      loop={true}
+    />
   </section>
 
   <section>
