@@ -64,6 +64,9 @@ interface LogoAnimationProps {
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3);
 }
+function clamp01(v: number) {
+  return Math.max(0, Math.min(1, v));
+}
 
 // Seeded-ish noise: give each pixel a unique but deterministic jitter
 // so the expansion looks organic, not circular
@@ -87,6 +90,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   const pixelsRef = useRef<Pixel[]>([]);
   const shardsRef = useRef<Shard[]>([]);
   const hdImgRef = useRef<HTMLImageElement | null>(null);
+  const offscreenRef = useRef<HTMLCanvasElement | null>(null);
 
   const logoRenderW = LOGO_W * pixelScale;
   const logoRenderH = LOGO_H * pixelScale;
@@ -97,8 +101,16 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   useEffect(() => {
     const img = new Image();
     img.src = "/logo/hd_logo_bigger.png";
-    img.onload = () => {
+    // Pre-decode to avoid a first-frame hiccup during glitch transition
+    const setReady = () => {
       hdImgRef.current = img;
+    };
+    img.onload = () => {
+      if (typeof img.decode === "function") {
+        img.decode().then(setReady).catch(setReady);
+      } else {
+        setReady();
+      }
     };
   }, []);
 
@@ -176,68 +188,60 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
 
   /* ── Draw frame ──────────────────────────────────────────────────── */
   const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, t: number, dtSec: number) => {
+    (ctx: CanvasRenderingContext2D, ms: number, dtSec: number) => {
       ctx.clearRect(0, 0, width, height);
 
       const pixels = pixelsRef.current;
       const shards = shardsRef.current;
 
-      // Shards start at t=0. Logo starts forming after LOGO_DELAY so
-      // the big rectangles mask most of the formation process.
-      const LOGO_DELAY = 0.05;
-      const logoT = Math.max(0, t - LOGO_DELAY) / (1 - LOGO_DELAY);
-      const FORM_SPEED = 1.6; // logo finishes at ~62% of its window
-      const waveFront = Math.min(1, logoT * FORM_SPEED);
+      // ──────────────────────────────────────────────────────────
+      //  TIMELINE — all values in milliseconds, easy to tweak!
+      //  Just change these numbers to adjust timing.
+      // ──────────────────────────────────────────────────────────
+      const logoStart = 50; // pixel logo starts forming
+      const textStart = 300; // letters start typing
+      const logoEnd = 850; // pixel logo fully formed
+      const textEnd = 850; // all letters visible
+      const glitch1Start = 1350; // 1st glitch (try HD… fail!)
+      const glitch1End = 1600; // snaps back to pixel
+      const glitch2Start = 1800; // 2nd glitch (try again…)
+      const glitch2End = 2050; // HD revealed! ✨
+      // ──────────────────────────────────────────────────────────
 
-      // ── Pulse + HD transition state ──
-      const LOGO_DONE_T = 0.78;
-      let pulseScale = 1;
-      let glowIntensity = 0;
-      let hdOpacity = 0;
+      // ── Logo formation progress (0→1) ──
+      const waveFront = clamp01(
+        ((ms - logoStart) / (logoEnd - logoStart)) * 1.1,
+      );
 
-      if (t > LOGO_DONE_T) {
-        const postT = (t - LOGO_DONE_T) / (1 - LOGO_DONE_T);
-        // Pulse 1: subtle
-        const p1Center = 0.25,
-          p1Width = 0.18;
-        const p1Dist = Math.abs(postT - p1Center);
-        const p1 =
-          p1Dist < p1Width ? Math.cos((p1Dist / p1Width) * Math.PI * 0.5) : 0;
-        // Pulse 2: more intense + triggers HD swap
-        const p2Center = 0.6,
-          p2Width = 0.22;
-        const p2Dist = Math.abs(postT - p2Center);
-        const p2 =
-          p2Dist < p2Width ? Math.cos((p2Dist / p2Width) * Math.PI * 0.5) : 0;
-        pulseScale = 1 + p1 * 0.03 + p2 * 0.06;
-        glowIntensity = p1 * 0.15 + p2 * 0.4;
-        // HD crossfade starts at pulse 2 peak
-        if (postT > p2Center) {
-          hdOpacity = Math.min(1, (postT - p2Center) / 0.12);
-        }
+      // ── Glitch intensity (0 = none, 0.7 = glitch1 peak, 1.0 = glitch2 peak) ──
+      let glitch = 0;
+      if (ms >= glitch1Start && ms <= glitch1End) {
+        const half = (glitch1End - glitch1Start) / 2;
+        const d = Math.abs(ms - (glitch1Start + half)) / half;
+        glitch = (1 - d * d) * 0.7;
+      }
+      if (ms >= glitch2Start && ms <= glitch2End) {
+        const half = (glitch2End - glitch2Start) / 2;
+        const d = Math.abs(ms - (glitch2Start + half)) / half;
+        glitch = Math.max(glitch, (1 - d * d) * 1.0);
       }
 
-      // Apply pulse scale from center
-      ctx.save();
-      if (pulseScale !== 1) {
-        ctx.translate(width / 2, height / 2);
-        ctx.scale(pulseScale, pulseScale);
-        ctx.translate(-width / 2, -height / 2);
-      }
+      // ── HD crossfade (starts DURING glitch2 for the desired look) ──
+      const g2Mid = (glitch2Start + glitch2End) / 2;
+      const hdOpacity = ms > g2Mid ? clamp01((ms - g2Mid) / 90) : 0;
 
-      // ── 1. Draw pixel logo (fades out during HD transition) ──
+      // ── 1. Pixel logo (stays at FULL alpha — HD logo draws on top) ──
       if (hdOpacity < 0.99) {
-        ctx.globalAlpha = 1 - hdOpacity;
         for (const p of pixels) {
           if (waveFront < p.order) continue;
           const age = waveFront - p.order;
-          const popT = Math.min(1, age / 0.04);
-          if (popT >= 1) {
+          const pop = clamp01(age / 0.04);
+          if (pop >= 1) {
             ctx.fillStyle = p.color;
             ctx.fillRect(p.tx, p.ty, pixelScale, pixelScale);
           } else {
-            const scale = easeOutCubic(popT) * (1 + 0.25 * (1 - popT));
-            const sz = pixelScale * scale;
+            const s = easeOutCubic(pop) * (1 + 0.25 * (1 - pop));
+            const sz = pixelScale * s;
             ctx.fillStyle = p.color;
             ctx.fillRect(
               p.tx + pixelScale / 2 - sz / 2,
@@ -247,10 +251,9 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
             );
           }
         }
-        ctx.globalAlpha = 1;
       }
 
-      // ── 1b. Draw HD logo (fades in during transition) ──
+      // ── 2. HD logo (fades in ON TOP of pixel logo — no background gap) ──
       if (hdOpacity > 0.01 && hdImgRef.current) {
         ctx.globalAlpha = hdOpacity;
         ctx.drawImage(
@@ -263,22 +266,17 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
         ctx.globalAlpha = 1;
       }
 
-      // ── 2. Draw shards (on top — they obscure logo while it forms) ──
+      // ── 3. Shards ──
+      const t01 = clamp01(ms / duration); // normalized 0-1 for shard lifecycle
       for (const s of shards) {
-        if (t < s.spawnT) continue;
-        const age = t - s.spawnT;
-        const life = Math.min(1, age / (1 - s.spawnT + 0.001));
-
-        // Grow from tiny to full size very quickly
-        const growT = Math.min(1, age / s.growDuration);
+        if (t01 < s.spawnT) continue;
+        const age = t01 - s.spawnT;
+        const life = clamp01(age / (1 - s.spawnT + 0.001));
+        const growT = clamp01(age / s.growDuration);
         const currentSize = s.size * easeOutCubic(growT);
-
-        // Drift position
         const driftDist = s.speed * age * (duration / 1000);
         const sx = s.ox + Math.cos(s.angle) * driftDist;
         const sy = s.oy + Math.sin(s.angle) * driftDist;
-
-        // Fade — high opacity while logo forms, then fade out to reveal
         const fadeStart = 0.5;
         const maxAlpha = 0.009;
         const alpha =
@@ -287,10 +285,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
             : maxAlpha *
               (1 - easeOutCubic((life - fadeStart) / (1 - fadeStart)));
         if (alpha < 0.01) continue;
-
-        // Slow rotation
         s.rotation += s.rotationSpeed * dtSec;
-
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.translate(sx, sy);
@@ -305,15 +300,11 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
         ctx.restore();
       }
 
-      // ── 3. Draw text "CHEESE" (left) and "BYTES" (right) ──
-      const TEXT_DELAY = 0.25;
-      const TEXT_END = 0.66;
-      const textWindow = TEXT_END - TEXT_DELAY;
+      // ── 4. Text ──
       const fontSize = Math.round(pixelScale * 24);
       const textY = height / 2;
       const textGap = pixelScale * 1.5;
 
-      // Helper: draw CHEESE + BYTES with a given font and alpha
       const drawText = (font: string, alpha: number) => {
         if (alpha < 0.01) return;
         ctx.font = `bold ${fontSize}px '${font}', monospace`;
@@ -324,12 +315,11 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
         const cheeseChars = ["C", "H", "E", "E", "S", "E"];
         const cheeseRight = logoOriginX - textGap;
         for (let i = 0; i < cheeseChars.length; i++) {
-          const letterT =
-            TEXT_DELAY + (i / Math.max(1, cheeseChars.length - 1)) * textWindow;
-          if (t < letterT) continue;
-          const age = (t - letterT) / 0.04;
-          const popT = Math.min(1, age);
-          const sc = easeOutCubic(popT);
+          const letterMs =
+            textStart + (i / (cheeseChars.length - 1)) * (textEnd - textStart);
+          if (ms < letterMs) continue;
+          const pop = clamp01((ms - letterMs) / 60);
+          const sc = easeOutCubic(pop);
           const lx = cheeseRight - (cheeseChars.length - i - 0.5) * cW;
           ctx.save();
           ctx.globalAlpha = sc * alpha;
@@ -344,13 +334,12 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
         const bytesLeft = logoOriginX + logoRenderW + textGap * 3;
         for (let i = 0; i < bytesChars.length; i++) {
           const appearIdx = bytesChars.length - 1 - i;
-          const letterT =
-            TEXT_DELAY +
-            (appearIdx / Math.max(1, bytesChars.length - 1)) * textWindow;
-          if (t < letterT) continue;
-          const age = (t - letterT) / 0.04;
-          const popT = Math.min(1, age);
-          const sc = easeOutCubic(popT);
+          const letterMs =
+            textStart +
+            (appearIdx / (bytesChars.length - 1)) * (textEnd - textStart);
+          if (ms < letterMs) continue;
+          const pop = clamp01((ms - letterMs) / 60);
+          const sc = easeOutCubic(pop);
           const lx = bytesLeft + (i + 0.5) * cW;
           ctx.save();
           ctx.globalAlpha = sc * alpha;
@@ -362,29 +351,115 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
         }
       };
 
-      // 8-bit font (fades out during HD transition)
-      drawText("BigBlueTerm437 Nerd Font Mono", 1 - hdOpacity);
-      // HD font (fades in during transition)
-      drawText("IosevkaTermSlab Nerd Font Mono", hdOpacity);
+      // Old font stays full alpha; new font draws on top (same trick as logo)
+      if (hdOpacity < 0.99) drawText("BigBlueTerm437 Nerd Font Mono", 1);
+      if (hdOpacity > 0.01)
+        drawText("IosevkaTermSlab Nerd Font Mono", hdOpacity);
 
-      // ── 4. Glow overlay ──
-      if (glowIntensity > 0) {
-        const grad = ctx.createRadialGradient(
-          width / 2,
-          height / 2,
-          0,
-          width / 2,
-          height / 2,
-          Math.max(logoRenderW, logoRenderH) * 0.8,
-        );
-        grad.addColorStop(0, `rgba(252, 229, 1, ${glowIntensity * 0.4})`);
-        grad.addColorStop(0.5, `rgba(254, 171, 2, ${glowIntensity * 0.15})`);
-        grad.addColorStop(1, "rgba(252, 229, 1, 0)");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+      // ── 5. Glitch effect (uses offscreen canvas to avoid grey leak) ──
+      if (glitch > 0.01) {
+        if (!offscreenRef.current)
+          offscreenRef.current = document.createElement("canvas");
+        const off = offscreenRef.current;
+        off.width = width;
+        off.height = height;
+        const offCtx = off.getContext("2d");
+        if (offCtx) {
+          // Copy current frame → offscreen, clear, redraw slices shifted
+          offCtx.clearRect(0, 0, width, height);
+          offCtx.drawImage(ctx.canvas, 0, 0);
+          ctx.clearRect(0, 0, width, height);
+
+          const sliceCount = 8 + Math.floor(glitch * 12);
+          const sliceH = Math.ceil(height / sliceCount);
+          for (let i = 0; i < sliceCount; i++) {
+            const seed = Math.sin(i * 73.1 + ms * 9.9997) * 43758.5;
+            const rnd = seed - Math.floor(seed);
+            const y0 = i * sliceH;
+            const h = Math.min(sliceH, height - y0);
+            let shift = 0;
+            if (rnd > 0.4) {
+              shift = Math.round(
+                (Math.sin(i * 17.3 + ms * 5) - 0.5) * 2 * glitch * 40,
+              );
+            }
+            const maxShift = Math.max(0, width - 1);
+            shift = Math.max(-maxShift, Math.min(maxShift, shift));
+            ctx.drawImage(off, 0, y0, width, h, shift, y0, width, h);
+
+            // Wrap edges so shifted slices never leave transparent gaps.
+            if (shift > 0) {
+              ctx.drawImage(off, width - shift, y0, shift, h, 0, y0, shift, h);
+            } else if (shift < 0) {
+              const wrapW = -shift;
+              ctx.drawImage(off, 0, y0, wrapW, h, width - wrapW, y0, wrapW, h);
+            }
+          }
+        }
+
+        // Color channel offset
+        if (glitch > 0.3) {
+          if (offCtx) {
+            offCtx.clearRect(0, 0, width, height);
+            offCtx.drawImage(ctx.canvas, 0, 0);
+          }
+          const colorShift = Math.round(glitch * 6);
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = glitch * 0.15;
+          if (offCtx && colorShift > 0) {
+            ctx.drawImage(off, colorShift, 0);
+            ctx.drawImage(
+              off,
+              width - colorShift,
+              0,
+              colorShift,
+              height,
+              0,
+              0,
+              colorShift,
+              height,
+            );
+          } else if (offCtx && colorShift < 0) {
+            const wrapW = -colorShift;
+            ctx.drawImage(off, colorShift, 0);
+            ctx.drawImage(
+              off,
+              0,
+              0,
+              wrapW,
+              height,
+              width - wrapW,
+              0,
+              wrapW,
+              height,
+            );
+          } else if (offCtx) {
+            ctx.drawImage(off, 0, 0);
+          }
+          ctx.restore();
+        }
+
+        // Scan-line noise blocks
+        const blockCount = Math.floor(glitch * 8);
+        for (let b = 0; b < blockCount; b++) {
+          ctx.save();
+          ctx.globalAlpha = glitch * 0.5;
+          ctx.fillStyle =
+            PALETTE[
+              Math.floor(
+                Math.abs(Math.sin(b * 77.7 + ms * 2.222)) * PALETTE.length,
+              )
+            ];
+          ctx.fillRect(
+            Math.sin(b * 331.7 + ms * 7.777) * width * 0.5 + width * 0.5,
+            Math.sin(b * 127.3 + ms * 3.333) * height * 0.5 + height * 0.5,
+            20 + Math.abs(Math.sin(b * 51.1 + ms * 0.999)) * 80,
+            2 + Math.abs(Math.sin(b * 91.3 + ms * 4.444)) * 6,
+          );
+          ctx.restore();
+        }
       }
-
-      ctx.restore(); // matches pulse scale save
     },
     [
       width,
@@ -414,16 +489,15 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
       const elapsed = timestamp - startRef.current;
       const dtSec = (timestamp - lastTimestamp) / 1000;
       lastTimestamp = timestamp;
-      const t = Math.min(1, elapsed / duration);
 
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      draw(ctx, t, dtSec);
+      draw(ctx, elapsed, dtSec);
 
-      if (t < 1) {
+      if (elapsed < duration) {
         animRef.current = requestAnimationFrame(tick);
       } else {
         if (loop) {
@@ -436,8 +510,46 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   }, [buildPixels, buildShards, draw, duration, loop]);
 
   useEffect(() => {
-    startAnimation();
-    return () => cancelAnimationFrame(animRef.current);
+    // Listen for Reveal.js slide changes to start/restart animation
+    // only when this slide is visible. Falls back to IntersectionObserver.
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const section = canvas.closest("section");
+    const isSlideVisible = () =>
+      section?.classList.contains("present") ?? false;
+
+    const tryStart = () => {
+      cancelAnimationFrame(animRef.current);
+      if (isSlideVisible()) startAnimation();
+    };
+
+    // Reveal fires 'slidechanged' on the deck element
+    const deck = canvas.closest(".reveal") ?? document.querySelector(".reveal");
+    if (deck) {
+      const handler = () => tryStart();
+      deck.addEventListener("slidechanged", handler);
+      // Also start if already visible (first load)
+      if (isSlideVisible()) startAnimation();
+      return () => {
+        deck.removeEventListener("slidechanged", handler);
+        cancelAnimationFrame(animRef.current);
+      };
+    }
+
+    // Fallback: IntersectionObserver
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) startAnimation();
+        else cancelAnimationFrame(animRef.current);
+      },
+      { threshold: 0.5 },
+    );
+    obs.observe(canvas);
+    return () => {
+      obs.disconnect();
+      cancelAnimationFrame(animRef.current);
+    };
   }, [startAnimation]);
 
   return (
@@ -449,7 +561,6 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
         width: "100%",
         height: "100%",
         display: "block",
-        background: "#000",
       }}
     />
   );
