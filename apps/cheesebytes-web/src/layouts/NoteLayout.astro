@@ -76,7 +76,7 @@ const tooltipInfo = getCheeseTooltip(noteType);
       <div class="flex items-center gap-3 mb-2">
         <div class="relative group">
           <a href="/cave/type-of-notes" class="block">
-            <div class="w-8 h-8 lg:w-12 lg:h-12 flex-shrink-0 -mt-8">
+            <div class="w-7 h-7 lg:w-11 lg:h-11 flex-shrink-0 -mt-5">
               <img
                 src={cheeseImage}
                 alt={tooltipInfo.title}
@@ -100,34 +100,43 @@ const tooltipInfo = getCheeseTooltip(noteType);
             </div>
           </div>
         </div>
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl mb-1 leading-tight">
+        <h1
+          class="text-2xl sm:text-3xl lg:text-4xl mt-3 mb-0 leading-tight font-semibold"
+        >
           {note.title}
         </h1>
       </div>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
-        Author: guiferviz
-      </p>
-      {
-        note.created && (
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-1">
-            Created:{" "}
-            <time datetime={note.created}>
-              {format(new Date(note.created), "yyyy-MM-dd")}
-            </time>
-          </p>
-        )
-      }
-
-      {
-        note.modified && (
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Last Modified:{" "}
-            <time datetime={note.modified}>
-              {format(new Date(note.modified), "yyyy-MM-dd")}
-            </time>
-          </p>
-        )
-      }
+      <div
+        class="mt-1 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500/85 dark:text-gray-400/85 font-normal leading-relaxed"
+      >
+        <span>
+          <span class="text-gray-500/60 dark:text-gray-400/60">Author:</span> guiferviz
+        </span>
+        {
+          note.created && (
+            <span>
+              <span class="text-gray-500/60 dark:text-gray-400/60">
+                Created:
+              </span>{" "}
+              <time datetime={note.created}>
+                {format(new Date(note.created), "yyyy-MM-dd")}
+              </time>
+            </span>
+          )
+        }
+        {
+          note.modified && (
+            <span>
+              <span class="text-gray-500/60 dark:text-gray-400/60">
+                Last Modified:
+              </span>{" "}
+              <time datetime={note.modified}>
+                {format(new Date(note.modified), "yyyy-MM-dd")}
+              </time>
+            </span>
+          )
+        }
+      </div>
     </header>
     <article
       class="prose prose-base dark:prose-invert max-w-3xl mx-auto
