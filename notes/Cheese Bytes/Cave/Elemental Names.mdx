@@ -569,6 +569,11 @@ complexity for larger inputs (e.g. using an iterative approach), we can pass an
 integer index as a parameter instead of slicing the string. This way, we track
 where the current subproblem starts without copying the string data.
 
+The dynamic programming (iterative) solution we discussed earlier is linear
+because it avoids sliding the rest of the string at each step. It only creates
+slices of 1 or 2 characters. Space complexity is also $\mathcal{O}(n)$ due to
+the `dp` array.
+
 # References
 
 - [Worder](https://es.worder.cat/buscarpalabras) To search for words formed with
