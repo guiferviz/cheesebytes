@@ -11,7 +11,7 @@ type FileNode = {
 };
 
 // Normalizar la ruta actual eliminando trailing slashes y asegurando que empiece con /
-const currentPath = new URL(Astro.request.url).pathname.replace(/\/+$/, '');
+const currentPath = new URL(Astro.request.url).pathname.replace(/\/+$/, "");
 
 const folderDisplayMapping: Record<string, string> = {
   cave: "The Cheese Cave",
@@ -22,10 +22,10 @@ function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
   const tree: FileNode[] = [
     {
       name: "Home",
-      path: "",  // La ruta raíz (/)
+      path: "", // La ruta raíz (/)
       type: "file",
-      cheeseImage: "/favicon.png"
-    }
+      cheeseImage: "/favicon.png",
+    },
   ];
 
   for (const node of nodes) {
@@ -39,7 +39,7 @@ function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
         name: node.data.title || fileName,
         path: node.id,
         type: "file",
-        cheeseImage: cheeseImage
+        cheeseImage: cheeseImage,
       });
     } else {
       let current = tree;
@@ -49,7 +49,7 @@ function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
         const folderSlug = parts[i];
         currentPath += "/" + folderSlug;
         let folder = current.find(
-          (node) => node.type === "folder" && node.path === currentPath
+          (node) => node.type === "folder" && node.path === currentPath,
         );
         if (!folder) {
           folder = {
@@ -67,7 +67,7 @@ function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
         name: node.data.title || fileName,
         path: node.id,
         type: "file",
-        cheeseImage: cheeseImage
+        cheeseImage: cheeseImage,
       });
     }
   }
@@ -82,8 +82,9 @@ function renderTree(files: FileNode[]): string[] {
   return files.map((file) => {
     // Manejar caso especial para Home
     const filePath = file.path === "" ? "/" : "/" + file.path;
-    const isActive = currentPath === filePath || (currentPath === "" && filePath === "/");
-    
+    const isActive =
+      currentPath === filePath || (currentPath === "" && filePath === "/");
+
     // Clases base para el contenedor
     const containerClass = `
       w-full
@@ -91,7 +92,7 @@ function renderTree(files: FileNode[]): string[] {
       rounded
       transition-colors
       duration-150
-      ${isActive ? 'bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-300 font-medium' : 'hover:bg-yellow-500/10 dark:hover:bg-yellow-500/20'}
+      ${isActive ? "bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-300 font-medium" : "hover:bg-yellow-500/10 dark:hover:bg-yellow-500/20"}
     `.trim();
 
     if (file.type === "folder") {
@@ -114,7 +115,7 @@ function renderTree(files: FileNode[]): string[] {
       return `
         <a href="${filePath}" class="${containerClass}">
           <div class="w-full flex items-center gap-2 py-1 px-2">
-            <img src="${file.cheeseImage || '/favicon.png'}" alt="" class="w-4 h-4 shrink-0" />
+            <img src="${file.cheeseImage || "/favicon.png"}" alt="" class="w-4 h-4 shrink-0" />
             <span class="whitespace-nowrap">${file.name}</span>
           </div>
         </a>
@@ -126,54 +127,43 @@ function renderTree(files: FileNode[]): string[] {
 const uniqueId = `file-tree-${Math.random().toString(36).substring(2, 8)}`;
 ---
 
-<nav id={uniqueId} 
-     class="w-full p-2 text-sm overflow-x-auto"
-     set:html={renderTree(tree).join("")} />
+<nav
+  id={uniqueId}
+  class="w-full p-2 text-sm overflow-x-auto"
+  set:html={renderTree(tree).join("")}
+/>
 
 <script type="module" define:vars={{ uniqueId, currentPath }}>
-document.addEventListener("DOMContentLoaded", () => {
-  const container = document.getElementById(uniqueId);
-  if (!container) return;
+  document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById(uniqueId);
+    if (!container) return;
 
-  const activeLink = container.querySelector(`a[href="${currentPath}"]`);
-  if (activeLink) {
-    let parentDetails = activeLink.closest("details");
-    while (parentDetails) {
-      parentDetails.open = true;
-      parentDetails = parentDetails.parentElement?.closest("details");
-    }
-    activeLink.scrollIntoView({ behavior: "auto", block: "center" });
-  }
-});
-</script>
+    const normalizedPath = currentPath === "" ? "/" : currentPath;
+    const activeLink =
+      normalizedPath === "/"
+        ? container.querySelector('a[href="/"]')
+        : container.querySelector(`a[href="${normalizedPath}"]`);
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const currentPath = new URL(window.location.href).pathname.replace(/\/+$/, '') || '/';
-    
-    // Función para expandir carpetas padres y hacer scroll hasta el link activo
-    const expandParents = () => {
-      // Encontrar el enlace activo o el Home si estamos en la página principal
-      const activeLink = 
-        (currentPath === '/' || currentPath === '')
-          ? document.querySelector('a[href="/"]')
-          : document.querySelector(`a[href="${currentPath}"]`);
-      
-      if (activeLink) {
-        // Expandir todos los details padres
-        let parent = activeLink.closest('details');
-        while (parent) {
-          parent.open = true;
-          parent = parent.parentElement?.closest('details');
-        }
-        
-        // Scroll hacia el elemento activo
-        setTimeout(() => {
-          activeLink.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
+    if (activeLink) {
+      let parentDetails = activeLink.closest("details");
+      while (parentDetails) {
+        parentDetails.open = true;
+        parentDetails = parentDetails.parentElement?.closest("details");
       }
-    };
-    
-    expandParents();
+
+      // Scroll ONLY inside sidebar container to avoid moving post/body scroll.
+      const sidebarScroll = document.getElementById("sidebar-scroll");
+      if (sidebarScroll) {
+        const linkRect = activeLink.getBoundingClientRect();
+        const scrollRect = sidebarScroll.getBoundingClientRect();
+        const relativeTop =
+          linkRect.top - scrollRect.top + sidebarScroll.scrollTop;
+        const targetScrollTop = Math.max(
+          0,
+          relativeTop - sidebarScroll.clientHeight * 0.35,
+        );
+        sidebarScroll.scrollTop = targetScrollTop;
+      }
+    }
   });
 </script>

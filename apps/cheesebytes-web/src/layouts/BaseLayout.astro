@@ -17,11 +17,16 @@ const { title, description } = Astro.props;
   <head>
     <BaseHead title={title} description={description} />
   </head>
-  <body class="bg-yellow-50 dark:bg-black text-gray-700 dark:text-gray-100">
+  <body
+    class="bg-yellow-50 dark:bg-black text-gray-700 dark:text-gray-100 overflow-hidden"
+  >
     <div class="flex h-screen overflow-hidden">
       <SideBar />
 
-      <div class="flex-1 overflow-y-auto w-full flex justify-center">
+      <div
+        id="content-scroll"
+        class="flex-1 overflow-y-auto w-full flex justify-center"
+      >
         <div class="w-full max-w-full flex-1">
           <slot />
         </div>

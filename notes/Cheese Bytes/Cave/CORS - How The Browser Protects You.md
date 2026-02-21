@@ -26,7 +26,7 @@ There is no rule saying "JavaScript can only call the site it came from".
 
 So this malicious page tries something like:
 
-> "Hey, let me call your bank’s website."
+> Hey, let me call your bank's website.
 
 Why not? Technically, it can.
 
@@ -61,7 +61,7 @@ The browser knows:
 
 And the browser says:
 
-> "Hold on. This smells dangerous."
+> Hold on. This smells dangerous.
 
 Depending on **what kind of request** the JavaScript is trying to make, the
 browser reacts in different ways.
@@ -89,16 +89,16 @@ Origin: https://evil-site.com
 
 This is the browser asking:
 
-> "Hey bank, I am currently on `evil-site.com`.  
-> Am I allowed to make this request?"
+> Hey bank, I am currently on `evil-site.com`. Am I allowed to make this
+> request?
 
 Now the bank replies:
 
-> "No. Only my own websites are allowed."
+> No. Only my own websites are allowed.
 
 And the browser, which is on **your side**, says:
 
-> "Alright. I will not even send the real request."
+> Alright. I will not even send the real request.
 
 The dangerous request is **cancelled before it happens**.
 
@@ -131,8 +131,7 @@ Current exachange rate is 1.2 USD/EUR
 
 Now the browser checks:
 
-> "I came from `evil-site.com`.  
-> Is `evil-site.com` allowed?"
+> I came from `evil-site.com`. Is `evil-site.com` allowed?
 
 If the answer is no, the browser does something important:
 
@@ -160,7 +159,7 @@ Not a security layer you can rely on server-side.
 
 It is the browser saying:
 
-> "I will only let JavaScript read responses if the server allows this origin."
+> I will only let JavaScript read responses if the server allows this origin.
 
 The backend helps by sending headers, but **the browser enforces the rules**.
 
@@ -182,12 +181,12 @@ Access-Control-Allow-Origin: *
 
 Which means:
 
-> "Anyone can call me from anywhere."
+> Anyone can call me from anywhere.
 
 That is fine. There is nothing sensitive to protect. Banks, on the other hand,
 usually say:
 
-> "Only my own websites are allowed to talk to my backend."
+> Only my own websites are allowed to talk to my backend.
 
 Different use case, different policy.
 
@@ -234,5 +233,4 @@ It is also:
 CORS exists because JavaScript is powerful, and power needs limits. So the next
 time you see a CORS error, remember:
 
-> The browser is not being annoying.  
-> It is doing its job.
+> The browser is not being annoying. It is doing its job.
