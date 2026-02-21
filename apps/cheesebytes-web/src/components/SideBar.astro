@@ -17,7 +17,6 @@ import SearchButton from "./SearchButton.astro";
     </a>
   </div>
   <div class="flex items-center">
-    <SearchButton />
     <button
       id="theme-toggle-mobile"
       class="p-2 rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors duration-200 mr-1 ml-2"
@@ -283,7 +282,7 @@ import SearchButton from "./SearchButton.astro";
     const reopenBtn = document.getElementById("reopen-sidebar");
     const mobileHeader = document.getElementById("mobile-header");
     const mobileToggle = document.getElementById(
-      "toggle-sidebar-mobile-header"
+      "toggle-sidebar-mobile-header",
     );
     const overlay = document.getElementById("sidebar-overlay");
 
@@ -521,7 +520,7 @@ import SearchButton from "./SearchButton.astro";
     // Verificar si ya hay un tema guardado en localStorage
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      "(prefers-color-scheme: dark)",
     ).matches;
 
     // Aplicar tema guardado o preferencia del sistema
@@ -543,7 +542,7 @@ import SearchButton from "./SearchButton.astro";
       document.dispatchEvent(
         new CustomEvent("themeChanged", {
           detail: { isDark },
-        })
+        }),
       );
     }
 
@@ -560,7 +559,7 @@ import SearchButton from "./SearchButton.astro";
     document.dispatchEvent(
       new CustomEvent("themeChanged", {
         detail: { isDark: htmlElement.classList.contains("dark") },
-      })
+      }),
     );
   });
 </script>
