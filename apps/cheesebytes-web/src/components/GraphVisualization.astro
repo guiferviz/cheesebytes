@@ -4,48 +4,62 @@ import { normalizeUrl, normalizePathParts } from "../content.config";
 
 // Configuración del grafo
 const config = {
-  isDirected: true,  // Flag para activar/desactivar las flechas direccionales
+  isDirected: true, // Flag para activar/desactivar las flechas direccionales
   arrowConfig: {
-    refX: 7,        // Distancia de la flecha al nodo
-    size: 5,         // Tamaño de la flecha
-    padding: 6       // Espacio adicional entre la flecha y el nodo
+    refX: 7, // Distancia de la flecha al nodo
+    size: 5, // Tamaño de la flecha
+    padding: 6, // Espacio adicional entre la flecha y el nodo
   },
   mobile: {
-    tapRadius: 30,     // Radio en píxeles para detectar toques en móvil
-    doubleTapZoom: 1.5  // Factor de zoom al hacer doble tap
+    tapRadius: 30, // Radio en píxeles para detectar toques en móvil
+    doubleTapZoom: 1.5, // Factor de zoom al hacer doble tap
+  },
+  nodeSizing: {
+    minVisualSize: 2.2, // Tamaño mínimo relativo del nodo
+    maxVisualSize: 9.2, // Tamaño máximo relativo del nodo (evita nodos gigantes)
+    sizeOffset: 2.0, // Offset base para el tamaño visual
+    growthFactor: 1.25, // Crecimiento logarítmico por conexiones
+    baseRadius: 8, // Radio base en px (antes de escalar por pantalla)
+    radiusGrowth: 2, // Incremento de radio por unidad de tamaño visual
+    labelGap: 8, // Separación adicional entre nodo y etiqueta en px
   },
   screenSizes: {
-    xs: {              // Pantallas muy pequeñas (< 360px)
+    xs: {
+      // Pantallas muy pequeñas (< 360px)
       nodeScale: 0.75, // Factor de escala para nodos (reducido)
-      distance: 65,    // Distancia entre nodos (reducida)
-      fontSize: 10,    // Tamaño de fuente (reducido)
-      arrowScale: 0.8  // Escala para flechas (reducida)
+      distance: 65, // Distancia entre nodos (reducida)
+      fontSize: 10, // Tamaño de fuente (reducido)
+      arrowScale: 0.8, // Escala para flechas (reducida)
     },
-    sm: {              // Pantallas pequeñas (360px - 640px)
+    sm: {
+      // Pantallas pequeñas (360px - 640px)
       nodeScale: 0.85,
       distance: 80,
       fontSize: 11,
-      arrowScale: 0.9
+      arrowScale: 0.9,
     },
-    md: {              // Pantallas medianas (640px - 768px)
+    md: {
+      // Pantallas medianas (640px - 768px)
       nodeScale: 1,
       distance: 100,
       fontSize: 12,
-      arrowScale: 1
+      arrowScale: 1,
     },
-    lg: {              // Pantallas grandes (768px - 1024px)
+    lg: {
+      // Pantallas grandes (768px - 1024px)
       nodeScale: 1,
       distance: 110,
       fontSize: 12,
-      arrowScale: 1
+      arrowScale: 1,
     },
-    xl: {              // Pantallas muy grandes (> 1024px)
+    xl: {
+      // Pantallas muy grandes (> 1024px)
       nodeScale: 1.1,
       distance: 120,
       fontSize: 13,
-      arrowScale: 1.1
-    }
-  }
+      arrowScale: 1.1,
+    },
+  },
 };
 
 // Obtener todas las notas
@@ -57,37 +71,40 @@ const links = [];
 const nodeConnections = new Map();
 
 // Crear nodos para cada nota
-notes.forEach(note => {
+notes.forEach((note) => {
   const id = note.id;
   const title = note.data.title;
-  const cheeseImage = note.data.cheeseImage || '/favicon.png'; // Usar imagen de queso asignada o favicon por defecto
+  const cheeseImage = note.data.cheeseImage || "/favicon.png"; // Usar imagen de queso asignada o favicon por defecto
   nodes.push({ id, label: title, cheeseImage });
-  
+
   // Inicializar contador de conexiones
   nodeConnections.set(id, 0);
 });
 
 // Debug para comprobar IDs de nodos
-console.log("IDs de nodos disponibles:", nodes.map(n => n.id));
+console.log(
+  "IDs de nodos disponibles:",
+  nodes.map((n) => n.id),
+);
 
 // Crear enlaces basados en los WikiLinks explícitos
-notes.forEach(note => {
+notes.forEach((note) => {
   const sourceId = note.id;
-  
+
   // Usar los WikiLinks ya normalizados que vienen del parser
   const wikiLinks = note.data.wikiLinks || [];
-  
+
   if (wikiLinks.length > 0) {
     console.log(`Nota ${sourceId} tiene WikiLinks:`, wikiLinks);
-    
-    wikiLinks.forEach(targetId => {
+
+    wikiLinks.forEach((targetId) => {
       // Verificar que el targetId exista en los nodos
-      const targetNode = nodes.find(node => node.id === targetId);
-      
+      const targetNode = nodes.find((node) => node.id === targetId);
+
       if (targetNode && targetId !== sourceId) {
         console.log(`Creando enlace: ${sourceId} -> ${targetId}`);
         links.push({ source: sourceId, target: targetId });
-        
+
         // Contar conexiones para ajustar el tamaño de los nodos
         nodeConnections.set(sourceId, (nodeConnections.get(sourceId) || 0) + 1);
         nodeConnections.set(targetId, (nodeConnections.get(targetId) || 0) + 1);
@@ -103,7 +120,7 @@ console.log("Nodos creados:", nodes.length);
 console.log("Enlaces creados:", links.length);
 
 const connectionCount = Object.fromEntries(nodeConnections);
-const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID único para esta instancia del grafo
+const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`; // ID único para esta instancia del grafo
 ---
 
 <div id={graphId} class="graph-container">
@@ -123,7 +140,7 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
     border-radius: 8px;
     touch-action: none; /* Evitar comportamiento táctil por defecto del navegador */
   }
-  
+
   /* Para dispositivos táctiles, asegurarse que los nodos son lo suficientemente grandes */
   @media (hover: none) and (pointer: coarse) {
     :global(.node-group image) {
@@ -132,116 +149,150 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
       min-height: 24px;
     }
   }
-  
+
   /* Estilos para los textos del grafo que serán afectados por el tema */
   :global(.node-text) {
     fill: #1f2937; /* Gris oscuro para modo claro */
     font-weight: 500;
     pointer-events: none;
   }
-  
+
   /* Estilos para los enlaces del grafo */
   :global(.link-line) {
     stroke: #9ca3af; /* Gris medio para modo claro */
     stroke-width: 1.5px;
   }
-  
+
   /* Estilos para flechas de enlaces dirigidos */
   :global(.link-arrow) {
     fill: #9ca3af; /* Gris medio para modo claro */
     stroke: none;
   }
-  
+
   /* Estilos para el fondo del texto */
   :global(.text-bg) {
     fill: rgba(0, 0, 0, 0.2); /* Fondo negro semitransparente en modo claro */
     rx: 4px;
     ry: 4px;
   }
-  
+
   /* Estilos para resaltar nodos */
   :global(.node-highlight) {
     fill: #92400e; /* Amarillo oscuro para modo claro */
     font-weight: bold;
   }
-  
+
   :global(.link-highlight) {
     stroke: #f59e0b; /* Amarillo para modo claro */
     stroke-width: 2px;
   }
-  
+
   :global(.arrow-highlight) {
     fill: #f59e0b; /* Amarillo para modo claro */
   }
-  
+
   /* Estilos para modo oscuro */
   :global(.dark .node-text) {
     fill: #f3f4f6; /* Gris claro para modo oscuro */
   }
-  
+
   :global(.dark .link-line) {
     stroke: #4b5563; /* Gris oscuro para modo oscuro */
   }
-  
+
   :global(.dark .link-arrow) {
     fill: #4b5563; /* Gris oscuro para modo oscuro */
   }
-  
+
   :global(.dark .text-bg) {
     fill: rgba(0, 0, 0, 0.7); /* Fondo negro más opaco en modo oscuro */
   }
-  
+
   :global(.dark .node-highlight) {
     fill: #fcd34d; /* Amarillo claro para modo oscuro */
   }
-  
+
   :global(.dark .link-highlight) {
     stroke: #fbbf24; /* Amarillo para modo oscuro */
   }
-  
+
   :global(.dark .arrow-highlight) {
     fill: #fbbf24; /* Amarillo para modo oscuro */
   }
 </style>
 
-<script define:vars={{ nodes, links, connectionCount, graphId, config }} type="module">
-  import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+<script
+  define:vars={{ nodes, links, connectionCount, graphId, config }}
+  type="module"
+>
+  import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener("DOMContentLoaded", () => {
     // Referencias a elementos DOM
     const graphContainer = document.getElementById(graphId);
-    
+
     // Detectar si estamos en un dispositivo móvil
-    const isMobile = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    
+    const isMobile = window.matchMedia(
+      "(hover: none) and (pointer: coarse)",
+    ).matches;
+
     // Detectar tamaño de pantalla para ajustar escala
     function getScreenSizeConfig() {
-      if (window.matchMedia('(max-width: 359px)').matches) return config.screenSizes.xs;
-      if (window.matchMedia('(max-width: 639px)').matches) return config.screenSizes.sm;
-      if (window.matchMedia('(max-width: 767px)').matches) return config.screenSizes.md;
-      if (window.matchMedia('(max-width: 1023px)').matches) return config.screenSizes.lg;
+      if (window.matchMedia("(max-width: 359px)").matches)
+        return config.screenSizes.xs;
+      if (window.matchMedia("(max-width: 639px)").matches)
+        return config.screenSizes.sm;
+      if (window.matchMedia("(max-width: 767px)").matches)
+        return config.screenSizes.md;
+      if (window.matchMedia("(max-width: 1023px)").matches)
+        return config.screenSizes.lg;
       return config.screenSizes.xl;
     }
-    
+
     // Obtener configuración según tamaño de pantalla
     const screenConfig = getScreenSizeConfig();
-    
+
+    // Helpers de tamaño visual para limitar nodos muy conectados
+    function getScaledNodeSize(totalConnections) {
+      const { minVisualSize, maxVisualSize, sizeOffset, growthFactor } =
+        config.nodeSizing;
+      const scaled =
+        sizeOffset + Math.log2((totalConnections || 0) + 1) * growthFactor;
+      return Math.min(maxVisualSize, Math.max(minVisualSize, scaled));
+    }
+
+    function getNodeRadius(node, scale = screenConfig.nodeScale) {
+      return (
+        (config.nodeSizing.baseRadius +
+          node.size * config.nodeSizing.radiusGrowth) *
+        scale
+      );
+    }
+
+    function getNodeImageSize(node, scale = screenConfig.nodeScale) {
+      return getNodeRadius(node, scale) * 2;
+    }
+
+    function getNodeLabelOffset(node, scale = screenConfig.nodeScale) {
+      return getNodeRadius(node, scale) + config.nodeSizing.labelGap * scale;
+    }
+
     // Estado del grafo
     let isDirected = config.isDirected;
     const arrowConfig = {
       refX: config.arrowConfig.refX * screenConfig.arrowScale,
       size: config.arrowConfig.size * screenConfig.arrowScale,
-      padding: config.arrowConfig.padding * screenConfig.arrowScale
+      padding: config.arrowConfig.padding * screenConfig.arrowScale,
     };
     const mobileConfig = config.mobile;
-    
+
     // Variables para dimensiones
     let width = graphContainer.clientWidth;
     let height = graphContainer.clientHeight;
 
     // Variables para control de zoom
     let currentZoom = 1;
-    
+
     // Variables para gestión táctil
     let lastTapTime = 0;
     let touchStartTime = 0;
@@ -249,10 +300,10 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
     let pinchZooming = false;
 
     // Procesar nodos
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       node.x = Math.random() * width;
       node.y = Math.random() * height;
-      node.size = (connectionCount[node.id] || 1) + 1;
+      node.size = getScaledNodeSize(connectionCount[node.id] || 0);
     });
 
     // Identificar enlaces bidireccionales y filtrar duplicados
@@ -261,30 +312,35 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
     const linkLookup = new Map();
 
     // Procesar enlaces y marcar bidireccionales
-    links.forEach(link => {
+    links.forEach((link) => {
       const key = `${link.source}-${link.target}`;
       const reverseKey = `${link.target}-${link.source}`;
       linkLookup.set(key, link);
-      
+
       // Verificar si existe el enlace en dirección opuesta
       if (linkLookup.has(reverseKey)) {
         link.isBidirectional = true;
         linkLookup.get(reverseKey).isBidirectional = true;
-        
+
         // Registrar el par bidireccional (usando una clave ordenada para evitar duplicados)
-        const orderedKey = [link.source, link.target].sort().join('-');
+        const orderedKey = [link.source, link.target].sort().join("-");
         bidirectionalPairs.add(orderedKey);
       }
     });
 
     // Filtrar enlaces duplicados para bidireccionales
-    links.forEach(link => {
+    links.forEach((link) => {
       if (link.isBidirectional) {
         // Solo incluir un enlace de cada par bidireccional
-        const orderedKey = [link.source, link.target].sort().join('-');
-        if (bidirectionalPairs.has(orderedKey) && !processedLinks.some(l => 
-          (l.source === link.source && l.target === link.target) || 
-          (l.source === link.target && l.target === link.source))) {
+        const orderedKey = [link.source, link.target].sort().join("-");
+        if (
+          bidirectionalPairs.has(orderedKey) &&
+          !processedLinks.some(
+            (l) =>
+              (l.source === link.source && l.target === link.target) ||
+              (l.source === link.target && l.target === link.source),
+          )
+        ) {
           processedLinks.push(link);
           bidirectionalPairs.delete(orderedKey); // Marcar como procesado
         }
@@ -295,18 +351,20 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
     });
 
     // Crear el SVG
-    const svg = d3.select(`#${graphId}`)
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height)
-      .attr('class', 'bg-transparent')
-      .attr('style', 'display: block;');
+    const svg = d3
+      .select(`#${graphId}`)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .attr("class", "bg-transparent")
+      .attr("style", "display: block;");
 
     // Definir los marcadores de flecha con escala adaptativa
     const defs = svg.append("defs");
-    
+
     // Flecha para el inicio de la línea (para enlaces bidireccionales)
-    defs.append("marker")
+    defs
+      .append("marker")
       .attr("id", `arrow-start-${graphId}`)
       .attr("viewBox", "0 -5 10 10")
       .attr("refX", arrowConfig.refX)
@@ -317,9 +375,10 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
       .append("path")
       .attr("class", "link-arrow")
       .attr("d", "M10,-5L0,0L10,5");
-    
+
     // Flecha normal para el final de la línea
-    defs.append("marker")
+    defs
+      .append("marker")
       .attr("id", `arrow-end-${graphId}`)
       .attr("viewBox", "0 -5 10 10")
       .attr("refX", arrowConfig.refX)
@@ -330,9 +389,10 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
       .append("path")
       .attr("class", "link-arrow")
       .attr("d", "M0,-5L10,0L0,5");
-      
+
     // Flecha resaltada para el inicio
-    defs.append("marker")
+    defs
+      .append("marker")
       .attr("id", `arrow-start-highlight-${graphId}`)
       .attr("viewBox", "0 -5 10 10")
       .attr("refX", arrowConfig.refX)
@@ -343,9 +403,10 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
       .append("path")
       .attr("class", "arrow-highlight")
       .attr("d", "M10,-5L0,0L10,5");
-      
+
     // Flecha resaltada para el final
-    defs.append("marker")
+    defs
+      .append("marker")
       .attr("id", `arrow-end-highlight-${graphId}`)
       .attr("viewBox", "0 -5 10 10")
       .attr("refX", arrowConfig.refX)
@@ -360,12 +421,27 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
     const zoomLayer = svg.append("g");
 
     // Configurar simulación con parámetros adaptados al tamaño de pantalla
-    const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(processedLinks).id(d => d.id).distance(screenConfig.distance))
-      .force('charge', d3.forceManyBody().strength(-300 * screenConfig.nodeScale))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(d => (16 + d.size * 3) * screenConfig.nodeScale))
-      .force('gravity', d3.forceRadial(0.1, width / 2, height / 2))
+    const simulation = d3
+      .forceSimulation(nodes)
+      .force(
+        "link",
+        d3
+          .forceLink(processedLinks)
+          .id((d) => d.id)
+          .distance(screenConfig.distance),
+      )
+      .force(
+        "charge",
+        d3.forceManyBody().strength(-300 * screenConfig.nodeScale),
+      )
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force(
+        "collision",
+        d3
+          .forceCollide()
+          .radius((d) => getNodeRadius(d) + 6 * screenConfig.nodeScale),
+      )
+      .force("gravity", d3.forceRadial(0.1, width / 2, height / 2))
       .velocityDecay(0.3)
       .alphaDecay(0.01)
       .alphaMin(0.001)
@@ -373,209 +449,248 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
 
     // Crear los enlaces
     const link = zoomLayer
-      .append('g')
-      .selectAll('path')
+      .append("g")
+      .selectAll("path")
       .data(processedLinks)
       .enter()
-      .append('path')
-      .attr('class', 'link-line');
-      
+      .append("path")
+      .attr("class", "link-line");
+
     // Aplicar marcadores de flecha según la configuración
     updateArrows();
 
     // Crear un grupo para cada nodo
     const node = zoomLayer
-      .append('g')
-      .selectAll('g')
+      .append("g")
+      .selectAll("g")
       .data(nodes)
       .enter()
-      .append('g')
-      .attr('class', 'node-group')
-      .attr('cursor', 'move')
+      .append("g")
+      .attr("class", "node-group")
+      .attr("cursor", "move")
       .call(
-        d3.drag()
-          .on('start', (event, d) => {
+        d3
+          .drag()
+          .on("start", (event, d) => {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
             d.fy = d.y;
           })
-          .on('drag', (event, d) => {
+          .on("drag", (event, d) => {
             d.fx = event.x;
             d.fy = event.y;
           })
-          .on('end', (event, d) => {
+          .on("end", (event, d) => {
             if (!event.active) simulation.alphaTarget(0);
             d.fx = null;
             d.fy = null;
-          })
+          }),
       );
 
     // Agregar íconos a los nodos con tamaño adaptado al tamaño de pantalla
-    const nodeImage = node.append('image')
-      .attr('xlink:href', d => d.cheeseImage) // Usar la imagen de queso específica
-      .attr('width', d => (16 + d.size * 4) * screenConfig.nodeScale)
-      .attr('height', d => (16 + d.size * 4) * screenConfig.nodeScale)
-      .attr('x', d => -((8 + d.size * 2) * screenConfig.nodeScale))
-      .attr('y', d => -((8 + d.size * 2) * screenConfig.nodeScale))
-      .style('opacity', 1)
-      .attr('cursor', 'pointer')
-      .on('mouseover', (event, d) => {
+    const nodeImage = node
+      .append("image")
+      .attr("xlink:href", (d) => d.cheeseImage) // Usar la imagen de queso específica
+      .attr("width", (d) => getNodeImageSize(d))
+      .attr("height", (d) => getNodeImageSize(d))
+      .attr("x", (d) => -getNodeRadius(d))
+      .attr("y", (d) => -getNodeRadius(d))
+      .style("opacity", 1)
+      .attr("cursor", "pointer")
+      .on("mouseover", (event, d) => {
         event.stopPropagation();
         highlightNode(d);
       })
-      .on('mouseout', (event, d) => {
+      .on("mouseout", (event, d) => {
         event.stopPropagation();
         resetHighlight();
       })
-      .on('click', (event, d) => {
+      .on("click", (event, d) => {
         event.stopPropagation();
-        window.location.href = '/' + d.id;
+        window.location.href = "/" + d.id;
       });
 
     // Agregar texto
-    const titleBg = node.append('rect')
-      .attr('class', 'text-bg')
-      .attr('width', 0)
-      .attr('height', 0)
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('text-anchor', 'middle')
-      .style('opacity', 0)
-      .attr('pointer-events', 'none');
+    const titleBg = node
+      .append("rect")
+      .attr("class", "text-bg")
+      .attr("width", 0)
+      .attr("height", 0)
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("text-anchor", "middle")
+      .style("opacity", 0)
+      .attr("pointer-events", "none");
 
-    const titleText = node.append('text')
-      .text(d => d.label)
-      .attr('class', 'node-text')
-      .attr('x', 0)
-      .attr('y', d => (24 + d.size * 2) * screenConfig.nodeScale)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', `${screenConfig.fontSize}px`)
-      .style('opacity', d => currentZoom >= 0.6 ? 1 : 0)
-      .attr('pointer-events', 'none');
+    const titleText = node
+      .append("text")
+      .text((d) => d.label)
+      .attr("class", "node-text")
+      .attr("x", 0)
+      .attr("y", (d) => getNodeLabelOffset(d))
+      .attr("text-anchor", "middle")
+      .attr("font-size", `${screenConfig.fontSize}px`)
+      .style("opacity", (d) => (currentZoom >= 0.6 ? 1 : 0))
+      .attr("pointer-events", "none");
 
     // Función para actualizar marcadores de flecha según la configuración
     function updateArrows() {
       if (isDirected) {
-        link.each(function(d) {
+        link.each(function (d) {
           const path = d3.select(this);
           if (d.isBidirectional) {
             // Para enlaces bidireccionales, poner flechas en ambos extremos
-            path.attr('marker-end', `url(#arrow-end-${graphId})`)
-                .attr('marker-start', `url(#arrow-start-${graphId})`);
+            path
+              .attr("marker-end", `url(#arrow-end-${graphId})`)
+              .attr("marker-start", `url(#arrow-start-${graphId})`);
           } else {
             // Para enlaces unidireccionales, solo flecha al final
-            path.attr('marker-end', `url(#arrow-end-${graphId})`)
-                .attr('marker-start', '');
+            path
+              .attr("marker-end", `url(#arrow-end-${graphId})`)
+              .attr("marker-start", "");
           }
         });
       } else {
         // Si no es dirigido, no mostrar flechas
-        link.attr('marker-end', '')
-            .attr('marker-start', '');
+        link.attr("marker-end", "").attr("marker-start", "");
       }
     }
 
     // Inicializar estado visual
     function initializeVisualState() {
-      nodeImage.style('opacity', 1);
-      titleBg.style('opacity', 0);
-      
+      nodeImage.style("opacity", 1);
+      titleBg.style("opacity", 0);
+
       titleText
-        .style('font-size', `${screenConfig.fontSize}px`)
-        .style('font-weight', 'normal');
-      
+        .style("font-size", `${screenConfig.fontSize}px`)
+        .style("font-weight", "normal");
+
       if (currentZoom >= 0.6) {
-        titleText.style('opacity', Math.min(1, (currentZoom - 0.6) / 0.6));
+        titleText.style("opacity", Math.min(1, (currentZoom - 0.6) / 0.6));
       } else {
-        titleText.style('opacity', 0);
+        titleText.style("opacity", 0);
       }
-      
+
       // Actualizar marcadores de flecha
       updateArrows();
     }
 
     // Función para resaltar nodos
     function highlightNode(d) {
-      nodeImage.style('opacity', 1);
-      
+      nodeImage.style("opacity", 1);
+
       link
-        .attr('class', l => {
-          return (l.source.id === d.id || l.target.id === d.id) ? 'link-line link-highlight' : 'link-line';
+        .attr("class", (l) => {
+          return l.source.id === d.id || l.target.id === d.id
+            ? "link-line link-highlight"
+            : "link-line";
         })
-        .attr('stroke-opacity', l => (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2);
-      
+        .attr("stroke-opacity", (l) =>
+          l.source.id === d.id || l.target.id === d.id ? 1 : 0.2,
+        );
+
       // Actualizar marcadores de flecha para el resaltado
       if (isDirected) {
-        link.each(function(l) {
+        link.each(function (l) {
           const path = d3.select(this);
-          const isHighlighted = (l.source.id === d.id || l.target.id === d.id);
-          
+          const isHighlighted = l.source.id === d.id || l.target.id === d.id;
+
           if (l.isBidirectional) {
-            path.attr('marker-end', isHighlighted ? `url(#arrow-end-highlight-${graphId})` : `url(#arrow-end-${graphId})`)
-                .attr('marker-start', isHighlighted ? `url(#arrow-start-highlight-${graphId})` : `url(#arrow-start-${graphId})`);
+            path
+              .attr(
+                "marker-end",
+                isHighlighted
+                  ? `url(#arrow-end-highlight-${graphId})`
+                  : `url(#arrow-end-${graphId})`,
+              )
+              .attr(
+                "marker-start",
+                isHighlighted
+                  ? `url(#arrow-start-highlight-${graphId})`
+                  : `url(#arrow-start-${graphId})`,
+              );
           } else {
-            path.attr('marker-end', isHighlighted ? `url(#arrow-end-highlight-${graphId})` : `url(#arrow-end-${graphId})`)
-                .attr('marker-start', '');
+            path
+              .attr(
+                "marker-end",
+                isHighlighted
+                  ? `url(#arrow-end-highlight-${graphId})`
+                  : `url(#arrow-end-${graphId})`,
+              )
+              .attr("marker-start", "");
           }
         });
       }
-      
-      nodeImage.style('opacity', n => {
+
+      nodeImage.style("opacity", (n) => {
         if (n === d) return 1;
-        if (processedLinks.some(l => (l.source.id === d.id && l.target.id === n.id) || (l.target.id === d.id && l.source.id === n.id))) {
+        if (
+          processedLinks.some(
+            (l) =>
+              (l.source.id === d.id && l.target.id === n.id) ||
+              (l.target.id === d.id && l.source.id === n.id),
+          )
+        ) {
           return 0.65;
         }
         return 0.3;
       });
-      
-      node.sort((a, b) => (a === d) ? 1 : -1);
-      
-      titleText.style('opacity', n => {
+
+      node.sort((a, b) => (a === d ? 1 : -1));
+
+      titleText.style("opacity", (n) => {
         if (currentZoom < 0.6) return 0;
         if (n === d) return 1;
-        if (processedLinks.some(l => (l.source.id === d.id && l.target.id === n.id) || (l.target.id === d.id && l.source.id === n.id))) {
+        if (
+          processedLinks.some(
+            (l) =>
+              (l.source.id === d.id && l.target.id === n.id) ||
+              (l.target.id === d.id && l.source.id === n.id),
+          )
+        ) {
           return 0.65;
         }
         return 0.3;
       });
-      
-      node.filter(n => n === d).each(function() {
-        const text = d3.select(this).select('text');
-        text.classed('node-highlight', true)
-            .style('font-size', '14px');
-        
-        const bbox = text.node().getBBox();
-        
-        d3.select(this).select('rect')
-          .attr('x', bbox.x - 5)
-          .attr('y', bbox.y - 2)
-          .attr('width', bbox.width + 10)
-          .attr('height', bbox.height + 4)
-          .style('opacity', 0.7);
-      });
+
+      node
+        .filter((n) => n === d)
+        .each(function () {
+          const text = d3.select(this).select("text");
+          text.classed("node-highlight", true).style("font-size", "14px");
+
+          const bbox = text.node().getBBox();
+
+          d3.select(this)
+            .select("rect")
+            .attr("x", bbox.x - 5)
+            .attr("y", bbox.y - 2)
+            .attr("width", bbox.width + 10)
+            .attr("height", bbox.height + 4)
+            .style("opacity", 0.7);
+        });
     }
-    
+
     // Función para resetear resaltados
     function resetHighlight() {
-      link.attr('class', 'link-line')
-          .attr('stroke-opacity', 0.9);
-      
+      link.attr("class", "link-line").attr("stroke-opacity", 0.9);
+
       // Resetear marcadores de flecha
       updateArrows();
-      
-      nodeImage.style('opacity', 1);
-      
-      titleBg.style('opacity', 0);
-      
+
+      nodeImage.style("opacity", 1);
+
+      titleBg.style("opacity", 0);
+
       titleText
-        .attr('class', 'node-text')
-        .style('font-size', `${screenConfig.fontSize}px`)
-        .style('font-weight', 'normal');
-      
+        .attr("class", "node-text")
+        .style("font-size", `${screenConfig.fontSize}px`)
+        .style("font-weight", "normal");
+
       if (currentZoom >= 0.6) {
-        titleText.style('opacity', Math.min(1, (currentZoom - 0.6) / 0.6));
+        titleText.style("opacity", Math.min(1, (currentZoom - 0.6) / 0.6));
       } else {
-        titleText.style('opacity', 0);
+        titleText.style("opacity", 0);
       }
     }
 
@@ -583,28 +698,36 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
     function updateTextOpacity(scale) {
       const minOpacityScale = isMobile ? 0.8 : 0.6;
       const maxOpacityScale = isMobile ? 1.5 : 1.2;
-      
+
       let opacity = 0;
       if (scale > minOpacityScale) {
-        opacity = Math.min(1, (scale - minOpacityScale) / (maxOpacityScale - minOpacityScale));
+        opacity = Math.min(
+          1,
+          (scale - minOpacityScale) / (maxOpacityScale - minOpacityScale),
+        );
       }
-      
-      titleText.style('opacity', opacity);
-      
+
+      titleText.style("opacity", opacity);
+
       return opacity;
     }
 
     // Configurar el zoom con ajustes específicos para móvil
-    const zoom = d3.zoom()
+    const zoom = d3
+      .zoom()
       .scaleExtent([0.2, 4])
-      .filter(event => {
+      .filter((event) => {
         // En móvil, solo permitir zoom con gestos de pinch
         if (isMobile) {
-          if (event.type === 'touchstart' || event.type === 'touchmove' || event.type === 'touchend') {
+          if (
+            event.type === "touchstart" ||
+            event.type === "touchmove" ||
+            event.type === "touchend"
+          ) {
             return true;
           }
           // Evitar zoom con rueda en móvil
-          if (event.type === 'wheel' && !event.ctrlKey) {
+          if (event.type === "wheel" && !event.ctrlKey) {
             return false;
           }
         }
@@ -615,119 +738,125 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
       .on("zoom", (event) => {
         // Guardar el zoom previo para comparar
         const prevZoom = currentZoom;
-        
+
         zoomLayer.attr("transform", event.transform);
         currentZoom = event.transform.k;
-        
+
         // Si estamos en móvil y hay un cambio grande de zoom, probablemente es un pinch
         if (isMobile && Math.abs(currentZoom - prevZoom) > 0.1) {
           pinchZooming = true;
         }
-        
+
         updateTextOpacity(currentZoom);
       });
 
     svg.call(zoom);
-    
+
     // Establecer zoom inicial óptimo basado en el tamaño de la pantalla
     let initialZoom = 1;
-    
+
     // Solo aplicar zoom en pantallas pequeñas
     if (width < 640) {
       initialZoom = Math.min(0.85, width / 800);
     }
-    
+
     // Aplicar transformación inicial
     setTimeout(() => {
-      zoom.transform(svg, d3.zoomIdentity
-        .translate(width / 2, height / 2)
-        .scale(initialZoom)
-        .translate(-width / 2, -height / 2));
+      zoom.transform(
+        svg,
+        d3.zoomIdentity
+          .translate(width / 2, height / 2)
+          .scale(initialZoom)
+          .translate(-width / 2, -height / 2),
+      );
     }, 200);
-    
+
     // Mejorar la interacción táctil para móviles
     if (isMobile) {
       // Manejar toques para diferenciar arrastrar vs. tap
       svg.on("touchstart", (event) => {
         touchStartTime = new Date().getTime();
         touchMoved = false;
-        
+
         // Si el usuario mantiene el dedo, mostrar etiquetas temporalmente
         if (event.touches.length === 1) {
           setTimeout(() => {
             const currentTime = new Date().getTime();
             // Si han pasado 500ms y no ha movido el dedo, mostrar etiquetas
             if (currentTime - touchStartTime >= 500 && !touchMoved) {
-              titleText.style('opacity', 1);
+              titleText.style("opacity", 1);
             }
           }, 500);
         }
       });
-      
+
       svg.on("touchmove", () => {
         touchMoved = true;
         // Ocultar etiquetas temporales si mueve el dedo
         if (currentZoom < 0.6) {
-          titleText.style('opacity', 0);
+          titleText.style("opacity", 0);
         }
       });
-      
+
       svg.on("touchend", (event) => {
         const currentTime = new Date().getTime();
-        
+
         // Si es un pinch zoom, no hacemos nada más
         if (pinchZooming) {
           pinchZooming = false;
           event.preventDefault();
           return;
         }
-        
+
         // Si no movió el dedo y fue un toque rápido
         if (!touchMoved && currentTime - touchStartTime < 300) {
           // Detectar doble tap
           if (currentTime - lastTapTime < 300) {
             // Doble tap detectado
             event.preventDefault();
-            
+
             // Buscar el nodo más cercano al toque
             const touch = event.changedTouches[0];
             const touchPoint = d3.pointer(touch, zoomLayer.node());
-            
+
             let closestNode = null;
             let minDist = mobileConfig.tapRadius;
-            
-            nodes.forEach(node => {
+
+            nodes.forEach((node) => {
               const dx = node.x - touchPoint[0];
               const dy = node.y - touchPoint[1];
               const dist = Math.sqrt(dx * dx + dy * dy);
-              
+
               if (dist < minDist) {
                 minDist = dist;
                 closestNode = node;
               }
             });
-            
+
             if (closestNode) {
               // Si hay un nodo cercano, navegar a él
-              window.location.href = '/' + closestNode.id;
+              window.location.href = "/" + closestNode.id;
             } else {
               // Si no hay nodos cercanos, hacer zoom
               const transform = d3.zoomTransform(svg.node());
               const newScale = currentZoom < 1 ? 1 : mobileConfig.doubleTapZoom;
-              
-              zoom.transform(svg, d3.zoomIdentity
-                .translate(width / 2, height / 2)
-                .scale(newScale)
-                .translate(-touchPoint[0], -touchPoint[1]));
+
+              zoom.transform(
+                svg,
+                d3.zoomIdentity
+                  .translate(width / 2, height / 2)
+                  .scale(newScale)
+                  .translate(-touchPoint[0], -touchPoint[1]),
+              );
             }
           }
-          
+
           lastTapTime = currentTime;
         }
-        
+
         // Resetear opacidad de texto si el zoom es bajo
         if (currentZoom < 0.6) {
-          titleText.style('opacity', 0);
+          titleText.style("opacity", 0);
         } else {
           updateTextOpacity(currentZoom);
         }
@@ -738,136 +867,151 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`;  // ID ú
     if (!isMobile) {
       svg.on("dblclick", (event) => {
         const point = d3.pointer(event, zoomLayer.node());
-        zoom.transform(svg, d3.zoomIdentity
-          .translate(width / 2, height / 2)
-          .scale(currentZoom < 1 ? 1 : 2)
-          .translate(-point[0], -point[1]));
+        zoom.transform(
+          svg,
+          d3.zoomIdentity
+            .translate(width / 2, height / 2)
+            .scale(currentZoom < 1 ? 1 : 2)
+            .translate(-point[0], -point[1]),
+        );
       });
     }
-    
+
     // Usar un tamaño adaptado para los nodos en dispositivos táctiles
     if (isMobile) {
       // Ajustar tamaño para que sea más fácil tocar en móviles
       const touchSizeMultiplier = 1.1; // Hacer ligeramente más grandes para tocar
-      
+
       nodeImage
-        .attr('width', d => Math.max(20, (16 + d.size * 4) * screenConfig.nodeScale * touchSizeMultiplier))
-        .attr('height', d => Math.max(20, (16 + d.size * 4) * screenConfig.nodeScale * touchSizeMultiplier))
-        .attr('x', d => -Math.max(10, ((8 + d.size * 2) * screenConfig.nodeScale * touchSizeMultiplier)))
-        .attr('y', d => -Math.max(10, ((8 + d.size * 2) * screenConfig.nodeScale * touchSizeMultiplier)));
+        .attr("width", (d) =>
+          Math.max(20, getNodeImageSize(d) * touchSizeMultiplier),
+        )
+        .attr("height", (d) =>
+          Math.max(20, getNodeImageSize(d) * touchSizeMultiplier),
+        )
+        .attr("x", (d) => -Math.max(10, getNodeRadius(d) * touchSizeMultiplier))
+        .attr(
+          "y",
+          (d) => -Math.max(10, getNodeRadius(d) * touchSizeMultiplier),
+        );
     }
-    
+
     // Actualizar cuando cambia el tamaño
-    simulation.on('tick', () => {
+    simulation.on("tick", () => {
       // Actualizar posiciones de enlaces con path
-      link.attr('d', d => {
+      link.attr("d", (d) => {
         // Calcular vector de dirección
         const dx = d.target.x - d.source.x;
         const dy = d.target.y - d.source.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (dist === 0) return "M0,0 L0,0"; // Prevenir división por cero
-        
+
         // Calcular punto de inicio (en el borde del nodo fuente)
-        const sourceSize = (8 + d.source.size * 2) * screenConfig.nodeScale; // Radio ajustado según pantalla
+        const sourceSize = getNodeRadius(d.source); // Radio ajustado según pantalla
         const startX = d.source.x + (dx / dist) * sourceSize;
         const startY = d.source.y + (dy / dist) * sourceSize;
-        
+
         // Calcular punto final (antes de llegar al nodo destino)
-        const targetSize = (8 + d.target.size * 2) * screenConfig.nodeScale; // Radio ajustado según pantalla
-        
+        const targetSize = getNodeRadius(d.target); // Radio ajustado según pantalla
+
         let endX, endY;
-        
+
         if (d.isBidirectional) {
           // Para enlaces bidireccionales ajustamos ambos extremos
           endX = d.target.x - (dx / dist) * (targetSize + arrowConfig.padding);
           endY = d.target.y - (dy / dist) * (targetSize + arrowConfig.padding);
-          
+
           // Ajustar también el punto de inicio para la flecha en el extremo inicial
           return `M${startX + (dx / dist) * (arrowConfig.padding + 1)},${startY + (dy / dist) * (arrowConfig.padding + 1)} L${endX},${endY}`;
         } else {
           // Para enlaces unidireccionales, solo ajustamos el extremo final
           endX = d.target.x - (dx / dist) * (targetSize + arrowConfig.padding);
           endY = d.target.y - (dy / dist) * (targetSize + arrowConfig.padding);
-          
+
           return `M${startX},${startY} L${endX},${endY}`;
         }
       });
 
       // Actualizar posiciones de nodos con transición suave
-      node.attr('transform', d => `translate(${d.x}, ${d.y})`);
+      node.attr("transform", (d) => `translate(${d.x}, ${d.y})`);
     });
-    
+
     // Inicializar estado visual
-    simulation.on('end', () => {
+    simulation.on("end", () => {
       initializeVisualState();
     });
-    
+
     setTimeout(() => {
       initializeVisualState();
     }, 100);
-    
+
     // Función que actualiza el gráfico cuando cambia el tamaño
     function updateSize() {
       const newWidth = graphContainer.clientWidth;
       const newHeight = graphContainer.clientHeight;
-      
+
       if (newWidth === width && newHeight === height) return;
-      
+
       width = newWidth;
       height = newHeight;
-      
-      svg.attr('width', width)
-         .attr('height', height);
-         
+
+      svg.attr("width", width).attr("height", height);
+
       // Actualizar la posición central
-      simulation.force('center', d3.forceCenter(width / 2, height / 2))
-                .alpha(0.3)
-                .restart();
+      simulation
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .alpha(0.3)
+        .restart();
     }
 
     // Actualizar configuración al cambiar el tamaño de la ventana
     function updateScreenConfig() {
       const newConfig = getScreenSizeConfig();
-      
+
       // Actualizar configuración de flechas
       arrowConfig.refX = config.arrowConfig.refX * newConfig.arrowScale;
       arrowConfig.size = config.arrowConfig.size * newConfig.arrowScale;
       arrowConfig.padding = config.arrowConfig.padding * newConfig.arrowScale;
-      
+
       // Actualizar simulación
-      simulation.force('link').distance(newConfig.distance);
-      simulation.force('charge').strength(-300 * newConfig.nodeScale);
-      simulation.force('collision').radius(d => (16 + d.size * 3) * newConfig.nodeScale);
-      
+      simulation.force("link").distance(newConfig.distance);
+      simulation.force("charge").strength(-300 * newConfig.nodeScale);
+      simulation
+        .force("collision")
+        .radius(
+          (d) =>
+            getNodeRadius(d, newConfig.nodeScale) + 6 * newConfig.nodeScale,
+        );
+
       // Actualizar nodos
       nodeImage
-        .attr('width', d => (16 + d.size * 4) * newConfig.nodeScale)
-        .attr('height', d => (16 + d.size * 4) * newConfig.nodeScale)
-        .attr('x', d => -((8 + d.size * 2) * newConfig.nodeScale))
-        .attr('y', d => -((8 + d.size * 2) * newConfig.nodeScale));
-      
+        .attr("width", (d) => getNodeImageSize(d, newConfig.nodeScale))
+        .attr("height", (d) => getNodeImageSize(d, newConfig.nodeScale))
+        .attr("x", (d) => -getNodeRadius(d, newConfig.nodeScale))
+        .attr("y", (d) => -getNodeRadius(d, newConfig.nodeScale));
+
       // Actualizar textos
       titleText
-        .attr('y', d => (24 + d.size * 2) * newConfig.nodeScale)
-        .attr('font-size', `${newConfig.fontSize}px`);
-      
+        .attr("y", (d) => getNodeLabelOffset(d, newConfig.nodeScale))
+        .attr("font-size", `${newConfig.fontSize}px`);
+
       // Reiniciar simulación
       simulation.alpha(0.3).restart();
     }
-    
+
     // Eventos de resize
-    window.addEventListener('resize', () => {
+    window.addEventListener("resize", () => {
       updateSize();
       updateScreenConfig();
     });
-    document.addEventListener('sidebar-resized', updateSize);
-    
+    document.addEventListener("sidebar-resized", updateSize);
+
     // Limpieza
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', updateSize);
-      document.removeEventListener('sidebar-resized', updateSize);
+      window.removeEventListener("resize", updateSize);
+      document.removeEventListener("sidebar-resized", updateSize);
     };
   });
-</script> 
+</script>
