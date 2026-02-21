@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import extractLinksTags from './src/plugins/remark-links-tags.js';
 import rehypeExternalLinks from './src/plugins/rehype-external-links.js';
+import remarkStripDeadWikilinks from './src/plugins/remark-strip-dead-wikilinks.js';
 import remarkMarimoIsland from './src/plugins/remark-marimo-island.js';
 import remarkObsidianCallout from 'remark-obsidian-callout';
 import { wikiLinkPlugin } from 'remark-wiki-link';
@@ -130,6 +131,7 @@ export default defineConfig({
         hrefTemplate: permalink => permalink,
         aliasDivider: '|',
       }],
+      remarkStripDeadWikilinks,
       extractLinksTags,
       remarkObsidianCallout,
       remarkMarimoIsland,
