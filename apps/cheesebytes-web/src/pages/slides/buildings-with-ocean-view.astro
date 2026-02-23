@@ -7,6 +7,11 @@ import {
 } from "../../components/cave/buildings-with-ocean-view";
 import RevealCode from "../../components/RevealCode";
 import { LogoAnimation } from "../../components/cave/intro";
+import katex from "katex";
+import "katex/dist/katex.min.css"; // Importa los estilos
+
+const formula = "\\mathcal{O}(n^2)";
+const katex_n2 = katex.renderToString(formula, { throwOnError: false });
 ---
 
 <RevealLayout
@@ -24,10 +29,10 @@ import { LogoAnimation } from "../../components/cave/intro";
       </p>
       <pre>Highlight building in index 2</pre>
     </aside>
-    <!-- hook -->
+    Problem introduction with a visualization of buildings and ocean view.
   </section>
 
-  <section id="logo">
+  <section id="intro">
     <LogoAnimation
       client:load
       width={2080}
@@ -47,10 +52,10 @@ import { LogoAnimation } from "../../components/cave/intro";
       </p>
       <p>
         So how do we check this in a systematic way? Suppose we want to know
-        whether a single building has an ocean view. Let us pick the one
-        furthest from the ocean. It has height four. In front of it, toward the
-        ocean, we see buildings with heights one, three, and two. All of them
-        are shorter. So this building has a view.
+        whether a single building has an ocean view. Let's pick the one furthest
+        from the ocean. It has height four. In front of it, toward the ocean, we
+        see buildings with heights one, three, and two. All of them are shorter.
+        So this building has a view.
       </p>
       <p>
         Now try another one. This building has height two. In front of it we see
@@ -71,14 +76,21 @@ import { LogoAnimation } from "../../components/cave/intro";
     <aside class="notes">
       <p>
         That works. But what if we want to know which ones have a view? We don't
-        just want to check one. We want to find all of them. We repeat that same
-        check for every position. Then repeat the same process again and again.
+        just want to check one. We want to find all of them. We can repeat that
+        same check for every position. Then repeat the same process again and
+        again.
       </p>
     </aside>
-    1, 2 and 4th have views
+    <SeaViewsViz
+      client:load
+      heights={[1, 3, 2, 4]}
+      showEditor={false}
+      width={1080}
+      height={580}
+    />
   </section>
 
-  <section>
+  <section id="matrix">
     <aside class="notes">
       <p>
         Let's make this visual. We draw a matrix. Each column is a building.
@@ -88,13 +100,15 @@ import { LogoAnimation } from "../../components/cave/intro";
       </p>
       <p>
         The next compares with one. We compare with the first one, so we place a
-        dot in the first row.The next with two.Then three. And this keeps
-        growing.
+        dot in the first row. Then we move to the next building. Now there are
+        two buildings in front of it, so we compare with both of them. That
+        fills two rows. Then the next building compares with three. And this
+        keeps growing.
       </p>
       <p>
-        If we count all these comparisons, we fill about half of an n by n grid.
-        That is why this approach is quadratic. It works. But it does not scale
-        well.
+        If we call n the number of buildings, then this pattern forms roughly
+        half of an n by n grid. That's why the running time grows quadratically.
+        It works. But it doesn't scale well.
       </p>
     </aside>
     <ComplexityMatrix
@@ -107,6 +121,10 @@ import { LogoAnimation } from "../../components/cave/intro";
   </section>
 
   <section>
+    <span class="text-7xl" set:html={katex_n2} />
+  </section>
+
+  <section>
     <aside class="notes">
       <p>
         Let's try a couple of small examples and see what we can learn. Take: 3,
@@ -116,22 +134,23 @@ import { LogoAnimation } from "../../components/cave/intro";
       <pre>3, 1, 2</pre>
       <p>
         The only way something behind can get a view is if it becomes a new
-        record. So if we add a 3 nothing changes. That last 3 is not higher than
-        the first one, so it's still blocked.
+        record. So if we add a 3 nothing changes. In real life you might argue
+        it has a view... but in our problem definition, it doesn't. It's still
+        blocked by the first building.
       </p>
       <pre>3, 1, 2, 3</pre>
       <p>
         If we add a 4 at the end, because 4 beats the maximum so far, it has a
-        view. So here is the idea: as we move away from the ocean, we keep the
-        maximum height seen so far. If the current height is greater than that
-        maximum, it has a view and we update the maximum.
+        view. So here is the idea: as we move away from the ocean, we keep track
+        of the tallest height up to this point. If the current building beats
+        that value, it has a view, and we update the maximum.
       </p>
       <pre>3, 1, 2, 3, 4</pre>
-      <pre>3, 1, 2, 3, 4, 5</pre>
+      <pre>3, 1, 2, 3, 4, 5, 3, 6</pre>
     </aside>
     <SeaViewsSolver
       client:load
-      heights={[3, 1, 2, 3, 4]}
+      heights={[3, 1, 2]}
       showEditor={true}
       showControls={true}
       width={1080}
@@ -142,8 +161,8 @@ import { LogoAnimation } from "../../components/cave/intro";
   <section id="code" class="text-lg">
     <aside class="notes">
       <p>
-        Let's implement this in Python.First, we prepare a list to store the
-        buildings that have a view. We also keep a variable called max_so_far.
+        Let's implement this in Python. First, we prepare a list to store the
+        buildings that have a view. We also keep a variable called "max so far".
         This represents the tallest building we have seen up to this point. We
         start with a sentinel value of -1, lower than any valid height, so the
         first building always counts as a new maximum.
@@ -180,5 +199,20 @@ import { LogoAnimation } from "../../components/cave/intro";
     # STEP-7
     return result`}
     />
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        So the whole problem comes down to a single idea: keep the maximum
+        height seen so far. Here's something you can try next. What changes if
+        the ocean is on the right instead of the left? And what if there is
+        ocean on both sides?
+      </p>
+      <p>
+        This was today's cheese byte. Remember, the code matters but the idea
+        comes first.
+      </p>
+    </aside>
   </section>
 </RevealLayout>
