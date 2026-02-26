@@ -23,6 +23,7 @@ export interface ComplexityMatrixProps {
   showEditor?: boolean;
   width?: number;
   height?: number;
+  waitForSlideTrigger?: boolean;
 }
 
 /**
@@ -40,6 +41,7 @@ export const ComplexityMatrix: React.FC<ComplexityMatrixProps> = ({
   showEditor = false,
   width = 1080,
   height = 620,
+  waitForSlideTrigger = true,
 }) => {
   const [heights, setHeights] = useState(initialHeights);
   const [heightInput, setHeightInput] = useState(initialHeights.join(", "));
@@ -54,15 +56,19 @@ export const ComplexityMatrix: React.FC<ComplexityMatrixProps> = ({
     <CheeseSlideContainer>
       {showEditor && (
         <div className="flex items-center justify-center gap-3 mb-4">
-          <label className="text-sm font-medium text-gray-300">heights =</label>
+          <label className="text-sm font-medium text-stone-600 dark:text-stone-300">
+            heights =
+          </label>
           <input
             type="text"
             value={heightInput}
             onChange={(e) => handleHeightInputChange(e.target.value)}
-            className="font-mono text-sm bg-gray-800 text-amber-300 border border-gray-600 rounded-lg px-3 py-2 w-80 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+            className="font-mono text-sm bg-stone-100 dark:bg-stone-800 text-amber-700 dark:text-amber-300 border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 w-80 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
             placeholder="4, 2, 3, 1"
           />
-          <span className="text-xs text-gray-500">(0-9)</span>
+          <span className="text-xs text-stone-400 dark:text-stone-500">
+            (0-9)
+          </span>
         </div>
       )}
       <MatrixCanvas
@@ -70,6 +76,7 @@ export const ComplexityMatrix: React.FC<ComplexityMatrixProps> = ({
         heights={heights}
         width={width}
         height={height}
+        waitForSlideTrigger={waitForSlideTrigger}
       />
     </CheeseSlideContainer>
   );
@@ -81,12 +88,14 @@ interface MatrixCanvasProps {
   heights: number[];
   width: number;
   height: number;
+  waitForSlideTrigger: boolean;
 }
 
 const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
   heights,
   width,
   height,
+  waitForSlideTrigger,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<PhaserObj>(null);
@@ -137,6 +146,11 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
   // - When slide becomes present: keep matrix visible but dots hidden.
   // - When a specific fragment is revealed: play animation.
   useEffect(() => {
+    if (!waitForSlideTrigger) {
+      armedRef.current = false;
+      return;
+    }
+
     const ensureTriggerFragment = () => {
       if (!containerRef.current) return;
       const section = containerRef.current.closest("section");
@@ -237,7 +251,7 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
       }
       triggerRef.current = null;
     };
-  }, [hideDots, replay]);
+  }, [hideDots, replay, waitForSlideTrigger]);
 
   // Create Phaser game
   useEffect(() => {
@@ -376,7 +390,11 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
 
           sceneRef.current = this;
           setIsLoading(false);
-          hideDots();
+          if (waitForSlideTrigger) {
+            hideDots();
+          } else {
+            replay();
+          }
         }
 
         drawBuilding(cx: number, baseY: number, h: number, sc: number) {
@@ -418,13 +436,12 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
         }
 
         addSegRotL(rx: number, cy: number, s: typeof SPRITES.door, sc: number) {
-          const img = this.add.image(
-            rx - (s.h * sc) / 2,
-            cy,
-            BUILDINGS_KEY,
-            s.frame,
-          );
-          img.setDisplaySize(s.w * sc, s.h * sc);
+          const dispW = Math.max(1, Math.round(s.w * sc));
+          const dispH = Math.max(1, Math.round(s.h * sc));
+          const x = Math.round(rx - dispH / 2);
+          const y = Math.round(cy);
+          const img = this.add.image(x, y, BUILDINGS_KEY, s.frame);
+          img.setDisplaySize(dispW, dispH);
           img.setAngle(-90);
         }
       }
@@ -435,7 +452,13 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
         width,
         height,
         transparent: true,
-        render: { pixelArt: false, antialias: true },
+        render: {
+          pixelArt: false,
+          antialias: true,
+          antialiasGL: true,
+          roundPixels: false,
+        },
+        input: { mouse: { preventDefaultWheel: false } },
         scene: MatrixScene,
       });
     });
@@ -445,7 +468,7 @@ const MatrixCanvas: React.FC<MatrixCanvasProps> = ({
       gameRef.current = null;
       sceneRef.current = null;
     };
-  }, [heights, width, height, hideDots]);
+  }, [heights, width, height, hideDots, replay, waitForSlideTrigger]);
 
   return (
     <div

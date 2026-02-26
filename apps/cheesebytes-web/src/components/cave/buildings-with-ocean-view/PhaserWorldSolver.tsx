@@ -85,7 +85,13 @@ interface SceneRef {
 /*  (same visual as CheeseTickIcon / CheeseCrossIcon)  */
 /* -------------------------------------------------- */
 
-function drawTickIcon(scene: PhaserObj, x: number, y: number, size: number, color: number): PhaserObj {
+function drawTickIcon(
+  scene: PhaserObj,
+  x: number,
+  y: number,
+  size: number,
+  color: number,
+): PhaserObj {
   const g = scene.add.graphics();
   // Rounded rect background
   g.fillStyle(color, 0.15);
@@ -103,7 +109,13 @@ function drawTickIcon(scene: PhaserObj, x: number, y: number, size: number, colo
   return g;
 }
 
-function drawCrossIcon(scene: PhaserObj, x: number, y: number, size: number, color: number): PhaserObj {
+function drawCrossIcon(
+  scene: PhaserObj,
+  x: number,
+  y: number,
+  size: number,
+  color: number,
+): PhaserObj {
   const g = scene.add.graphics();
   // Rounded rect background
   g.fillStyle(color, 0.15);
@@ -139,6 +151,20 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
   const gameRef = useRef<PhaserObj>(null);
   const sceneRef = useRef<SceneRef | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [themeKey, setThemeKey] = useState(0);
+
+  // Recreate the Phaser canvas whenever the light/dark class toggles
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const observer = new MutationObserver(() => {
+      setThemeKey((k) => k + 1);
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const currentIndexRef = useRef(currentIndex);
   const maxSoFarRef = useRef(maxSoFar);
@@ -187,16 +213,36 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
         create() {
           const tex = this.textures.get(BUILDINGS_KEY);
           if (!tex.has(SPRITES.balcony.frame)) {
-            tex.add(SPRITES.balcony.frame, 0, SPRITES.balcony.x, SPRITES.balcony.y, SPRITES.balcony.w, SPRITES.balcony.h);
-            tex.add(SPRITES.window.frame, 0, SPRITES.window.x, SPRITES.window.y, SPRITES.window.w, SPRITES.window.h);
-            tex.add(SPRITES.door.frame, 0, SPRITES.door.x, SPRITES.door.y, SPRITES.door.w, SPRITES.door.h);
+            tex.add(
+              SPRITES.balcony.frame,
+              0,
+              SPRITES.balcony.x,
+              SPRITES.balcony.y,
+              SPRITES.balcony.w,
+              SPRITES.balcony.h,
+            );
+            tex.add(
+              SPRITES.window.frame,
+              0,
+              SPRITES.window.x,
+              SPRITES.window.y,
+              SPRITES.window.w,
+              SPRITES.window.h,
+            );
+            tex.add(
+              SPRITES.door.frame,
+              0,
+              SPRITES.door.x,
+              SPRITES.door.y,
+              SPRITES.door.w,
+              SPRITES.door.h,
+            );
           }
 
           this.drawBuildings();
           this.createOverlays();
           this.createPointer();
           this.createMaxLine();
-          this.createHeightLabels();
 
           sceneRef.current = {
             scene: this,
@@ -225,8 +271,9 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
           const maxH = Math.max(...heights, 1);
 
           this.skylineBottom = height * 0.78;
-          const maxPixels = height * 0.50;
-          const tallestH = SPRITES.door.h + SPRITES.balcony.h + maxH * SPRITES.window.h;
+          const maxPixels = height * 0.5;
+          const tallestH =
+            SPRITES.door.h + SPRITES.balcony.h + maxH * SPRITES.window.h;
           this.bScale = Math.min(maxPixels / tallestH, 0.28);
 
           this.buildingW = SPRITES.balcony.w * this.bScale;
@@ -240,25 +287,52 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
             const x = this.xStart + i * this.actualStep;
             let yOffset = 0;
 
-            const door = this.addSegment(x, this.skylineBottom - yOffset, SPRITES.door, this.bScale);
+            const door = this.addSegment(
+              x,
+              this.skylineBottom - yOffset,
+              SPRITES.door,
+              this.bScale,
+            );
             yOffset += SPRITES.door.h * this.bScale;
 
             const windows: PhaserObj[] = [];
             for (let w = 0; w < h; w++) {
-              const win = this.addSegment(x, this.skylineBottom - yOffset, SPRITES.window, this.bScale);
+              const win = this.addSegment(
+                x,
+                this.skylineBottom - yOffset,
+                SPRITES.window,
+                this.bScale,
+              );
               windows.push(win);
               yOffset += SPRITES.window.h * this.bScale;
             }
 
-            const balcony = this.addSegment(x, this.skylineBottom - yOffset, SPRITES.balcony, this.bScale);
+            const balcony = this.addSegment(
+              x,
+              this.skylineBottom - yOffset,
+              SPRITES.balcony,
+              this.bScale,
+            );
             yOffset += SPRITES.balcony.h * this.bScale;
             const topY = this.skylineBottom - yOffset;
 
-            this.buildings.push({ door, windows, balcony, x, topY, heightVal: h });
+            this.buildings.push({
+              door,
+              windows,
+              balcony,
+              x,
+              topY,
+              heightVal: h,
+            });
           }
         }
 
-        addSegment(x: number, bottomY: number, sprite: typeof SPRITES.door, scale: number) {
+        addSegment(
+          x: number,
+          bottomY: number,
+          sprite: typeof SPRITES.door,
+          scale: number,
+        ) {
           const dispW = sprite.w * scale;
           const dispH = sprite.h * scale;
           const y = bottomY - dispH / 2;
@@ -299,13 +373,15 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
           gfx.lineStyle(3, colors.pointer, 1);
           gfx.lineBetween(0, -24, 0, -48);
 
-          const label = this.add.text(0, -62, "i", {
-            fontFamily: FONT_FAMILY,
-            fontSize: "18px",
-            color: colors.pointerHex,
-            fontStyle: "bold",
-            resolution: 2,
-          }).setOrigin(0.5, 0.5);
+          const label = this.add
+            .text(0, -62, "i", {
+              fontFamily: FONT_FAMILY,
+              fontSize: "18px",
+              color: colors.pointerHex,
+              fontStyle: "bold",
+              resolution: 2,
+            })
+            .setOrigin(0.5, 0.5);
 
           container.add([gfx, label]);
           container.setVisible(false);
@@ -319,15 +395,17 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
           this.maxLine.setDepth(15);
           this.maxLine.setVisible(false);
 
-          this.maxLabel = this.add.text(0, 0, "", {
-            fontFamily: FONT_FAMILY,
-            fontSize: "16px",
-            color: colors.maxHex,
-            fontStyle: "bold",
-            backgroundColor: colors.maxLabelBg,
-            padding: { x: 6, y: 3 },
-            resolution: 2,
-          }).setOrigin(0, 0.5);
+          this.maxLabel = this.add
+            .text(0, 0, "", {
+              fontFamily: FONT_FAMILY,
+              fontSize: "16px",
+              color: colors.maxHex,
+              fontStyle: "bold",
+              backgroundColor: colors.maxLabelBg,
+              padding: { x: 6, y: 3 },
+              resolution: 2,
+            })
+            .setOrigin(0, 0.5);
           this.maxLabel.setDepth(16);
           this.maxLabel.setVisible(false);
         }
@@ -335,18 +413,15 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
         createHeightLabels() {
           for (let i = 0; i < heights.length; i++) {
             const b = this.buildings[i];
-            const label = this.add.text(
-              b.x,
-              this.skylineBottom + 14,
-              `${heights[i]}`,
-              {
+            const label = this.add
+              .text(b.x, this.skylineBottom + 14, `${heights[i]}`, {
                 fontFamily: FONT_FAMILY,
                 fontSize: "16px",
                 color: colors.text,
                 fontStyle: "bold",
                 resolution: 2,
-              },
-            ).setOrigin(0.5, 0);
+              })
+              .setOrigin(0.5, 0);
             label.setDepth(10);
             this.heightLabels.push(label);
           }
@@ -360,6 +435,7 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
         height,
         transparent: true,
         render: { pixelArt: false, antialias: true },
+        input: { mouse: { preventDefaultWheel: false } },
         scene: SolverScene,
       });
     });
@@ -369,14 +445,24 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
       gameRef.current = null;
       sceneRef.current = null;
     };
-  }, [width, height]);
+  }, [width, height, themeKey]); // themeKey forces full rebuild on theme change
 
   // ---- Sync React state -> Phaser visuals ----
   useEffect(() => {
     const ref = sceneRef.current;
     if (!ref || !ref.scene) return;
 
-    const { scene, buildings, pointer, maxLine, maxLabel, dimOverlays, glows, viewIcons, colors } = ref;
+    const {
+      scene,
+      buildings,
+      pointer,
+      maxLine,
+      maxLabel,
+      dimOverlays,
+      glows,
+      viewIcons,
+      colors,
+    } = ref;
     const n = heights.length;
     const idx = currentIndex;
 
@@ -435,7 +521,8 @@ export const PhaserWorldSolver: React.FC<PhaserWorldSolverProps> = ({
       maxLine.setVisible(true);
       maxLabel.setVisible(true);
 
-      const targetLineY = ref.skylineBottom -
+      const targetLineY =
+        ref.skylineBottom -
         (SPRITES.door.h * ref.scale +
           SPRITES.balcony.h * ref.scale +
           maxSoFar * SPRITES.window.h * ref.scale);

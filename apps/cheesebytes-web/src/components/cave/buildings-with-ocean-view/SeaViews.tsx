@@ -54,15 +54,19 @@ export const SeaViews: React.FC<SeaViewsProps> = ({
       {/* Height editor */}
       {showEditor && (
         <div className="flex items-center justify-center gap-3 mb-4">
-          <label className="text-sm font-medium text-gray-300">heights =</label>
+          <label className="text-sm font-medium text-stone-600 dark:text-stone-300">
+            heights =
+          </label>
           <input
             type="text"
             value={heightInput}
             onChange={(e) => handleHeightInputChange(e.target.value)}
-            className="font-mono text-sm bg-gray-800 text-amber-300 border border-gray-600 rounded-lg px-3 py-2 w-80 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+            className="font-mono text-sm bg-stone-100 dark:bg-stone-800 text-amber-700 dark:text-amber-300 border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 w-80 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
             placeholder="4, 2, 3, 1"
           />
-          <span className="text-xs text-gray-500">(0-9)</span>
+          <span className="text-xs text-stone-400 dark:text-stone-500">
+            (0-9)
+          </span>
         </div>
       )}
 

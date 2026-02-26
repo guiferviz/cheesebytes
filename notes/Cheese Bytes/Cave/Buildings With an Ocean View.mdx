@@ -44,7 +44,7 @@ and 3.
 
 Try editing the heights below and see which buildings end up with a view:
 
-<div style={{ height: "38em" }}>
+<div>
   <SeaViewsViz client:load heights={[1, 3, 2, 4]} showEditor={true} />
 </div>
 
@@ -75,7 +75,7 @@ Think about how many comparisons we make:
 If we draw a matrix where each column is a building and each row is a comparison
 it performs, we get a triangular pattern. Roughly half of an n × n grid.
 
-<div style={{ height: "43em" }}>
+<div>
   <ComplexityMatrix
     client:load
     heights={[1, 3, 2, 4]}
@@ -120,7 +120,7 @@ current building beats that number, it has a view and becomes the new record.
 Explore this idea interactively. Try the sequences from above, and then try
 longer ones like `[3, 1, 2, 3, 4, 5, 3, 6]`:
 
-<div style={{ height: "25em" }}>
+<div>
   <SeaViewsSolver
     client:load
     heights={[3, 1, 2]}

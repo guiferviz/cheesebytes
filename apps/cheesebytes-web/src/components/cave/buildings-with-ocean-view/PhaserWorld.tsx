@@ -172,6 +172,7 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
         height,
         transparent: true,
         render: { pixelArt: false, antialias: true },
+        input: { mouse: { preventDefaultWheel: false } },
         scene: SeaScene,
       });
     });
@@ -187,12 +188,7 @@ export const PhaserWorld: React.FC<PhaserWorldProps> = ({
     <div
       ref={containerRef}
       className="overflow-hidden rounded-[14px]"
-      style={{
-        width,
-        height,
-        boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
-        background: "transparent",
-      }}
+      style={{ width, height, background: "transparent" }}
     >
       {isLoading && (
         <div className="w-full h-full flex items-center justify-center">

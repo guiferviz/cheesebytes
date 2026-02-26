@@ -95,10 +95,14 @@ const StatBadge: React.FC<StatBadgeProps> = ({
         ${s.border} ${s.bg}
       `}
     >
-      <div className={`text-[10px] font-medium uppercase tracking-wider ${s.label}`}>
+      <div
+        className={`text-[10px] font-medium uppercase tracking-wider ${s.label}`}
+      >
         {label}
       </div>
-      <div className={`text-lg font-bold tabular-nums ${s.text} flex items-center gap-2`}>
+      <div
+        className={`text-lg font-bold tabular-nums ${s.text} flex items-center gap-2`}
+      >
         {icon}
         {value}
       </div>
@@ -247,30 +251,13 @@ export const SeaViewsSolver: React.FC<SeaViewsProps> = ({
             />
           </Suspense>
         </div>
-
-        <div className="flex flex-col gap-2 min-w-[120px] flex-shrink-0">
-          <StatBadge label="Step" value={currentStep} variant="amber" />
-          <StatBadge
-            label="max_left"
-            value={solver.maxSoFar < 0 ? "-" : solver.maxSoFar}
-            variant="orange"
-            highlight={solver.currentHasView === false}
-          />
-          <StatBadge
-            label="Views"
-            value={solver.viewIndices.length}
-            variant="green"
-            highlight={solver.currentHasView === true}
-            icon={viewResultIcon}
-          />
-        </div>
       </div>
 
       {showControls && (
         <CheeseControlBar
           onReset={reset}
           onStep={executeStep}
-          onPlayPause={() => setIsPlaying((p) => !p)}
+          onPlayPause={false}
           isPlaying={isPlaying}
           isComplete={isComplete}
           stepLabel="Step"
