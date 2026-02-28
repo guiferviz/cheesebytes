@@ -1,0 +1,30 @@
+---
+slug: cave/python-web-workers
+---
+
+import dedent from "dedent";
+import PyodideWorkerRunner from "../../../apps/cheesebytes-web/src/components/PyodideWorkerRunner";
+
+This Cheese Byte shows an example of how to run Python inside a MDX note using a
+**Web Worker**, so heavy execution does not block the UI or freeze the main
+thread.
+
+The runner tries to auto-install packages when it detects missing imports (if
+they are available in the Pyodide index), and then executes the code.
+
+Also, if your script uses waits such as `await asyncio.sleep`, the worker can
+yield control and report real-time memory usage (WASM heap) back to the main
+thread.
+
+export const exampleCode = dedent`\
+    import asyncio
+
+    async def simulate_work():
+        for i in range(5):
+            print(f"Phase {i+1}...")
+            await asyncio.sleep(1)
+
+    print("Running in an isolated Worker, not blocking the main thread!")
+    simulate_work()`;
+
+<PyodideWorkerRunner client:only="react" initialCode={exampleCode} />
