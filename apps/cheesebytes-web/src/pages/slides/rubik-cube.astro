@@ -1,0 +1,219 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import { RubikCube as RubikCubeViz } from "../../components/cave/rubik-cube";
+import { LogoAnimation } from "../../components/cave/intro";
+---
+
+<RevealLayout
+  title="The Rubik's Cube"
+  description="Group theory, permutations, and why some scrambles can never be solved"
+  theme="dark"
+>
+  <!-- ── Intro ──────────────────────────────────────────────────────────── -->
+  <section>
+    <aside class="notes">
+      <p>
+        This is a Rubik's Cube. Six faces, nine stickers each, fifty-four
+        colours in total. You have probably held one at some point. Maybe you
+        solved it once. Maybe you gave up, peeled the stickers off, and called
+        it a day.
+      </p>
+      <p>
+        Today we are not going to talk about how to solve it. We are going to
+        talk about something more interesting: why some Rubik's Cubes are
+        impossible to solve.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ── Logo ──────────────────────────────────────────────────────────── -->
+  <section id="intro">
+    <LogoAnimation
+      client:load
+      width={2080}
+      height={600}
+      pixelScale={8}
+      duration={2700}
+      loop={true}
+    />
+  </section>
+
+  <!-- ── Interactive cube ──────────────────────────────────────────────── -->
+  <section id="cube">
+    <aside class="notes">
+      <p>
+        Here is our cube. Use the arrow keys to orbit around it. Scroll to zoom.
+        Press F, B, R, L, U or D to move each face. Hold Shift to reverse. Press
+        Space to unfold all six faces flat.
+      </p>
+      <p>
+        Each face is named after its direction: Front, Back, Right, Left, Up,
+        Down. Every quarter turn is one move. This notation is standard — it is
+        used by speedcubers all over the world.
+      </p>
+    </aside>
+    <RubikCubeViz client:only="react" width={1080} height={600} />
+  </section>
+
+  <!-- ── State space ───────────────────────────────────────────────────── -->
+  <section>
+    <aside class="notes">
+      <p>
+        How many positions can a Rubik's Cube be in? If you take all the pieces
+        apart and put them back together randomly, there are about 519
+        quintillion possibilities. That's 519 followed by 17 zeros.
+      </p>
+      <p>
+        But here is the twist. Only one in twelve of those arrangements is
+        actually reachable from a solved cube using legal moves. The rest are
+        impossible. You can scramble a solved cube for a billion years and you
+        will never reach them.
+      </p>
+    </aside>
+    <div class="text-center space-y-6">
+      <p class="text-4xl font-mono text-slate-300">
+        Total arrangements: <span class="text-white font-bold"
+          >~5.19 × 10²⁰</span
+        >
+      </p>
+      <p class="text-4xl font-mono text-slate-300">
+        Reachable from solved: <span class="text-emerald-400 font-bold"
+          >1 / 12</span
+        >
+      </p>
+      <p class="text-2xl text-slate-500 mt-8">Why?</p>
+    </div>
+  </section>
+
+  <!-- ── Three invariants ──────────────────────────────────────────────── -->
+  <section>
+    <aside class="notes">
+      <p>
+        There are three secret rules that every legal position must satisfy.
+        Break any one of them and the cube can never be solved, no matter how
+        long you try.
+      </p>
+      <p>
+        First: corner permutation parity. You cannot swap just two corners. Any
+        swap of corners must be paired with a corresponding swap of edges.
+        Second: edge permutation parity. Same idea for edges. Third:
+        orientation. You cannot twist a single corner or flip a single edge
+        without affecting others.
+      </p>
+    </aside>
+    <div class="text-left space-y-10 text-2xl font-mono p-8">
+      <div class="fragment">
+        <span class="text-orange-400 font-bold">Invariant 1</span>
+        <span class="text-slate-300"> — Corner permutation parity</span>
+        <p class="text-slate-500 text-lg mt-1">
+          You cannot swap exactly two corners. Any corner swap must be
+          accompanied by an edge swap.
+        </p>
+      </div>
+      <div class="fragment">
+        <span class="text-sky-400 font-bold">Invariant 2</span>
+        <span class="text-slate-300"> — Edge permutation parity</span>
+        <p class="text-slate-500 text-lg mt-1">
+          Edges follow the same parity rule as corners.
+        </p>
+      </div>
+      <div class="fragment">
+        <span class="text-emerald-400 font-bold">Invariant 3</span>
+        <span class="text-slate-300"> — Orientation conservation</span>
+        <p class="text-slate-500 text-lg mt-1">
+          You cannot twist a single corner or flip a single edge in isolation.
+          Orientations must balance out across the whole cube.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Cube again: unfold demo ───────────────────────────────────────── -->
+  <section>
+    <aside class="notes">
+      <p>
+        Let's look at the cube one more time. Press Space and watch all six
+        faces unfold into a flat cross. This is called the net of the cube. Here
+        you can clearly see each face. Every sticker in its place.
+      </p>
+      <p>
+        Try making a couple of moves — F, then R — and then unfold again. The
+        net shows you exactly what state each face is in.
+      </p>
+    </aside>
+    <RubikCubeViz client:only="react" width={1080} height={600} />
+  </section>
+
+  <!-- ── Group theory ──────────────────────────────────────────────────── -->
+  <section>
+    <aside class="notes">
+      <p>
+        The mathematical structure behind all of this is called a group.
+        Formally, the set of all reachable positions, together with the
+        operation of applying a move, forms a group. This one is called the
+        Rubik's Cube group.
+      </p>
+      <p>
+        Group theory is the language of symmetry. It appears in physics,
+        chemistry, cryptography, and here — in a colourful plastic puzzle from
+        the seventies.
+      </p>
+    </aside>
+    <div class="text-center space-y-8">
+      <p class="text-3xl text-slate-300 font-mono">The Rubik's Cube group</p>
+      <p class="text-5xl font-bold text-white font-mono">
+        ≅ &lt;F, B, R, L, U, D&gt;
+      </p>
+      <p class="text-xl text-slate-500 mt-4">
+        A subgroup of the symmetric group S₅₄ generated by six generators.
+      </p>
+      <div class="fragment mt-8 text-xl text-slate-400">
+        Order: <span class="text-white font-bold"
+          >43,252,003,274,489,856,000</span
+        >
+      </div>
+    </div>
+  </section>
+
+  <!-- ── God's number ──────────────────────────────────────────────────── -->
+  <section>
+    <aside class="notes">
+      <p>
+        In 2010, a team of researchers proved that any position on a Rubik's
+        Cube can be solved in at most twenty moves. This number is called God's
+        number, because an all-knowing solver would never need more.
+      </p>
+      <p>
+        Twenty moves. No matter how scrambled the cube is. Maximum twenty moves
+        home.
+      </p>
+    </aside>
+    <div class="text-center space-y-4">
+      <p class="text-2xl text-slate-400">
+        Maximum moves to solve <em>any</em> position
+      </p>
+      <p class="text-9xl font-bold text-white font-mono">20</p>
+      <p class="text-2xl text-emerald-400 font-mono mt-4">God's Number</p>
+      <p class="text-slate-500 text-lg mt-6">
+        Proved in 2010 by Rokicki, Kociemba, Davidson & Dethridge<br />
+        using 35 CPU-years of computation donated by Google.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Outro ─────────────────────────────────────────────────────────── -->
+  <section>
+    <aside class="notes">
+      <p>
+        So next time you pick up a Rubik's Cube, remember: if it came from
+        taking pieces apart and putting them back randomly, there is an 11 in 12
+        chance it is broken — not because the cube is faulty, but because the
+        universe of legal moves is smaller than it looks.
+      </p>
+      <p>
+        This was today's Cheese Byte. The code matters. But the structure behind
+        the code matters more.
+      </p>
+    </aside>
+  </section>
+</RevealLayout>
