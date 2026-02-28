@@ -2,7 +2,7 @@ import dedent from "dedent";
 import { HistogramGenerator } from "../../../apps/cheesebytes-web/src/components/cave/shared";
 import PyodideCodeRunner from "../../../apps/cheesebytes-web/src/components/PyodideCodeRunner.tsx";
 
-export const mulberry32PythonCode = dedent`
+export const mulberry32PythonCode = dedent`\
 	from typing import Callable
 
     def mulberry32(seed: int) -> Callable[[], float]:
