@@ -153,6 +153,69 @@ function makeCubie(gx: number, gy: number, gz: number, size: number) {
   return { mesh, stickers };
 }
 
+// ── State string (U L F R B D, Z-scan per face) ───────────────────────────────
+
+const FACE_ORDER_STR = ["U", "L", "F", "R", "B", "D"] as const;
+
+const STICKER_CHAR: Record<number, string> = {
+  0x0033cc: "B", // Blue
+  0x00aa00: "G", // Green
+  0xffff00: "Y", // Yellow
+  0xdddddd: "W", // White
+  0xff6600: "O", // Orange
+  0xcc0000: "R", // Red
+};
+
+// also handle the 0xffffff variant just in case
+(STICKER_CHAR as Record<number, string>)[0xffffff] = "W";
+
+const CHAR_COLOR: Record<string, number> = {
+  B: 0x0033cc,
+  G: 0x00aa00,
+  Y: 0xffff00,
+  W: 0xdddddd,
+  O: 0xff6600,
+  R: 0xcc0000,
+};
+
+const FACE_WORLD_NORMAL: Record<string, THREE.Vector3> = {
+  U: new THREE.Vector3(0, 1, 0),
+  D: new THREE.Vector3(0, -1, 0),
+  F: new THREE.Vector3(0, 0, 1),
+  B: new THREE.Vector3(0, 0, -1),
+  R: new THREE.Vector3(1, 0, 0),
+  L: new THREE.Vector3(-1, 0, 0),
+};
+
+/**
+ * For each face, return the list of cubie grid positions [gx,gy,gz] in Z-scan
+ * order (TL→TR then BL→BR, i.e. top-left of the face viewed head-on first).
+ */
+function buildFaceScan(
+  size: number,
+): Record<string, [number, number, number][]> {
+  const max = size - 1;
+  const out: Record<string, [number, number, number][]> = {
+    U: [],
+    D: [],
+    F: [],
+    B: [],
+    R: [],
+    L: [],
+  };
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      out.U.push([c, max, r]); // viewed from top:   row=z(0=back→front), col=x
+      out.D.push([c, 0, max - r]); // viewed from bottom: row=z(max=front→back)
+      out.F.push([c, max - r, max]); // viewed from front: row=y(top→bot), col=x
+      out.B.push([max - c, max - r, 0]); // viewed from back:  col mirrored
+      out.R.push([max, max - r, max - c]); // viewed from right: col=z(front→back)
+      out.L.push([0, max - r, c]); // viewed from left:  col=z(back→front)
+    }
+  }
+  return out;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function easeIO(t: number): number {
@@ -169,17 +232,41 @@ export default function RubikCube({
   width = 1080,
   height = 600,
   size = 2,
+  showStateEditor = false,
 }: {
   width?: number;
   height?: number;
   /** Cubies per edge: 2 = pocket, 3 = classic. */
   size?: number;
+  /** Show the string-representation editor overlay. */
+  showStateEditor?: boolean;
 }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [webglError, setWebglError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(true);
   const showHelpRef = useRef(true);
   showHelpRef.current = showHelp;
+
+  // ── State-editor React state + imperative-bridge refs ──────────────────────
+  const [stateString, setStateString] = useState("");
+  const [hoveredStrIdx, setHoveredStrIdx] = useState(-1);
+  const stateInputRef = useRef<HTMLInputElement>(null);
+  // Refs so imperative Three.js callbacks can trigger React updates
+  const setStateStringRef = useRef<(s: string) => void>(() => {});
+  const setHoveredIdxRef = useRef<(i: number) => void>(() => {});
+  const applyStringRef = useRef<(s: string) => void>(() => {});
+  setStateStringRef.current = setStateString;
+  setHoveredIdxRef.current = setHoveredStrIdx;
+
+  useEffect(() => {
+    if (!showStateEditor || hoveredStrIdx < 0) return;
+    const input = stateInputRef.current;
+    if (!input) return;
+    input.focus();
+    const start = Math.min(hoveredStrIdx, input.value.length);
+    const end = Math.min(start + 1, input.value.length);
+    input.setSelectionRange(start, end);
+  }, [showStateEditor, hoveredStrIdx, stateString]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -298,6 +385,159 @@ export default function RubikCube({
           stickers.push(...cs);
         }
 
+    // ── State-editor helpers ──────────────────────────────────────────────────
+
+    const faceScan = buildFaceScan(size);
+    let stateStringSnapshot = "";
+    let stateIndexMap = new Map<StickerMesh, number>();
+
+    /** Returns the 24-char string AND a Map<sticker → string index>. */
+    function computeStickerMap(): {
+      str: string;
+      indexMap: Map<StickerMesh, number>;
+    } {
+      let str = "";
+      const indexMap = new Map<StickerMesh, number>();
+
+      for (const face of FACE_ORDER_STR) {
+        const targetNormal = FACE_WORLD_NORMAL[face];
+        for (const [gx, gy, gz] of faceScan[face]) {
+          const idx = str.length;
+          const cubie = cubies.find(
+            (c) =>
+              c.userData.gx === gx &&
+              c.userData.gy === gy &&
+              c.userData.gz === gz,
+          );
+          if (!cubie) {
+            str += "?";
+            continue;
+          }
+
+          let bestSticker: StickerMesh | null = null;
+          let bestDot = -Infinity;
+          const wqTmp = new THREE.Quaternion();
+          const nTmp = new THREE.Vector3();
+          for (const s of stickers) {
+            if (s.userData.parentCubie !== cubie) continue;
+            s.getWorldQuaternion(wqTmp);
+            nTmp.set(0, 0, 1).applyQuaternion(wqTmp).normalize();
+            const dot = nTmp.dot(targetNormal);
+            if (dot > bestDot) {
+              bestDot = dot;
+              bestSticker = s;
+            }
+          }
+
+          if (!bestSticker) {
+            str += "?";
+            continue;
+          }
+          indexMap.set(bestSticker, idx);
+          const hex = (
+            bestSticker.material as THREE.MeshBasicMaterial
+          ).color.getHex();
+          str += STICKER_CHAR[hex] ?? "?";
+        }
+      }
+      return { str, indexMap };
+    }
+
+    /** Create a canvas texture showing a sticker index number. */
+    function makeLabelTexture(index: number): THREE.CanvasTexture {
+      const c = document.createElement("canvas");
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext("2d")!;
+      ctx.clearRect(0, 0, 128, 128);
+      ctx.fillStyle = "rgba(0,0,0,0.72)";
+      ctx.beginPath();
+      ctx.arc(64, 64, 52, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 52px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(index), 64, 64);
+      return new THREE.CanvasTexture(c);
+    }
+
+    /**
+     * Label sprites: added to the SCENE (not parented to stickers) so they
+     * always face the camera and never appear upside-down.  We reposition
+     * them every time the unfold finishes.
+     */
+    const labelSprites: THREE.Sprite[] = [];
+    if (showStateEditor) {
+      for (const _s of stickers) {
+        const mat = new THREE.SpriteMaterial({
+          map: makeLabelTexture(0),
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+        });
+        const sp = new THREE.Sprite(mat);
+        sp.scale.setScalar(STICKER_SZ * 0.55);
+        sp.visible = false;
+        scene.add(sp);
+        labelSprites.push(sp);
+      }
+    }
+
+    /** Refresh label textures + positions from the cached sticker→index map. */
+    function refreshLabelsFromCache() {
+      if (!showStateEditor) return;
+      const wp = new THREE.Vector3();
+      stickers.forEach((s, i) => {
+        const idx = stateIndexMap.get(s) ?? i;
+        const sp = labelSprites[i];
+        if (!sp) return;
+        const mat = sp.material as THREE.SpriteMaterial;
+        mat.map?.dispose();
+        mat.map = makeLabelTexture(idx);
+        mat.needsUpdate = true;
+        // Position the sprite slightly in front of the sticker
+        s.getWorldPosition(wp);
+        sp.position.copy(wp);
+      });
+    }
+
+    /** Recompute state from current cube orientation (only valid while folded). */
+    function updateStateDisplay() {
+      const { str, indexMap } = computeStickerMap();
+      stateStringSnapshot = str;
+      stateIndexMap = indexMap;
+      setStateStringRef.current(str);
+      refreshLabelsFromCache();
+    }
+
+    /** Parse an editor string and recolor matching stickers. */
+    function applyStringFromEditor(s: string) {
+      const total = 6 * size * size;
+      const raw = s.toUpperCase();
+
+      // Enforce strict format: exactly N chars, color alphabet only.
+      if (raw.length !== total || /[^BGYWOR]/.test(raw)) {
+        setStateStringRef.current(stateStringSnapshot);
+        return;
+      }
+      const reverseMap = new Map<number, StickerMesh>();
+      stateIndexMap.forEach((idx, sticker) => reverseMap.set(idx, sticker));
+      for (let i = 0; i < total; i++) {
+        const color = CHAR_COLOR[raw[i]];
+        if (color === undefined) continue;
+        const sticker = reverseMap.get(i);
+        if (!sticker) continue;
+        (sticker.material as THREE.MeshBasicMaterial).color.setHex(color);
+      }
+      stateStringSnapshot = raw;
+      setStateStringRef.current(raw);
+    }
+
+    applyStringRef.current = applyStringFromEditor;
+
+    if (showStateEditor) updateStateDisplay();
+
     // ── Animation queue ───────────────────────────────────────────────────────
     type TickFn = (dt: number) => void;
     const animCallbacks: TickFn[] = [];
@@ -404,6 +644,7 @@ export default function RubikCube({
           });
           scene.remove(pivot);
           isAnimating = false;
+          updateStateDisplay();
         },
       );
     }
@@ -605,6 +846,15 @@ export default function RubikCube({
           },
           () => {
             cubies.forEach((c) => (c.visible = false));
+            if (showStateEditor) {
+              refreshLabelsFromCache();
+              labelSprites.forEach((sp) => {
+                const mat = sp.material as THREE.SpriteMaterial;
+                mat.opacity = 1;
+                mat.needsUpdate = true;
+                sp.visible = true;
+              });
+            }
             isAnimating = false;
             isUnfolded = true;
           },
@@ -647,9 +897,22 @@ export default function RubikCube({
         const lookEnd = new THREE.Vector3(0, 0, 0);
         const lookTmp = new THREE.Vector3();
 
+        const LABEL_FADE_OUT_FRACTION = 0.12;
+
         addAnim(
           DURATION,
-          (_, e) => {
+          (t, e) => {
+            if (showStateEditor) {
+              const fade = Math.min(t / LABEL_FADE_OUT_FRACTION, 1);
+              const opacity = 1 - fade;
+              labelSprites.forEach((sp) => {
+                const mat = sp.material as THREE.SpriteMaterial;
+                mat.opacity = opacity;
+                mat.needsUpdate = true;
+                sp.visible = opacity > 0.001;
+              });
+            }
+
             stickers.forEach((s, i) => {
               s.position.lerpVectors(stickerCurrent[i], stickerHome[i], e);
               s.quaternion.slerpQuaternions(
@@ -668,6 +931,12 @@ export default function RubikCube({
             // Re-attach stickers to their cubies (Three.js preserves world pos)
             stickers.forEach((s) => s.userData.parentCubie.attach(s));
             cubies.forEach((c) => c.scale.setScalar(1));
+            labelSprites.forEach((sp) => {
+              const mat = sp.material as THREE.SpriteMaterial;
+              mat.opacity = 0;
+              mat.needsUpdate = true;
+              sp.visible = false;
+            });
             applyView(currentFront, currentUp, cameraRadius);
             isAnimating = false;
             isUnfolded = false;
@@ -769,14 +1038,36 @@ export default function RubikCube({
     mount.addEventListener("keydown", onKeyDown);
     mount.addEventListener("wheel", onWheel, { passive: false });
 
+    // ── Raycast hover for state editor ────────────────────────────────────────
+    const raycaster = showStateEditor ? new THREE.Raycaster() : null;
+    function onMouseMove(e: MouseEvent) {
+      if (!raycaster) return;
+      const rect = gl.domElement.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+      const hits = raycaster.intersectObjects(
+        stickers as unknown as THREE.Object3D[],
+        false,
+      );
+      if (hits.length > 0) {
+        const s = hits[0].object as StickerMesh;
+        setHoveredIdxRef.current(stateIndexMap.get(s) ?? -1);
+      } else {
+        setHoveredIdxRef.current(-1);
+      }
+    }
+    if (showStateEditor) mount.addEventListener("mousemove", onMouseMove);
+
     return () => {
       cancelAnimationFrame(rafId);
       mount.removeEventListener("keydown", onKeyDown);
       mount.removeEventListener("wheel", onWheel);
+      if (showStateEditor) mount.removeEventListener("mousemove", onMouseMove);
       gl.dispose();
       if (mount.contains(gl.domElement)) mount.removeChild(gl.domElement);
     };
-  }, [width, height, size]);
+  }, [width, height, size, showStateEditor]);
 
   // ── JSX ───────────────────────────────────────────────────────────────────
 
@@ -811,6 +1102,46 @@ export default function RubikCube({
               tabIndex={0}
               style={{ width, height, outline: "none", cursor: "grab" }}
             />
+            {/* ── State-editor overlay ─────────────────────────────────── */}
+            {showStateEditor && stateString.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 0,
+                  padding: "10px 0 8px",
+                  background: "rgba(0,0,0,0.45)",
+                }}
+              >
+                {/* Editable text input */}
+                <input
+                  ref={stateInputRef}
+                  type="text"
+                  value={stateString}
+                  maxLength={6 * size * size}
+                  spellCheck={false}
+                  onChange={(e) => applyStringRef.current(e.target.value)}
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "0.78rem",
+                    letterSpacing: "0.12em",
+                    background: "rgba(0,0,0,0.6)",
+                    color: "#e2e8f0",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                    borderRadius: 4,
+                    padding: "4px 10px",
+                    outline: "none",
+                    textAlign: "center",
+                    width: Math.min(width - 40, size * size * 6 * 12 + 80),
+                  }}
+                />
+              </div>
+            )}
             {showHelp && (
               <div
                 style={{
