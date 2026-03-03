@@ -24,7 +24,7 @@ export const exampleCode = dedent`\
             inv[p] = i
         return inv
 
-    for k in MOVES.keys():
+    for k in list(MOVES.keys()):
         MOVES[k + "'"] = invert_permutation(MOVES[k])
 
     def move(state, move):
@@ -43,8 +43,12 @@ export const exampleCode = dedent`\
         return visited
 
     initial_state = "BBBBRRRRYYYYOOOOWWWWGGGG"
-    explore_moves(initial_state, 1)
-    print("Visited", len(visited))`;
+    visited = explore_moves(initial_state, 1)
+    counts = {}
+    for dist in visited.values():
+        counts[dist] = counts.get(dist, 0) + 1
+    print("Total states visited:", len(visited))
+    print("Move counts by distance:", counts)`;
 ---
 
 <RevealLayout
