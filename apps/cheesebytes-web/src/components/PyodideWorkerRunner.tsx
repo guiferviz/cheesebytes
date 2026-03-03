@@ -360,6 +360,9 @@ const PyodideWorkerRunner = forwardRef<
     const [code, setCode] = useState(initialCode);
     const [output, setOutput] = useState("");
     const [memoryStats, setMemoryStats] = useState<MemoryStats | null>(null);
+    const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+    const startTimeRef = useRef<number>(0);
+    const elapsedRafRef = useRef<number | null>(null);
     const [status, setStatus] = useState<WorkerStatus>(() =>
       pyodideWorkerContext.isReady() ? "ready" : "loading",
     );
@@ -367,6 +370,14 @@ const PyodideWorkerRunner = forwardRef<
     const isDragging = useRef(false);
     const dragStartY = useRef(0);
     const dragStartH = useRef(0);
+
+    // ── Cleanup RAF on unmount ──────────────────────────────────────────────
+    useEffect(() => {
+      return () => {
+        if (elapsedRafRef.current !== null)
+          cancelAnimationFrame(elapsedRafRef.current);
+      };
+    }, []);
 
     // ── Inject keyframes once ──────────────────────────────────────────────
     useEffect(() => {
@@ -426,6 +437,16 @@ const PyodideWorkerRunner = forwardRef<
         setStatus("running");
         setOutput(""); // clear previous output before new run
         setMemoryStats(null);
+
+        // Start real-time elapsed timer on main thread
+        if (elapsedRafRef.current !== null)
+          cancelAnimationFrame(elapsedRafRef.current);
+        startTimeRef.current = performance.now();
+        const tick = () => {
+          setElapsedMs(performance.now() - startTimeRef.current);
+          elapsedRafRef.current = requestAnimationFrame(tick);
+        };
+        elapsedRafRef.current = requestAnimationFrame(tick);
         const opts: RunOptions = {
           context,
           returnVars,
@@ -436,12 +457,22 @@ const PyodideWorkerRunner = forwardRef<
           const runResult = await pyodideWorkerContext.run(src, opts);
           // stdout is already fully painted via chunks; no need to set again
           // unless the component was freshly mounted with a pre-existing result.
+          if (elapsedRafRef.current !== null) {
+            cancelAnimationFrame(elapsedRafRef.current);
+            elapsedRafRef.current = null;
+          }
+          setElapsedMs(performance.now() - startTimeRef.current);
           setStatus("ready");
           onResult?.(runResult);
           return runResult;
         } catch (err) {
           const error = err instanceof Error ? err : new Error(String(err));
           // Gracefully swallow abort — the UI already handles the state reset.
+          if (elapsedRafRef.current !== null) {
+            cancelAnimationFrame(elapsedRafRef.current);
+            elapsedRafRef.current = null;
+          }
+          setElapsedMs(performance.now() - startTimeRef.current);
           if (error.message === "Aborted") {
             setOutput((prev) => (prev ? prev + "\n[Aborted]" : "[Aborted]"));
             setStatus("loading"); // worker is restarting
@@ -463,6 +494,7 @@ const PyodideWorkerRunner = forwardRef<
     const clearOutput = useCallback(() => {
       setOutput("");
       setMemoryStats(null);
+      setElapsedMs(null);
       setStatus((s) => (s === "error" ? "ready" : s));
     }, []);
 
@@ -598,6 +630,31 @@ const PyodideWorkerRunner = forwardRef<
 
             {showMemory && memoryStats && (
               <MemoryPill stats={memoryStats} isDark={isDark} />
+            )}
+
+            {elapsedMs !== null && (
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  fontFamily: "monospace",
+                  color:
+                    status === "running"
+                      ? isDark
+                        ? "#60a5fa"
+                        : "#2563eb"
+                      : isDark
+                        ? "#6b7280"
+                        : "#9ca3af",
+                  minWidth: "4.5ch",
+                  textAlign: "right",
+                  transition: "color 0.2s ease",
+                  userSelect: "none",
+                }}
+              >
+                {elapsedMs < 1000
+                  ? `${Math.round(elapsedMs)} ms`
+                  : `${(elapsedMs / 1000).toFixed(3)} s`}
+              </span>
             )}
 
             <div style={{ flex: 1 }} />
