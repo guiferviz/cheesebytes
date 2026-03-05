@@ -6,7 +6,7 @@ import { RubikCube as RubikCubeViz } from "../../components/cave/rubik-cube";
 import { LogoAnimation } from "../../components/cave/intro";
 import PyodideWorkerRunner from "../../../src/components/PyodideWorkerRunner";
 
-export const exampleCode = dedent`\
+export const stringRepresentationCode = dedent`\
     import asyncio
     from collections import deque
 
@@ -61,6 +61,208 @@ export const exampleCode = dedent`\
         counts[dist] = counts.get(dist, 0) + 1
     print("Total states visited:", len(visited))
     print("Move counts by distance:", counts)`;
+
+export const intRepresentationCode = dedent`\
+    from collections import deque
+    import math
+
+
+    HALF_TURN_METRIC = True
+    N_PERMUTATIONS = math.factorial(7)
+    N_ORIENTATIONS = 3**6
+    N_INDICES = N_PERMUTATIONS * N_ORIENTATIONS
+    EMPTY_DIST = 255
+    MOVES_PERM = {
+        "U": [3, 0, 1, 2, 4, 5, 6],
+        "F": [0, 1, 3, 4, 5, 2, 6],
+        "R": [0, 2, 5, 3, 4, 6, 1],
+    }
+    MOVES_ORI = {
+        "U": [0, 0, 0, 0, 0, 0],
+        "F": [0, 0, 1, 2, 1, 2],
+        "R": [0, 1, 2, 0, 0, 1],
+    }
+
+
+    def invert_perm(perm):
+        inv = [0] * len(perm)
+        for i, p in enumerate(perm):
+            inv[p] = i
+        return inv
+
+
+    def compose(perm2, perm1):
+        return [perm1[i] for i in perm2]
+
+
+    for k in list(MOVES_PERM.keys()):
+        MOVES_PERM[k + "'"] = invert_perm(MOVES_PERM[k])
+        MOVES_ORI[k + "'"] = MOVES_ORI[k].copy()
+        if HALF_TURN_METRIC:
+            MOVES_PERM[k + "2"] = compose(MOVES_PERM[k], MOVES_PERM[k])
+            MOVES_ORI[k + "2"] = [0] * 6
+    MOVES = list(MOVES_PERM.keys())
+    assert list(MOVES_ORI.keys()) == MOVES
+
+
+    def index_to_lehmer(perm_index: int) -> list[int]:
+        n = 7
+        code = [0] * n
+        for i in range(2, n + 1):
+            code[-i] = perm_index % i
+            perm_index //= i
+        return code
+
+
+    def lehmer_to_perm(lehmer: list[int]) -> list[int]:
+        n = 7
+        perm = lehmer.copy()
+        for i in range(n - 1, -1, -1):
+            for j in range(i + 1, n):
+                if perm[j] >= perm[i]:
+                    perm[j] += 1
+        return perm
+
+
+    def decode_perm(perm_index: int) -> list[int]:
+        lehmer = index_to_lehmer(perm_index)
+        perm = lehmer_to_perm(lehmer)
+        return perm
+
+
+    def apply_perm(state, perm) -> list[int]:
+        return [state[i] for i in perm]
+
+
+    def lehmer_to_index(lehmer: list[int]) -> int:
+        result = 0
+        fact = 1
+        for i, value in enumerate(reversed(lehmer), start=1):
+            result += value * fact
+            fact *= i
+        return result
+
+
+    def perm_to_lehmer(perm: list[int]) -> list[int]:
+        for i in range(len(perm)):
+            for j in range(i + 1, len(perm)):
+                if perm[j] > perm[i]:
+                    perm[j] -= 1
+        return perm
+
+
+    def encode_perm(perm: list[int]) -> int:
+        lehmer = perm_to_lehmer(perm)
+        index = lehmer_to_index(lehmer)
+        return index
+
+
+    def apply_move_to_perm_index(perm_index, move) -> int:
+        perm = decode_perm(perm_index)
+        new_perm = apply_perm(perm, MOVES_PERM[move])
+        return encode_perm(new_perm)
+
+
+    def apply_ori(ori, move):
+        new_ori = [0] * 6
+        for i in range(6):
+            new_ori[i] = (ori[i] + move[i]) % 3
+        return new_ori
+
+
+    def apply_move_to_ori_index(ori_index, move) -> int:
+        ori = decode_ori(ori_index)
+        ori = apply_perm(ori, MOVES_PERM[move])
+        new_ori = apply_ori(ori, MOVES_ORI[move])
+        return encode_ori(new_ori)
+
+
+    def split_index(index: int) -> tuple[int, int]:
+        perm_index = index // N_ORIENTATIONS
+        ori_index = index % N_ORIENTATIONS
+        return perm_index, ori_index
+
+
+    def decode_ori(ori_index: int) -> list[int]:
+        result = [0] * 7
+        for i in range(6):
+            result[i] = ori_index % 3
+            ori_index //= 3
+        result[-1] = -sum(result) % 3
+        return result
+
+
+    def encode_ori(ori: list[int]) -> int:
+        result = 0
+        pos = 1
+        for i in range(6):
+            result += ori[i] * pos
+            pos *= 3
+        return result
+
+
+    def combine_indices(perm_index: int, ori_index: int) -> int:
+        return perm_index * N_ORIENTATIONS + ori_index
+
+
+    def create_perm_table() -> dict[str, list[int]]:
+        table = {i: [0] * N_PERMUTATIONS for i in MOVES}
+        for move in MOVES:
+            for p in range(N_PERMUTATIONS):
+                table[move][p] = apply_move_to_perm_index(p, move)
+        return table
+
+
+    def create_ori_table() -> dict[str, list[int]]:
+        table = {i: [0] * N_ORIENTATIONS for i in MOVES}
+        for move in MOVES:
+            for o in range(N_ORIENTATIONS):
+                table[move][o] = apply_move_to_ori_index(o, move)
+        return table
+
+
+    def neighbors(state, perm_table, ori_table):
+        for m in perm_table.keys():
+            perm_index, ori_index = split_index(state)
+            new_perm_index = perm_table[m][perm_index]
+            new_ori_index = ori_table[m][ori_index]
+            yield combine_indices(new_perm_index, new_ori_index)
+
+
+    def bfs(initial_index, max_depth, perm_table, ori_table):
+        dist = bytearray([EMPTY_DIST]) * N_INDICES
+        dist[initial_index] = 0
+        queue = deque([initial_index])
+        while queue:
+            index = queue.popleft()
+            depth = dist[index]
+            next_depth = depth + 1
+            for i in neighbors(index, perm_table, ori_table):
+                if dist[i] != EMPTY_DIST:
+                    continue
+                dist[i] = next_depth
+                if next_depth <= max_depth:
+                    queue.append(i)
+        return dist
+
+
+    def dist_count(dist: bytearray):
+        counts = {i: 0 for i in range(256)}
+        for i in range(N_INDICES):
+            counts[dist[i]] += 1
+        return {k: v for k, v in counts.items() if v >= 1}
+
+
+    def main():
+        perm_table = create_perm_table()  # 5040
+        ori_table = create_ori_table()  # 729
+        solved_state = 0
+        max_depth = 16
+        dist = bfs(solved_state, max_depth, perm_table, ori_table)
+        print(dist_count(dist))
+
+
+    main()`;
 ---
 
 <RevealLayout
