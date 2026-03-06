@@ -640,8 +640,22 @@ export default function RubikStateGraph({
 
   // Theme-dependent colors
   const themeColors = isDark
-    ? { idFill: "#aaa", labelStroke: "#0a0a0a", stickerStroke: "#111", controlBg: "rgba(10,10,10,0.85)", controlText: "#ccc", panelBg: "rgba(15,15,15,0.95)" }
-    : { idFill: "#444", labelStroke: "#ffffff", stickerStroke: "#bbb", controlBg: "rgba(255,255,255,0.9)", controlText: "#333", panelBg: "rgba(245,245,245,0.97)" };
+    ? {
+        idFill: "#aaa",
+        labelStroke: "#0a0a0a",
+        stickerStroke: "#111",
+        controlBg: "rgba(10,10,10,0.85)",
+        controlText: "#ccc",
+        panelBg: "rgba(15,15,15,0.95)",
+      }
+    : {
+        idFill: "#444",
+        labelStroke: "#ffffff",
+        stickerStroke: "#bbb",
+        controlBg: "rgba(255,255,255,0.9)",
+        controlText: "#333",
+        panelBg: "rgba(245,245,245,0.97)",
+      };
 
   // Sticker cache to avoid recomputing
   const stickerCache = useRef(new Map<number, string[]>());
@@ -723,16 +737,23 @@ export default function RubikStateGraph({
       .append("polygon")
       .attr("fill", (d: any) => MOVE_COLOR[d.move] ?? "#888");
 
-    // Label near the arrowhead — dark outline makes it readable over any line
-    const linkLabel = linkG
+    // Labels in a separate group so they render ON TOP of ALL edges
+    const linkLabelG = container
+      .append("g")
+      .attr("class", "link-labels")
+      .selectAll("text")
+      .data(links)
+      .enter();
+
+    const linkLabel = linkLabelG
       .append("text")
       .attr("class", "edge-label")
       .text((d: any) => d.move)
       .attr("font-size", 8)
       .attr("fill", (d: any) => MOVE_COLOR[d.move] ?? "#aaa")
       .attr("stroke", themeColors.labelStroke)
-      .attr("stroke-width", 2.5)
-      .attr("paint-order", "stroke")
+      .attr("stroke-width", 3)
+      .style("paint-order", "stroke")
       .attr("text-anchor", "middle")
       .attr("font-family", "monospace")
       .attr("font-weight", "bold")
@@ -781,7 +802,12 @@ export default function RubikStateGraph({
         .select(this)
         .append("g")
         .attr("class", "cube-detail")
-        .attr("opacity", cubeThreshold === 0 ? 1 : Math.min(1, Math.max(0, (1 - cubeThreshold) * 5)));
+        .attr(
+          "opacity",
+          cubeThreshold === 0
+            ? 1
+            : Math.min(1, Math.max(0, (1 - cubeThreshold) * 5)),
+        );
       const stickers = getStickers(d.id);
       if (cubeView === "iso") {
         drawIsoCube(g as any, stickers, cubeSize, isDark);
@@ -843,10 +869,13 @@ export default function RubikStateGraph({
 
     function tick() {
       linkLine.attr("d", (d: any) => {
-        const sx = d.source.x, sy = d.source.y;
-        const tx = d.target.x, ty = d.target.y;
+        const sx = d.source.x,
+          sy = d.source.y;
+        const tx = d.target.x,
+          ty = d.target.y;
         const bend = (d.bendAmt as number) ?? 0;
-        const ex = tx - sx, ey = ty - sy;
+        const ex = tx - sx,
+          ey = ty - sy;
         const len = Math.sqrt(ex * ex + ey * ey) || 1;
         const cpx = (sx + tx) / 2 + (-ey / len) * bend;
         const cpy = (sy + ty) / 2 + (ex / len) * bend;
@@ -854,10 +883,13 @@ export default function RubikStateGraph({
       });
 
       linkArrow.attr("points", (d: any) => {
-        const sx = d.source.x, sy = d.source.y;
-        const tx = d.target.x, ty = d.target.y;
+        const sx = d.source.x,
+          sy = d.source.y;
+        const tx = d.target.x,
+          ty = d.target.y;
         const bend = (d.bendAmt as number) ?? 0;
-        const ex = tx - sx, ey = ty - sy;
+        const ex = tx - sx,
+          ey = ty - sy;
         const len = Math.sqrt(ex * ex + ey * ey) || 1;
         const cpx = (sx + tx) / 2 + (-ey / len) * bend;
         const cpy = (sy + ty) / 2 + (ex / len) * bend;
@@ -866,8 +898,10 @@ export default function RubikStateGraph({
         const tdx = bezTan(sx, cpx, tx, ARROW_T);
         const tdy = bezTan(sy, cpy, ty, ARROW_T);
         const tLen = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
-        const ux = tdx / tLen, uy = tdy / tLen;
-        const nx = -uy, ny = ux;
+        const ux = tdx / tLen,
+          uy = tdy / tLen;
+        const nx = -uy,
+          ny = ux;
         const tipX = ax + ux * ARROW_SIZE;
         const tipY = ay + uy * ARROW_SIZE;
         const b1x = ax - ux * ARROW_SIZE + nx * ARROW_SIZE * 1.0;
@@ -878,10 +912,13 @@ export default function RubikStateGraph({
       });
 
       linkLabel.each(function (this: any, d: any) {
-        const sx = d.source.x, sy = d.source.y;
-        const tx = d.target.x, ty = d.target.y;
+        const sx = d.source.x,
+          sy = d.source.y;
+        const tx = d.target.x,
+          ty = d.target.y;
         const bend = (d.bendAmt as number) ?? 0;
-        const ex = tx - sx, ey = ty - sy;
+        const ex = tx - sx,
+          ey = ty - sy;
         const len = Math.sqrt(ex * ex + ey * ey) || 1;
         const cpx = (sx + tx) / 2 + (-ey / len) * bend;
         const cpy = (sy + ty) / 2 + (ex / len) * bend;
@@ -892,7 +929,9 @@ export default function RubikStateGraph({
         const tLen = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
         const offx = -(-tdy / tLen) * 10;
         const offy = -(tdx / tLen) * 10;
-        d3.select(this).attr("x", lx + offx).attr("y", ly + offy);
+        d3.select(this)
+          .attr("x", lx + offx)
+          .attr("y", ly + offy);
       });
 
       nodeG.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
@@ -928,13 +967,17 @@ export default function RubikStateGraph({
     // Update edge bend in link data (tick reads d.bendAmt)
     for (const lk of linksRef.current) lk.bendAmt = edgeBend;
 
-    // Edge labels: visibility + theme stroke
-    container.selectAll(".edge-label")
+    // Edge labels: visibility + theme stroke + ensure outline is always present
+    container
+      .selectAll(".edge-label")
       .attr("opacity", showLabels ? 1 : 0)
-      .attr("stroke", isDark ? "#0a0a0a" : "#ffffff");
+      .attr("stroke", isDark ? "#0a0a0a" : "#ffffff")
+      .attr("stroke-width", 3)
+      .style("paint-order", "stroke");
 
     // Node IDs: visibility + theme color + position
-    container.selectAll(".node-id")
+    container
+      .selectAll(".node-id")
       .attr("opacity", showIds ? 1 : 0)
       .attr("fill", isDark ? "#aaa" : "#444")
       .attr("dy", cubeSize * 0.9);
@@ -963,12 +1006,23 @@ export default function RubikStateGraph({
     // Cube opacity based on current zoom level
     const k = svgRef.current ? d3.zoomTransform(svgRef.current).k : 1;
     const ct = cubeThreshold;
-    container.selectAll(".cube-detail")
-      .attr("opacity", () => ct === 0 ? 1 : Math.min(1, Math.max(0, (k - ct) * 5)));
+    container
+      .selectAll(".cube-detail")
+      .attr("opacity", () =>
+        ct === 0 ? 1 : Math.min(1, Math.max(0, (k - ct) * 5)),
+      );
 
     // Re-render edges with updated bend values
     tickFnRef.current?.();
-  }, [showIds, showLabels, cubeSize, cubeView, isDark, cubeThreshold, edgeBend]);
+  }, [
+    showIds,
+    showLabels,
+    cubeSize,
+    cubeView,
+    isDark,
+    cubeThreshold,
+    edgeBend,
+  ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1062,8 +1116,8 @@ export default function RubikStateGraph({
               key={m}
               onClick={() => setMetric(m)}
               style={{
-                background: metric === m ? "#ff8800" : (isDark ? "#333" : "#ddd"),
-                color: metric === m ? "#000" : (isDark ? "#aaa" : "#555"),
+                background: metric === m ? "#ff8800" : isDark ? "#333" : "#ddd",
+                color: metric === m ? "#000" : isDark ? "#aaa" : "#555",
                 border: `1px solid ${isDark ? "#555" : "#bbb"}`,
                 borderRadius: m === "QTM" ? "4px 0 0 4px" : "0 4px 4px 0",
                 padding: "2px 8px",
@@ -1085,8 +1139,9 @@ export default function RubikStateGraph({
               key={v}
               onClick={() => setCubeView(v)}
               style={{
-                background: cubeView === v ? "#4488ff" : (isDark ? "#333" : "#ddd"),
-                color: cubeView === v ? "#000" : (isDark ? "#aaa" : "#555"),
+                background:
+                  cubeView === v ? "#4488ff" : isDark ? "#333" : "#ddd",
+                color: cubeView === v ? "#000" : isDark ? "#aaa" : "#555",
                 border: `1px solid ${isDark ? "#555" : "#bbb"}`,
                 borderRadius: i === 0 ? "4px 0 0 4px" : "0 4px 4px 0",
                 padding: "2px 8px",
@@ -1101,7 +1156,13 @@ export default function RubikStateGraph({
           ))}
         </div>
 
-        <span style={{ color: isDark ? "#666" : "#999", fontSize: 11, marginLeft: "auto" }}>
+        <span
+          style={{
+            color: isDark ? "#666" : "#999",
+            fontSize: 11,
+            marginLeft: "auto",
+          }}
+        >
           scroll to zoom · drag nodes · click to re-root
         </span>
 
@@ -1110,7 +1171,13 @@ export default function RubikStateGraph({
           onClick={() => setSettingsOpen((o) => !o)}
           title="Graph settings"
           style={{
-            background: settingsOpen ? (isDark ? "#555" : "#ccc") : (isDark ? "#333" : "#ddd"),
+            background: settingsOpen
+              ? isDark
+                ? "#555"
+                : "#ccc"
+              : isDark
+                ? "#333"
+                : "#ddd",
             color: isDark ? "#ccc" : "#555",
             border: `1px solid ${isDark ? "#555" : "#bbb"}`,
             borderRadius: 4,
@@ -1145,45 +1212,121 @@ export default function RubikStateGraph({
             minWidth: 220,
           }}
         >
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             Charge: {chargeStrength}
-            <input type="range" min={-600} max={-20} value={chargeStrength}
+            <input
+              type="range"
+              min={-600}
+              max={-20}
+              value={chargeStrength}
               onChange={(e) => setChargeStrength(Number(e.target.value))}
-              style={{ width: 100, accentColor: "#ff8800" }} />
+              style={{ width: 100, accentColor: "#ff8800" }}
+            />
           </label>
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             Link dist: {linkDistance}
-            <input type="range" min={20} max={200} value={linkDistance}
+            <input
+              type="range"
+              min={20}
+              max={200}
+              value={linkDistance}
               onChange={(e) => setLinkDistance(Number(e.target.value))}
-              style={{ width: 100, accentColor: "#ff8800" }} />
+              style={{ width: 100, accentColor: "#ff8800" }}
+            />
           </label>
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             Edge bend: {edgeBend}
-            <input type="range" min={0} max={60} value={edgeBend}
+            <input
+              type="range"
+              min={0}
+              max={60}
+              value={edgeBend}
               onChange={(e) => setEdgeBend(Number(e.target.value))}
-              style={{ width: 100, accentColor: "#ff8800" }} />
+              style={{ width: 100, accentColor: "#ff8800" }}
+            />
           </label>
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            Cube threshold: {cubeThreshold === 0 ? "always" : cubeThreshold.toFixed(1)}
-            <input type="range" min={0} max={3} step={0.1} value={cubeThreshold}
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            Cube threshold:{" "}
+            {cubeThreshold === 0 ? "always" : cubeThreshold.toFixed(1)}
+            <input
+              type="range"
+              min={0}
+              max={3}
+              step={0.1}
+              value={cubeThreshold}
               onChange={(e) => setCubeThreshold(Number(e.target.value))}
-              style={{ width: 100, accentColor: "#4488ff" }} />
+              style={{ width: 100, accentColor: "#4488ff" }}
+            />
           </label>
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             Cube size: {cubeSize}
-            <input type="range" min={8} max={80} step={2} value={cubeSize}
+            <input
+              type="range"
+              min={8}
+              max={80}
+              step={2}
+              value={cubeSize}
               onChange={(e) => setCubeSize(Number(e.target.value))}
-              style={{ width: 100, accentColor: "#4488ff" }} />
+              style={{ width: 100, accentColor: "#4488ff" }}
+            />
           </label>
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             Show IDs
-            <input type="checkbox" checked={showIds}
-              onChange={(e) => setShowIds(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={showIds}
+              onChange={(e) => setShowIds(e.target.checked)}
+            />
           </label>
-          <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             Show labels
-            <input type="checkbox" checked={showLabels}
-              onChange={(e) => setShowLabels(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={showLabels}
+              onChange={(e) => setShowLabels(e.target.checked)}
+            />
           </label>
         </div>
       )}
