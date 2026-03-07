@@ -13,7 +13,13 @@
  *   F B R L U D  – face move (clockwise) · +Shift → counter-clockwise
  *   Space        – toggle flat cross (stickers peel off) ↔ 3-D
  */
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
@@ -218,6 +224,105 @@ function buildFaceScan(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Build a camera-relative face scan.  Given which world direction the camera
+ * treats as "Front" and "Up", return the same structure as buildFaceScan but
+ * with face order and within-face sticker order relative to the camera view.
+ *
+ * The returned record has keys in the camera-relative sense:
+ *   "U" → the face on top from the camera's point of view, etc.
+ * but the grid positions [gx, gy, gz] are still in world coordinates.
+ */
+function buildCameraRelativeFaceScan(
+  size: number,
+  front: THREE.Vector3,
+  up: THREE.Vector3,
+): {
+  scan: Record<string, [number, number, number][]>;
+  normals: Record<string, THREE.Vector3>;
+} {
+  const max = size - 1;
+  const right = new THREE.Vector3().crossVectors(up, front).normalize();
+
+  // Camera-relative label → world direction
+  const camDirs: Record<string, THREE.Vector3> = {
+    F: front.clone(),
+    B: front.clone().negate(),
+    U: up.clone(),
+    D: up.clone().negate(),
+    R: right.clone(),
+    L: right.clone().negate(),
+  };
+
+  // Convert a world direction to grid axis index (0=x, 1=y, 2=z) and sign
+  function dirToAxis(d: THREE.Vector3): { axis: number; sign: number } {
+    const ax = Math.round(d.x);
+    const ay = Math.round(d.y);
+    const az = Math.round(d.z);
+    if (Math.abs(ax) === 1) return { axis: 0, sign: ax };
+    if (Math.abs(ay) === 1) return { axis: 1, sign: ay };
+    return { axis: 2, sign: az };
+  }
+
+  const scan: Record<string, [number, number, number][]> = {};
+  const normals: Record<string, THREE.Vector3> = {};
+
+  for (const camFace of FACE_ORDER_STR) {
+    const faceNormal = camDirs[camFace]; // world direction of this face's outward normal
+    normals[camFace] = faceNormal;
+
+    const { axis: nAxis, sign: nSign } = dirToAxis(faceNormal);
+    const sliceVal = nSign > 0 ? max : 0; // which grid slice this face is on
+
+    // For head-on viewing of this face:
+    //   viewRight = camera-right when looking at F; derived for other faces
+    //   viewDown  = direction of increasing row (top→bottom)
+    let viewRight: THREE.Vector3;
+    let viewDown: THREE.Vector3;
+
+    // When looking head-on at each camera-relative face:
+    if (camFace === "F") {
+      viewRight = right.clone();
+      viewDown = up.clone().negate();
+    } else if (camFace === "B") {
+      viewRight = right.clone().negate();
+      viewDown = up.clone().negate();
+    } else if (camFace === "U") {
+      viewRight = right.clone();
+      viewDown = front.clone();
+    } else if (camFace === "D") {
+      viewRight = right.clone();
+      viewDown = front.clone().negate();
+    } else if (camFace === "R") {
+      viewRight = front.clone().negate();
+      viewDown = up.clone().negate();
+    } else {
+      // L
+      viewRight = front.clone();
+      viewDown = up.clone().negate();
+    }
+
+    const { axis: rAxis, sign: rSign } = dirToAxis(viewRight);
+    const { axis: dAxis, sign: dSign } = dirToAxis(viewDown);
+
+    const positions: [number, number, number][] = [];
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        const g: [number, number, number] = [0, 0, 0];
+        g[nAxis] = sliceVal;
+        // Column direction: col 0 = left, col max = right
+        g[rAxis] = rSign > 0 ? col : max - col;
+        // Row direction: row 0 = top, row max = bottom
+        g[dAxis] = dSign > 0 ? row : max - row;
+        positions.push(g);
+      }
+    }
+    scan[camFace] = positions;
+  }
+
+  return { scan, normals };
+}
+
 function easeIO(t: number): number {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 }
@@ -226,967 +331,1038 @@ function neg(v: THREE.Vector3) {
   return v.clone().multiplyScalar(-1);
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Public handle (exposed via ref) ───────────────────────────────────────────
 
-export default function RubikCube({
-  width = 1080,
-  height = 600,
-  size = 2,
-  showStateEditor = false,
-}: {
+export interface RubikCubeHandle {
+  /** Trigger an animated face rotation. face ∈ {F,B,R,L,U,D}, cw = clockwise. */
+  applyMove: (face: string, cw: boolean) => void;
+  /** Instantly recolour stickers from a 24-char state string. */
+  applyState: (stateString: string) => void;
+}
+
+interface RubikCubeProps {
   width?: number;
   height?: number;
   /** Cubies per edge: 2 = pocket, 3 = classic. */
   size?: number;
   /** Show the string-representation editor overlay. */
   showStateEditor?: boolean;
-}) {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const [webglError, setWebglError] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState(true);
-  const showHelpRef = useRef(true);
-  showHelpRef.current = showHelp;
+  /** Called after every move with the new sticker string. */
+  onStateChange?: (stateString: string) => void;
+  /** Initial visibility of the help bar (default true). */
+  initialShowHelp?: boolean;
+  /**
+   * When true, the sticker string is relative to the current camera view:
+   * the face in front of the camera is "F", the face on top is "U", etc.
+   * Orbiting the cube changes the string. Default false (world-space).
+   */
+  cameraRelativeEncoding?: boolean;
+}
 
-  // ── State-editor React state + imperative-bridge refs ──────────────────────
-  const [stateString, setStateString] = useState("");
-  const [hoveredStrIdx, setHoveredStrIdx] = useState(-1);
-  const stateInputRef = useRef<HTMLInputElement>(null);
-  // Refs so imperative Three.js callbacks can trigger React updates
-  const setStateStringRef = useRef<(s: string) => void>(() => {});
-  const setHoveredIdxRef = useRef<(i: number) => void>(() => {});
-  const applyStringRef = useRef<(s: string) => void>(() => {});
-  setStateStringRef.current = setStateString;
-  setHoveredIdxRef.current = setHoveredStrIdx;
+// ── Component ─────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (!showStateEditor || hoveredStrIdx < 0) return;
-    const input = stateInputRef.current;
-    if (!input) return;
-    input.focus();
-    const start = Math.min(hoveredStrIdx, input.value.length);
-    const end = Math.min(start + 1, input.value.length);
-    input.setSelectionRange(start, end);
-  }, [showStateEditor, hoveredStrIdx, stateString]);
+const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
+  function RubikCube(
+    {
+      width = 1080,
+      height = 600,
+      size = 2,
+      showStateEditor = false,
+      onStateChange,
+      initialShowHelp = true,
+      cameraRelativeEncoding = false,
+    },
+    ref,
+  ) {
+    const mountRef = useRef<HTMLDivElement>(null);
+    const [webglError, setWebglError] = useState<string | null>(null);
+    const [showHelp, setShowHelp] = useState(initialShowHelp);
+    const showHelpRef = useRef(true);
+    showHelpRef.current = showHelp;
 
-  useEffect(() => {
-    const mount = mountRef.current;
-    if (!mount) return;
+    // ── State-editor React state + imperative-bridge refs ──────────────────────
+    const [stateString, setStateString] = useState("");
+    const [hoveredStrIdx, setHoveredStrIdx] = useState(-1);
+    const stateInputRef = useRef<HTMLInputElement>(null);
+    // Refs so imperative Three.js callbacks can trigger React updates
+    const setStateStringRef = useRef<(s: string) => void>(() => {});
+    const setHoveredIdxRef = useRef<(i: number) => void>(() => {});
+    const applyStringRef = useRef<(s: string) => void>(() => {});
+    const animateFaceMoveExtRef = useRef<(face: string, cw: boolean) => void>(
+      () => {},
+    );
+    const applyStateExtRef = useRef<(s: string) => void>(() => {});
+    const onStateChangeRef = useRef(onStateChange);
+    onStateChangeRef.current = onStateChange;
+    setStateStringRef.current = setStateString;
+    setHoveredIdxRef.current = setHoveredStrIdx;
 
-    const faceDef = buildFaceDef(size);
-    const half = (size - 1) / 2;
-    const spacing = size * GAP; // face-to-face gap in the unfolded cross
+    useImperativeHandle(ref, () => ({
+      applyMove: (face, cw) => animateFaceMoveExtRef.current(face, cw),
+      applyState: (s) => applyStateExtRef.current(s),
+    }));
 
-    // ── Renderer ─────────────────────────────────────────────────────────────
-    let renderer: THREE.WebGLRenderer;
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    } catch {
-      setWebglError(
-        "WebGL is not available. Try this page in a regular browser tab.",
-      );
-      return;
-    }
-    const gl = renderer;
-    gl.setPixelRatio(window.devicePixelRatio);
-    gl.setSize(width, height);
-    gl.setClearColor(0x000000, 0);
-    gl.shadowMap.enabled = false;
-    mount.appendChild(gl.domElement);
+    useEffect(() => {
+      if (!showStateEditor || hoveredStrIdx < 0) return;
+      const input = stateInputRef.current;
+      if (!input) return;
+      input.focus();
+      const start = Math.min(hoveredStrIdx, input.value.length);
+      const end = Math.min(start + 1, input.value.length);
+      input.setSelectionRange(start, end);
+    }, [showStateEditor, hoveredStrIdx, stateString]);
 
-    // ── Scene ─────────────────────────────────────────────────────────────────
-    const scene = new THREE.Scene();
-    const ambLight = new THREE.AmbientLight(0xffffff, 0.62);
-    scene.add(ambLight);
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x40404a, 0.45);
-    scene.add(hemi);
-    const key = new THREE.DirectionalLight(0xffffff, 0.42);
-    key.position.set(4, 6, 5);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight(0x8aa0ff, 0.2);
-    rim.position.set(-5, 2, -4);
-    scene.add(rim);
+    useEffect(() => {
+      const mount = mountRef.current;
+      if (!mount) return;
 
-    // ── Camera ────────────────────────────────────────────────────────────────
-    const camera = new THREE.PerspectiveCamera(FOV, width / height, 0.1, 300);
-    const cubeExtent = (size - 1) * GAP + CUBIE_SIZE;
-    const baseDist = (cubeExtent / Math.tan(((FOV / 2) * Math.PI) / 180)) * 0.9;
-    let cameraRadius = baseDist;
+      const faceDef = buildFaceDef(size);
+      const half = (size - 1) / 2;
+      const spacing = size * GAP; // face-to-face gap in the unfolded cross
 
-    const WORLD_FACE_VEC = {
-      F: new THREE.Vector3(0, 0, 1),
-      B: new THREE.Vector3(0, 0, -1),
-      U: new THREE.Vector3(0, 1, 0),
-      D: new THREE.Vector3(0, -1, 0),
-      R: new THREE.Vector3(1, 0, 0),
-      L: new THREE.Vector3(-1, 0, 0),
-    } as const;
-
-    const currentFront = WORLD_FACE_VEC.F.clone();
-    const currentUp = WORLD_FACE_VEC.U.clone();
-
-    function getRight(front: THREE.Vector3, up: THREE.Vector3) {
-      return up.clone().cross(front).normalize();
-    }
-
-    function cameraPose(
-      front: THREE.Vector3,
-      up: THREE.Vector3,
-      radius: number,
-    ) {
-      const right = getRight(front, up);
-      const dir = front
-        .clone()
-        .add(right.multiplyScalar(CAMERA_BIAS_RIGHT))
-        .add(up.clone().multiplyScalar(CAMERA_BIAS_UP))
-        .normalize();
-      return {
-        position: dir.multiplyScalar(radius),
-        up: up.clone().normalize(),
-      };
-    }
-
-    function applyView(
-      front: THREE.Vector3,
-      up: THREE.Vector3,
-      radius: number,
-    ) {
-      const pose = cameraPose(front, up, radius);
-      camera.position.copy(pose.position);
-      camera.up.copy(pose.up);
-      camera.lookAt(0, 0, 0);
-    }
-
-    function worldFaceFromVec(
-      v: THREE.Vector3,
-    ): "F" | "B" | "U" | "D" | "R" | "L" {
-      const x = Math.round(v.x);
-      const y = Math.round(v.y);
-      const z = Math.round(v.z);
-      if (z === 1) return "F";
-      if (z === -1) return "B";
-      if (y === 1) return "U";
-      if (y === -1) return "D";
-      if (x === 1) return "R";
-      return "L";
-    }
-
-    applyView(currentFront, currentUp, cameraRadius);
-
-    // ── Cubies + stickers ─────────────────────────────────────────────────────
-    const cubies: THREE.Mesh[] = [];
-    const stickers: StickerMesh[] = [];
-
-    for (let x = 0; x < size; x++)
-      for (let y = 0; y < size; y++)
-        for (let z = 0; z < size; z++) {
-          const { mesh, stickers: cs } = makeCubie(x, y, z, size);
-          scene.add(mesh);
-          cubies.push(mesh);
-          stickers.push(...cs);
-        }
-
-    // ── State-editor helpers ──────────────────────────────────────────────────
-
-    const faceScan = buildFaceScan(size);
-    let stateStringSnapshot = "";
-    let stateIndexMap = new Map<StickerMesh, number>();
-
-    /** Returns the 24-char string AND a Map<sticker → string index>. */
-    function computeStickerMap(): {
-      str: string;
-      indexMap: Map<StickerMesh, number>;
-    } {
-      let str = "";
-      const indexMap = new Map<StickerMesh, number>();
-
-      for (const face of FACE_ORDER_STR) {
-        const targetNormal = FACE_WORLD_NORMAL[face];
-        for (const [gx, gy, gz] of faceScan[face]) {
-          const idx = str.length;
-          const cubie = cubies.find(
-            (c) =>
-              c.userData.gx === gx &&
-              c.userData.gy === gy &&
-              c.userData.gz === gz,
-          );
-          if (!cubie) {
-            str += "?";
-            continue;
-          }
-
-          let bestSticker: StickerMesh | null = null;
-          let bestDot = -Infinity;
-          const wqTmp = new THREE.Quaternion();
-          const nTmp = new THREE.Vector3();
-          for (const s of stickers) {
-            if (s.userData.parentCubie !== cubie) continue;
-            s.getWorldQuaternion(wqTmp);
-            nTmp.set(0, 0, 1).applyQuaternion(wqTmp).normalize();
-            const dot = nTmp.dot(targetNormal);
-            if (dot > bestDot) {
-              bestDot = dot;
-              bestSticker = s;
-            }
-          }
-
-          if (!bestSticker) {
-            str += "?";
-            continue;
-          }
-          indexMap.set(bestSticker, idx);
-          const hex = (
-            bestSticker.material as THREE.MeshBasicMaterial
-          ).color.getHex();
-          str += STICKER_CHAR[hex] ?? "?";
-        }
-      }
-      return { str, indexMap };
-    }
-
-    /** Create a canvas texture showing a sticker index number. */
-    function makeLabelTexture(index: number): THREE.CanvasTexture {
-      const c = document.createElement("canvas");
-      c.width = 128;
-      c.height = 128;
-      const ctx = c.getContext("2d")!;
-      ctx.clearRect(0, 0, 128, 128);
-      ctx.fillStyle = "rgba(0,0,0,0.72)";
-      ctx.beginPath();
-      ctx.arc(64, 64, 52, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 52px monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(String(index), 64, 64);
-      return new THREE.CanvasTexture(c);
-    }
-
-    /**
-     * Label sprites: added to the SCENE (not parented to stickers) so they
-     * always face the camera and never appear upside-down.  We reposition
-     * them every time the unfold finishes.
-     */
-    const labelSprites: THREE.Sprite[] = [];
-    if (showStateEditor) {
-      for (const _s of stickers) {
-        const mat = new THREE.SpriteMaterial({
-          map: makeLabelTexture(0),
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-        });
-        const sp = new THREE.Sprite(mat);
-        sp.scale.setScalar(STICKER_SZ * 0.55);
-        sp.visible = false;
-        scene.add(sp);
-        labelSprites.push(sp);
-      }
-    }
-
-    /** Refresh label textures + positions from the cached sticker→index map. */
-    function refreshLabelsFromCache() {
-      if (!showStateEditor) return;
-      const wp = new THREE.Vector3();
-      stickers.forEach((s, i) => {
-        const idx = stateIndexMap.get(s) ?? i;
-        const sp = labelSprites[i];
-        if (!sp) return;
-        const mat = sp.material as THREE.SpriteMaterial;
-        mat.map?.dispose();
-        mat.map = makeLabelTexture(idx);
-        mat.needsUpdate = true;
-        // Position the sprite slightly in front of the sticker
-        s.getWorldPosition(wp);
-        sp.position.copy(wp);
-      });
-    }
-
-    /** Recompute state from current cube orientation (only valid while folded). */
-    function updateStateDisplay() {
-      const { str, indexMap } = computeStickerMap();
-      stateStringSnapshot = str;
-      stateIndexMap = indexMap;
-      setStateStringRef.current(str);
-      refreshLabelsFromCache();
-    }
-
-    /** Parse an editor string and recolor matching stickers. */
-    function applyStringFromEditor(s: string) {
-      const total = 6 * size * size;
-      const raw = s.toUpperCase();
-
-      // Enforce strict format: exactly N chars, color alphabet only.
-      if (raw.length !== total || /[^BGYWOR]/.test(raw)) {
-        setStateStringRef.current(stateStringSnapshot);
+      // ── Renderer ─────────────────────────────────────────────────────────────
+      let renderer: THREE.WebGLRenderer;
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      } catch {
+        setWebglError(
+          "WebGL is not available. Try this page in a regular browser tab.",
+        );
         return;
       }
-      const reverseMap = new Map<number, StickerMesh>();
-      stateIndexMap.forEach((idx, sticker) => reverseMap.set(idx, sticker));
-      for (let i = 0; i < total; i++) {
-        const color = CHAR_COLOR[raw[i]];
-        if (color === undefined) continue;
-        const sticker = reverseMap.get(i);
-        if (!sticker) continue;
-        (sticker.material as THREE.MeshBasicMaterial).color.setHex(color);
+      const gl = renderer;
+      gl.setPixelRatio(window.devicePixelRatio);
+      gl.setSize(width, height);
+      gl.setClearColor(0x000000, 0);
+      gl.shadowMap.enabled = false;
+      mount.appendChild(gl.domElement);
+
+      // ── Scene ─────────────────────────────────────────────────────────────────
+      const scene = new THREE.Scene();
+      const ambLight = new THREE.AmbientLight(0xffffff, 0.62);
+      scene.add(ambLight);
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x40404a, 0.45);
+      scene.add(hemi);
+      const key = new THREE.DirectionalLight(0xffffff, 0.42);
+      key.position.set(4, 6, 5);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight(0x8aa0ff, 0.2);
+      rim.position.set(-5, 2, -4);
+      scene.add(rim);
+
+      // ── Camera ────────────────────────────────────────────────────────────────
+      const camera = new THREE.PerspectiveCamera(FOV, width / height, 0.1, 300);
+      const cubeExtent = (size - 1) * GAP + CUBIE_SIZE;
+      const baseDist =
+        (cubeExtent / Math.tan(((FOV / 2) * Math.PI) / 180)) * 0.9;
+      let cameraRadius = baseDist;
+
+      const WORLD_FACE_VEC = {
+        F: new THREE.Vector3(0, 0, 1),
+        B: new THREE.Vector3(0, 0, -1),
+        U: new THREE.Vector3(0, 1, 0),
+        D: new THREE.Vector3(0, -1, 0),
+        R: new THREE.Vector3(1, 0, 0),
+        L: new THREE.Vector3(-1, 0, 0),
+      } as const;
+
+      const currentFront = WORLD_FACE_VEC.F.clone();
+      const currentUp = WORLD_FACE_VEC.U.clone();
+
+      function getRight(front: THREE.Vector3, up: THREE.Vector3) {
+        return up.clone().cross(front).normalize();
       }
-      stateStringSnapshot = raw;
-      setStateStringRef.current(raw);
-    }
 
-    applyStringRef.current = applyStringFromEditor;
+      function cameraPose(
+        front: THREE.Vector3,
+        up: THREE.Vector3,
+        radius: number,
+      ) {
+        const right = getRight(front, up);
+        const dir = front
+          .clone()
+          .add(right.multiplyScalar(CAMERA_BIAS_RIGHT))
+          .add(up.clone().multiplyScalar(CAMERA_BIAS_UP))
+          .normalize();
+        return {
+          position: dir.multiplyScalar(radius),
+          up: up.clone().normalize(),
+        };
+      }
 
-    if (showStateEditor) updateStateDisplay();
+      function applyView(
+        front: THREE.Vector3,
+        up: THREE.Vector3,
+        radius: number,
+      ) {
+        const pose = cameraPose(front, up, radius);
+        camera.position.copy(pose.position);
+        camera.up.copy(pose.up);
+        camera.lookAt(0, 0, 0);
+      }
 
-    // ── Animation queue ───────────────────────────────────────────────────────
-    type TickFn = (dt: number) => void;
-    const animCallbacks: TickFn[] = [];
+      function worldFaceFromVec(
+        v: THREE.Vector3,
+      ): "F" | "B" | "U" | "D" | "R" | "L" {
+        const x = Math.round(v.x);
+        const y = Math.round(v.y);
+        const z = Math.round(v.z);
+        if (z === 1) return "F";
+        if (z === -1) return "B";
+        if (y === 1) return "U";
+        if (y === -1) return "D";
+        if (x === 1) return "R";
+        return "L";
+      }
 
-    function addAnim(
-      duration: number,
-      onTick: (t: number, e: number) => void,
-      onDone?: () => void,
-    ) {
-      let elapsed = 0;
-      const fn: TickFn = (dt) => {
-        elapsed += dt;
-        const t = Math.min(elapsed / duration, 1);
-        onTick(t, easeIO(t));
-        if (t >= 1) {
-          onDone?.();
-          animCallbacks.splice(animCallbacks.indexOf(fn), 1);
+      applyView(currentFront, currentUp, cameraRadius);
+
+      // ── Cubies + stickers ─────────────────────────────────────────────────────
+      const cubies: THREE.Mesh[] = [];
+      const stickers: StickerMesh[] = [];
+
+      for (let x = 0; x < size; x++)
+        for (let y = 0; y < size; y++)
+          for (let z = 0; z < size; z++) {
+            const { mesh, stickers: cs } = makeCubie(x, y, z, size);
+            scene.add(mesh);
+            cubies.push(mesh);
+            stickers.push(...cs);
+          }
+
+      // ── State-editor helpers ──────────────────────────────────────────────────
+
+      const faceScan = buildFaceScan(size);
+      let stateStringSnapshot = "";
+      let stateIndexMap = new Map<StickerMesh, number>();
+
+      /** Returns the 24-char string AND a Map<sticker → string index>. */
+      function computeStickerMap(): {
+        str: string;
+        indexMap: Map<StickerMesh, number>;
+      } {
+        let str = "";
+        const indexMap = new Map<StickerMesh, number>();
+
+        // Choose face ordering: camera-relative or world-fixed
+        let activeScan: Record<string, [number, number, number][]>;
+        let activeNormals: Record<string, THREE.Vector3>;
+        if (cameraRelativeEncoding) {
+          const rel = buildCameraRelativeFaceScan(
+            size,
+            currentFront,
+            currentUp,
+          );
+          activeScan = rel.scan;
+          activeNormals = rel.normals;
+        } else {
+          activeScan = faceScan;
+          activeNormals = FACE_WORLD_NORMAL;
         }
-      };
-      animCallbacks.push(fn);
-      return fn;
-    }
 
-    // ── Mutable state ─────────────────────────────────────────────────────────
-    let isUnfolded = false;
-    let isAnimating = false; // serialises face/orbit/unfold actions
-
-    // ── Slice selection ───────────────────────────────────────────────────────
-    function getSlice(face: string): THREE.Mesh[] {
-      const def = faceDef[face];
-      return cubies.filter((c) => {
-        const g =
-          def.axis.x !== 0
-            ? c.userData.gx
-            : def.axis.y !== 0
-              ? c.userData.gy
-              : c.userData.gz;
-        return g === def.slice;
-      });
-    }
-
-    // ── Camera snap animation ─────────────────────────────────────────────────
-    function snapCameraTo(front: THREE.Vector3, up: THREE.Vector3) {
-      if (isAnimating) return;
-      isAnimating = true;
-      const fromPos = camera.position.clone();
-      const fromUp = camera.up.clone();
-      const target = cameraPose(front, up, cameraRadius);
-      const fromDir = fromPos.clone().normalize();
-      const toDir = target.position.clone().normalize();
-
-      addAnim(
-        0.45,
-        (_, e) => {
-          const dir = fromDir.clone().lerp(toDir, e).normalize();
-          camera.position.copy(dir.multiplyScalar(cameraRadius));
-          camera.up.lerpVectors(fromUp, target.up, e).normalize();
-          camera.lookAt(0, 0, 0);
-        },
-        () => {
-          currentFront.copy(front);
-          currentUp.copy(up);
-          applyView(currentFront, currentUp, cameraRadius);
-          isAnimating = false;
-        },
-      );
-    }
-
-    // ── Face rotation ─────────────────────────────────────────────────────────
-    function animateFaceMove(face: string, cw: boolean) {
-      if (isAnimating || isUnfolded) return;
-      isAnimating = true;
-
-      const def = faceDef[face];
-      const angle = (Math.PI / 2) * (cw ? def.sign : -def.sign);
-      const slice = getSlice(face);
-
-      const pivot = new THREE.Object3D();
-      scene.add(pivot);
-      slice.forEach((c) => pivot.attach(c));
-
-      const startQ = pivot.quaternion.clone();
-      const endQ = new THREE.Quaternion()
-        .setFromAxisAngle(def.axis, angle)
-        .multiply(startQ);
-
-      addAnim(
-        MOVE_DURATION,
-        (_, e) => pivot.quaternion.slerpQuaternions(startQ, endQ, e),
-        () => {
-          slice.forEach((c) => {
-            scene.attach(c);
-            const gx = Math.round(c.position.x / GAP + half);
-            const gy = Math.round(c.position.y / GAP + half);
-            const gz = Math.round(c.position.z / GAP + half);
-            c.position.set(
-              (gx - half) * GAP,
-              (gy - half) * GAP,
-              (gz - half) * GAP,
+        for (const face of FACE_ORDER_STR) {
+          const targetNormal = activeNormals[face];
+          for (const [gx, gy, gz] of activeScan[face]) {
+            const idx = str.length;
+            const cubie = cubies.find(
+              (c) =>
+                c.userData.gx === gx &&
+                c.userData.gy === gy &&
+                c.userData.gz === gz,
             );
-            c.userData.gx = gx;
-            c.userData.gy = gy;
-            c.userData.gz = gz;
+            if (!cubie) {
+              str += "?";
+              continue;
+            }
+
+            let bestSticker: StickerMesh | null = null;
+            let bestDot = -Infinity;
+            const wqTmp = new THREE.Quaternion();
+            const nTmp = new THREE.Vector3();
+            for (const s of stickers) {
+              if (s.userData.parentCubie !== cubie) continue;
+              s.getWorldQuaternion(wqTmp);
+              nTmp.set(0, 0, 1).applyQuaternion(wqTmp).normalize();
+              const dot = nTmp.dot(targetNormal);
+              if (dot > bestDot) {
+                bestDot = dot;
+                bestSticker = s;
+              }
+            }
+
+            if (!bestSticker) {
+              str += "?";
+              continue;
+            }
+            indexMap.set(bestSticker, idx);
+            const hex = (
+              bestSticker.material as THREE.MeshBasicMaterial
+            ).color.getHex();
+            str += STICKER_CHAR[hex] ?? "?";
+          }
+        }
+        return { str, indexMap };
+      }
+
+      /** Create a canvas texture showing a sticker index number. */
+      function makeLabelTexture(index: number): THREE.CanvasTexture {
+        const c = document.createElement("canvas");
+        c.width = 128;
+        c.height = 128;
+        const ctx = c.getContext("2d")!;
+        ctx.clearRect(0, 0, 128, 128);
+        ctx.fillStyle = "rgba(0,0,0,0.72)";
+        ctx.beginPath();
+        ctx.arc(64, 64, 52, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 52px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(index), 64, 64);
+        return new THREE.CanvasTexture(c);
+      }
+
+      /**
+       * Label sprites: added to the SCENE (not parented to stickers) so they
+       * always face the camera and never appear upside-down.  We reposition
+       * them every time the unfold finishes.
+       */
+      const labelSprites: THREE.Sprite[] = [];
+      if (showStateEditor) {
+        for (const _s of stickers) {
+          const mat = new THREE.SpriteMaterial({
+            map: makeLabelTexture(0),
+            transparent: true,
+            depthTest: false,
+            depthWrite: false,
           });
-          scene.remove(pivot);
-          isAnimating = false;
-          updateStateDisplay();
-        },
-      );
-    }
-
-    // ── Unfold / fold ─────────────────────────────────────────────────────────
-    //
-    // On unfold: sticker meshes peel off their cubie and fly to cross positions.
-    // On fold:   stickers fly back and re-attach to their parent cubies.
-
-    // Cross layout (in CURRENT VIEW coordinates):
-    //          [U]
-    //    [L]  [F]  [R]  [B]
-    //          [D]
-
-    function classifyStickerFace(
-      stickerNormalWorld: THREE.Vector3,
-      viewFront: THREE.Vector3,
-      viewUp: THREE.Vector3,
-      viewRight: THREE.Vector3,
-    ): "F" | "B" | "U" | "D" | "R" | "L" {
-      const candidates: Array<
-        ["F" | "B" | "U" | "D" | "R" | "L", THREE.Vector3]
-      > = [
-        ["F", viewFront],
-        ["B", neg(viewFront)],
-        ["U", viewUp],
-        ["D", neg(viewUp)],
-        ["R", viewRight],
-        ["L", neg(viewRight)],
-      ];
-
-      let bestFace: "F" | "B" | "U" | "D" | "R" | "L" = "F";
-      let bestDot = -Infinity;
-      for (const [face, normal] of candidates) {
-        const dot = stickerNormalWorld.dot(normal);
-        if (dot > bestDot) {
-          bestDot = dot;
-          bestFace = face;
+          const sp = new THREE.Sprite(mat);
+          sp.scale.setScalar(STICKER_SZ * 0.55);
+          sp.visible = false;
+          scene.add(sp);
+          labelSprites.push(sp);
         }
       }
-      return bestFace;
-    }
 
-    function toggleUnfold() {
-      if (isAnimating) return;
-      isAnimating = true;
-      const DURATION = 0.65;
-
-      if (!isUnfolded) {
-        // ── Unfold ──────────────────────────────────────────────────────────
-
-        const viewFront = currentFront.clone().normalize();
-        const viewUp = currentUp.clone().normalize();
-        const viewRight = getRight(viewFront, viewUp);
-
-        const planeX = viewRight;
-        const planeY = viewUp;
-        const planeN = viewFront;
-
-        const crossCenter = planeN.clone().multiplyScalar(cubeExtent * 0.7);
-        const crossCenters: Record<
-          "F" | "B" | "U" | "D" | "R" | "L",
-          THREE.Vector3
-        > = {
-          F: crossCenter.clone(),
-          U: crossCenter.clone().add(planeY.clone().multiplyScalar(spacing)),
-          D: crossCenter.clone().add(planeY.clone().multiplyScalar(-spacing)),
-          L: crossCenter.clone().add(planeX.clone().multiplyScalar(-spacing)),
-          R: crossCenter.clone().add(planeX.clone().multiplyScalar(spacing)),
-          B: crossCenter
-            .clone()
-            .add(planeX.clone().multiplyScalar(2 * spacing)),
-        };
-
-        const faceAxes: Record<
-          "F" | "B" | "U" | "D" | "R" | "L",
-          { x: THREE.Vector3; y: THREE.Vector3 }
-        > = {
-          F: { x: planeX.clone(), y: planeY.clone() },
-          B: { x: neg(planeX), y: planeY.clone() },
-          R: { x: neg(planeN), y: planeY.clone() },
-          L: { x: planeN.clone(), y: planeY.clone() },
-          U: { x: planeX.clone(), y: neg(planeN) },
-          D: { x: planeX.clone(), y: planeN.clone() },
-        };
-
-        // 1. Snapshot sticker world transforms and detach
-        const stickerFrom: THREE.Vector3[] = [];
-        const stickerFromQ: THREE.Quaternion[] = [];
-        const stickerTargetQ: THREE.Quaternion[] = [];
-        const stickerMid: THREE.Vector3[] = [];
-        const stickerTo: THREE.Vector3[] = [];
-
-        for (const s of stickers) {
-          const wp = new THREE.Vector3();
-          const wq = new THREE.Quaternion();
+      /** Refresh label textures + positions from the cached sticker→index map. */
+      function refreshLabelsFromCache() {
+        if (!showStateEditor) return;
+        const wp = new THREE.Vector3();
+        stickers.forEach((s, i) => {
+          const idx = stateIndexMap.get(s) ?? i;
+          const sp = labelSprites[i];
+          if (!sp) return;
+          const mat = sp.material as THREE.SpriteMaterial;
+          mat.map?.dispose();
+          mat.map = makeLabelTexture(idx);
+          mat.needsUpdate = true;
+          // Position the sprite slightly in front of the sticker
           s.getWorldPosition(wp);
-          s.getWorldQuaternion(wq);
-          const normalWorld = new THREE.Vector3(0, 0, 1)
-            .applyQuaternion(wq)
-            .normalize();
-          const face = classifyStickerFace(
-            normalWorld,
-            viewFront,
-            viewUp,
-            viewRight,
-          );
-          const axes = faceAxes[face];
-          const center = crossCenters[face];
-
-          const valX = wp.dot(axes.x);
-          const valY = wp.dot(axes.y);
-          const ix = Math.round(valX / GAP + half);
-          const iy = Math.round(valY / GAP + half);
-          const lx = (ix - half) * GAP;
-          const ly = (iy - half) * GAP;
-
-          // Per-sticker target quat: rotate normal to face camera,
-          // but preserve the current spin around the normal (no undo of F moves etc.)
-          const faceToCamera = new THREE.Quaternion().setFromUnitVectors(
-            normalWorld,
-            planeN,
-          );
-          const targetQ = faceToCamera.clone().multiply(wq);
-
-          s.userData.savedWorldPos.copy(wp);
-          s.userData.savedWorldQuat.copy(wq);
-          stickerFrom.push(wp.clone());
-          stickerFromQ.push(wq.clone());
-          stickerTargetQ.push(targetQ);
-          stickerMid.push(
-            wp.clone().add(planeN.clone().multiplyScalar(cubeExtent * 0.3)),
-          );
-          stickerTo.push(
-            center
-              .clone()
-              .add(planeX.clone().multiplyScalar(lx))
-              .add(planeY.clone().multiplyScalar(ly)),
-          );
-          scene.attach(s); // detach from cubie, keep world transform
-        }
-
-        // 2. Compute cross camera position
-        const crossW = 4 * spacing + CUBIE_SIZE;
-        const crossH = 3 * spacing + CUBIE_SIZE;
-        const aspect = width / height;
-        const halfFov = (FOV / 2) * (Math.PI / 180);
-        const camZh = (crossH / 2 + 0.5) / Math.tan(halfFov);
-        const camZw = (crossW / 2 + 0.5) / (Math.tan(halfFov) * aspect);
-        const camZ = Math.max(camZh, camZw) * 1.12;
-
-        const crossCX = spacing / 2;
-        const crossCenterInWorld = crossCenter
-          .clone()
-          .add(planeX.clone().multiplyScalar(crossCX));
-        const camStart = camera.position.clone();
-        const camTarget = crossCenterInWorld
-          .clone()
-          .add(planeN.clone().multiplyScalar(camZ));
-        const lookStart = new THREE.Vector3(0, 0, 0);
-        const lookEnd = crossCenterInWorld.clone();
-        const lookTmp = new THREE.Vector3();
-
-        const SHRINK_PHASE = 0.34;
-
-        addAnim(
-          DURATION,
-          (t, e) => {
-            if (t <= SHRINK_PHASE) {
-              const p = t / SHRINK_PHASE;
-              const pe = easeIO(p);
-              cubies.forEach((c) => c.scale.setScalar(1 - pe * 0.97));
-              stickers.forEach((s, i) => {
-                s.position.lerpVectors(stickerFrom[i], stickerMid[i], pe);
-              });
-            } else {
-              const p = (t - SHRINK_PHASE) / (1 - SHRINK_PHASE);
-              const pe = easeIO(p);
-              cubies.forEach((c) => c.scale.setScalar(0.03));
-              stickers.forEach((s, i) => {
-                s.position.lerpVectors(stickerMid[i], stickerTo[i], pe);
-              });
-            }
-
-            // Rotation: smooth slerp to face camera, preserving spin
-            stickers.forEach((s, i) => {
-              s.quaternion.slerpQuaternions(
-                stickerFromQ[i],
-                stickerTargetQ[i],
-                e,
-              );
-            });
-
-            // Camera
-            camera.position.lerpVectors(camStart, camTarget, e);
-            lookTmp.lerpVectors(lookStart, lookEnd, e);
-            camera.up.lerpVectors(currentUp, planeY, e).normalize();
-            camera.lookAt(lookTmp);
-          },
-          () => {
-            cubies.forEach((c) => (c.visible = false));
-            if (showStateEditor) {
-              refreshLabelsFromCache();
-              labelSprites.forEach((sp) => {
-                const mat = sp.material as THREE.SpriteMaterial;
-                mat.opacity = 1;
-                mat.needsUpdate = true;
-                sp.visible = true;
-              });
-            }
-            isAnimating = false;
-            isUnfolded = true;
-          },
-        );
-      } else {
-        // ── Fold ────────────────────────────────────────────────────────────
-
-        const stickerCurrent: THREE.Vector3[] = [];
-        const stickerCurrentQ: THREE.Quaternion[] = [];
-        const stickerHome: THREE.Vector3[] = [];
-        const stickerHomeQ: THREE.Quaternion[] = [];
-
-        for (const s of stickers) {
-          stickerCurrent.push(s.position.clone());
-          stickerCurrentQ.push(s.quaternion.clone());
-          stickerHome.push(s.userData.savedWorldPos.clone());
-          stickerHomeQ.push(s.userData.savedWorldQuat.clone());
-        }
-
-        // Show cubies immediately (they'll scale up)
-        cubies.forEach((c) => {
-          c.visible = true;
-          c.scale.setScalar(0.01);
+          sp.position.copy(wp);
         });
+      }
 
-        const camStart = camera.position.clone();
-        const camTarget = cameraPose(
-          currentFront,
-          currentUp,
-          cameraRadius,
-        ).position;
-        const viewFront = currentFront.clone().normalize();
-        const viewUp = currentUp.clone().normalize();
-        const viewRight = getRight(viewFront, viewUp);
-        const crossCX = spacing / 2;
-        const lookStart = viewFront
-          .clone()
-          .multiplyScalar(cubeExtent * 0.7)
-          .add(viewRight.clone().multiplyScalar(crossCX));
-        const lookEnd = new THREE.Vector3(0, 0, 0);
-        const lookTmp = new THREE.Vector3();
+      /** Recompute state from current cube orientation (only valid while folded). */
+      function updateStateDisplay() {
+        const { str, indexMap } = computeStickerMap();
+        stateStringSnapshot = str;
+        stateIndexMap = indexMap;
+        setStateStringRef.current(str);
+        onStateChangeRef.current?.(str);
+        refreshLabelsFromCache();
+      }
 
-        const LABEL_FADE_OUT_FRACTION = 0.12;
+      /** Parse an editor string and recolor matching stickers. */
+      function applyStringFromEditor(s: string) {
+        const total = 6 * size * size;
+        const raw = s.toUpperCase();
+
+        // Enforce strict format: exactly N chars, color alphabet only.
+        if (raw.length !== total || /[^BGYWOR]/.test(raw)) {
+          setStateStringRef.current(stateStringSnapshot);
+          return;
+        }
+        const reverseMap = new Map<number, StickerMesh>();
+        stateIndexMap.forEach((idx, sticker) => reverseMap.set(idx, sticker));
+        for (let i = 0; i < total; i++) {
+          const color = CHAR_COLOR[raw[i]];
+          if (color === undefined) continue;
+          const sticker = reverseMap.get(i);
+          if (!sticker) continue;
+          (sticker.material as THREE.MeshBasicMaterial).color.setHex(color);
+        }
+        stateStringSnapshot = raw;
+        setStateStringRef.current(raw);
+      }
+
+      applyStringRef.current = applyStringFromEditor;
+      applyStateExtRef.current = applyStringFromEditor;
+
+      if (showStateEditor) updateStateDisplay();
+
+      // ── Animation queue ───────────────────────────────────────────────────────
+      type TickFn = (dt: number) => void;
+      const animCallbacks: TickFn[] = [];
+
+      function addAnim(
+        duration: number,
+        onTick: (t: number, e: number) => void,
+        onDone?: () => void,
+      ) {
+        let elapsed = 0;
+        const fn: TickFn = (dt) => {
+          elapsed += dt;
+          const t = Math.min(elapsed / duration, 1);
+          onTick(t, easeIO(t));
+          if (t >= 1) {
+            onDone?.();
+            animCallbacks.splice(animCallbacks.indexOf(fn), 1);
+          }
+        };
+        animCallbacks.push(fn);
+        return fn;
+      }
+
+      // ── Mutable state ─────────────────────────────────────────────────────────
+      let isUnfolded = false;
+      let isAnimating = false; // serialises face/orbit/unfold actions
+
+      // ── Slice selection ───────────────────────────────────────────────────────
+      function getSlice(face: string): THREE.Mesh[] {
+        const def = faceDef[face];
+        return cubies.filter((c) => {
+          const g =
+            def.axis.x !== 0
+              ? c.userData.gx
+              : def.axis.y !== 0
+                ? c.userData.gy
+                : c.userData.gz;
+          return g === def.slice;
+        });
+      }
+
+      // ── Camera snap animation ─────────────────────────────────────────────────
+      function snapCameraTo(front: THREE.Vector3, up: THREE.Vector3) {
+        if (isAnimating) return;
+        isAnimating = true;
+        const fromPos = camera.position.clone();
+        const fromUp = camera.up.clone();
+        const target = cameraPose(front, up, cameraRadius);
+        const fromDir = fromPos.clone().normalize();
+        const toDir = target.position.clone().normalize();
 
         addAnim(
-          DURATION,
-          (t, e) => {
-            if (showStateEditor) {
-              const fade = Math.min(t / LABEL_FADE_OUT_FRACTION, 1);
-              const opacity = 1 - fade;
-              labelSprites.forEach((sp) => {
-                const mat = sp.material as THREE.SpriteMaterial;
-                mat.opacity = opacity;
-                mat.needsUpdate = true;
-                sp.visible = opacity > 0.001;
-              });
-            }
-
-            stickers.forEach((s, i) => {
-              s.position.lerpVectors(stickerCurrent[i], stickerHome[i], e);
-              s.quaternion.slerpQuaternions(
-                stickerCurrentQ[i],
-                stickerHomeQ[i],
-                e,
-              );
-            });
-            cubies.forEach((c) => c.scale.setScalar(0.01 + e * 0.99));
-            camera.position.lerpVectors(camStart, camTarget, e);
-            lookTmp.lerpVectors(lookStart, lookEnd, e);
-            camera.up.lerpVectors(viewUp, currentUp, e).normalize();
-            camera.lookAt(lookTmp);
+          0.45,
+          (_, e) => {
+            const dir = fromDir.clone().lerp(toDir, e).normalize();
+            camera.position.copy(dir.multiplyScalar(cameraRadius));
+            camera.up.lerpVectors(fromUp, target.up, e).normalize();
+            camera.lookAt(0, 0, 0);
           },
           () => {
-            // Re-attach stickers to their cubies (Three.js preserves world pos)
-            stickers.forEach((s) => s.userData.parentCubie.attach(s));
-            cubies.forEach((c) => c.scale.setScalar(1));
-            labelSprites.forEach((sp) => {
-              const mat = sp.material as THREE.SpriteMaterial;
-              mat.opacity = 0;
-              mat.needsUpdate = true;
-              sp.visible = false;
-            });
+            currentFront.copy(front);
+            currentUp.copy(up);
             applyView(currentFront, currentUp, cameraRadius);
             isAnimating = false;
-            isUnfolded = false;
+            if (cameraRelativeEncoding) updateStateDisplay();
           },
         );
       }
-    }
 
-    // ── Event handlers ────────────────────────────────────────────────────────
+      // ── Face rotation ─────────────────────────────────────────────────────────
+      function animateFaceMove(face: string, cw: boolean) {
+        if (isAnimating || isUnfolded) return;
+        isAnimating = true;
 
-    function onKeyDown(e: KeyboardEvent) {
-      e.stopPropagation();
+        const def = faceDef[face];
+        const angle = (Math.PI / 2) * (cw ? def.sign : -def.sign);
+        const slice = getSlice(face);
 
-      if (e.key === "h" || e.key === "H") {
-        setShowHelp(!showHelpRef.current);
-        return;
+        const pivot = new THREE.Object3D();
+        scene.add(pivot);
+        slice.forEach((c) => pivot.attach(c));
+
+        const startQ = pivot.quaternion.clone();
+        const endQ = new THREE.Quaternion()
+          .setFromAxisAngle(def.axis, angle)
+          .multiply(startQ);
+
+        addAnim(
+          MOVE_DURATION,
+          (_, e) => pivot.quaternion.slerpQuaternions(startQ, endQ, e),
+          () => {
+            slice.forEach((c) => {
+              scene.attach(c);
+              const gx = Math.round(c.position.x / GAP + half);
+              const gy = Math.round(c.position.y / GAP + half);
+              const gz = Math.round(c.position.z / GAP + half);
+              c.position.set(
+                (gx - half) * GAP,
+                (gy - half) * GAP,
+                (gz - half) * GAP,
+              );
+              c.userData.gx = gx;
+              c.userData.gy = gy;
+              c.userData.gz = gz;
+            });
+            scene.remove(pivot);
+            isAnimating = false;
+            updateStateDisplay();
+          },
+        );
       }
 
-      if (e.code === "Space") {
+      animateFaceMoveExtRef.current = animateFaceMove;
+
+      // ── Unfold / fold ─────────────────────────────────────────────────────────
+      //
+      // On unfold: sticker meshes peel off their cubie and fly to cross positions.
+      // On fold:   stickers fly back and re-attach to their parent cubies.
+
+      // Cross layout (in CURRENT VIEW coordinates):
+      //          [U]
+      //    [L]  [F]  [R]  [B]
+      //          [D]
+
+      function classifyStickerFace(
+        stickerNormalWorld: THREE.Vector3,
+        viewFront: THREE.Vector3,
+        viewUp: THREE.Vector3,
+        viewRight: THREE.Vector3,
+      ): "F" | "B" | "U" | "D" | "R" | "L" {
+        const candidates: Array<
+          ["F" | "B" | "U" | "D" | "R" | "L", THREE.Vector3]
+        > = [
+          ["F", viewFront],
+          ["B", neg(viewFront)],
+          ["U", viewUp],
+          ["D", neg(viewUp)],
+          ["R", viewRight],
+          ["L", neg(viewRight)],
+        ];
+
+        let bestFace: "F" | "B" | "U" | "D" | "R" | "L" = "F";
+        let bestDot = -Infinity;
+        for (const [face, normal] of candidates) {
+          const dot = stickerNormalWorld.dot(normal);
+          if (dot > bestDot) {
+            bestDot = dot;
+            bestFace = face;
+          }
+        }
+        return bestFace;
+      }
+
+      function toggleUnfold() {
+        if (isAnimating) return;
+        isAnimating = true;
+        const DURATION = 0.65;
+
+        if (!isUnfolded) {
+          // ── Unfold ──────────────────────────────────────────────────────────
+
+          const viewFront = currentFront.clone().normalize();
+          const viewUp = currentUp.clone().normalize();
+          const viewRight = getRight(viewFront, viewUp);
+
+          const planeX = viewRight;
+          const planeY = viewUp;
+          const planeN = viewFront;
+
+          const crossCenter = planeN.clone().multiplyScalar(cubeExtent * 0.7);
+          const crossCenters: Record<
+            "F" | "B" | "U" | "D" | "R" | "L",
+            THREE.Vector3
+          > = {
+            F: crossCenter.clone(),
+            U: crossCenter.clone().add(planeY.clone().multiplyScalar(spacing)),
+            D: crossCenter.clone().add(planeY.clone().multiplyScalar(-spacing)),
+            L: crossCenter.clone().add(planeX.clone().multiplyScalar(-spacing)),
+            R: crossCenter.clone().add(planeX.clone().multiplyScalar(spacing)),
+            B: crossCenter
+              .clone()
+              .add(planeX.clone().multiplyScalar(2 * spacing)),
+          };
+
+          const faceAxes: Record<
+            "F" | "B" | "U" | "D" | "R" | "L",
+            { x: THREE.Vector3; y: THREE.Vector3 }
+          > = {
+            F: { x: planeX.clone(), y: planeY.clone() },
+            B: { x: neg(planeX), y: planeY.clone() },
+            R: { x: neg(planeN), y: planeY.clone() },
+            L: { x: planeN.clone(), y: planeY.clone() },
+            U: { x: planeX.clone(), y: neg(planeN) },
+            D: { x: planeX.clone(), y: planeN.clone() },
+          };
+
+          // 1. Snapshot sticker world transforms and detach
+          const stickerFrom: THREE.Vector3[] = [];
+          const stickerFromQ: THREE.Quaternion[] = [];
+          const stickerTargetQ: THREE.Quaternion[] = [];
+          const stickerMid: THREE.Vector3[] = [];
+          const stickerTo: THREE.Vector3[] = [];
+
+          for (const s of stickers) {
+            const wp = new THREE.Vector3();
+            const wq = new THREE.Quaternion();
+            s.getWorldPosition(wp);
+            s.getWorldQuaternion(wq);
+            const normalWorld = new THREE.Vector3(0, 0, 1)
+              .applyQuaternion(wq)
+              .normalize();
+            const face = classifyStickerFace(
+              normalWorld,
+              viewFront,
+              viewUp,
+              viewRight,
+            );
+            const axes = faceAxes[face];
+            const center = crossCenters[face];
+
+            const valX = wp.dot(axes.x);
+            const valY = wp.dot(axes.y);
+            const ix = Math.round(valX / GAP + half);
+            const iy = Math.round(valY / GAP + half);
+            const lx = (ix - half) * GAP;
+            const ly = (iy - half) * GAP;
+
+            // Per-sticker target quat: rotate normal to face camera,
+            // but preserve the current spin around the normal (no undo of F moves etc.)
+            const faceToCamera = new THREE.Quaternion().setFromUnitVectors(
+              normalWorld,
+              planeN,
+            );
+            const targetQ = faceToCamera.clone().multiply(wq);
+
+            s.userData.savedWorldPos.copy(wp);
+            s.userData.savedWorldQuat.copy(wq);
+            stickerFrom.push(wp.clone());
+            stickerFromQ.push(wq.clone());
+            stickerTargetQ.push(targetQ);
+            stickerMid.push(
+              wp.clone().add(planeN.clone().multiplyScalar(cubeExtent * 0.3)),
+            );
+            stickerTo.push(
+              center
+                .clone()
+                .add(planeX.clone().multiplyScalar(lx))
+                .add(planeY.clone().multiplyScalar(ly)),
+            );
+            scene.attach(s); // detach from cubie, keep world transform
+          }
+
+          // 2. Compute cross camera position
+          const crossW = 4 * spacing + CUBIE_SIZE;
+          const crossH = 3 * spacing + CUBIE_SIZE;
+          const aspect = width / height;
+          const halfFov = (FOV / 2) * (Math.PI / 180);
+          const camZh = (crossH / 2 + 0.5) / Math.tan(halfFov);
+          const camZw = (crossW / 2 + 0.5) / (Math.tan(halfFov) * aspect);
+          const camZ = Math.max(camZh, camZw) * 1.12;
+
+          const crossCX = spacing / 2;
+          const crossCenterInWorld = crossCenter
+            .clone()
+            .add(planeX.clone().multiplyScalar(crossCX));
+          const camStart = camera.position.clone();
+          const camTarget = crossCenterInWorld
+            .clone()
+            .add(planeN.clone().multiplyScalar(camZ));
+          const lookStart = new THREE.Vector3(0, 0, 0);
+          const lookEnd = crossCenterInWorld.clone();
+          const lookTmp = new THREE.Vector3();
+
+          const SHRINK_PHASE = 0.34;
+
+          addAnim(
+            DURATION,
+            (t, e) => {
+              if (t <= SHRINK_PHASE) {
+                const p = t / SHRINK_PHASE;
+                const pe = easeIO(p);
+                cubies.forEach((c) => c.scale.setScalar(1 - pe * 0.97));
+                stickers.forEach((s, i) => {
+                  s.position.lerpVectors(stickerFrom[i], stickerMid[i], pe);
+                });
+              } else {
+                const p = (t - SHRINK_PHASE) / (1 - SHRINK_PHASE);
+                const pe = easeIO(p);
+                cubies.forEach((c) => c.scale.setScalar(0.03));
+                stickers.forEach((s, i) => {
+                  s.position.lerpVectors(stickerMid[i], stickerTo[i], pe);
+                });
+              }
+
+              // Rotation: smooth slerp to face camera, preserving spin
+              stickers.forEach((s, i) => {
+                s.quaternion.slerpQuaternions(
+                  stickerFromQ[i],
+                  stickerTargetQ[i],
+                  e,
+                );
+              });
+
+              // Camera
+              camera.position.lerpVectors(camStart, camTarget, e);
+              lookTmp.lerpVectors(lookStart, lookEnd, e);
+              camera.up.lerpVectors(currentUp, planeY, e).normalize();
+              camera.lookAt(lookTmp);
+            },
+            () => {
+              cubies.forEach((c) => (c.visible = false));
+              if (showStateEditor) {
+                refreshLabelsFromCache();
+                labelSprites.forEach((sp) => {
+                  const mat = sp.material as THREE.SpriteMaterial;
+                  mat.opacity = 1;
+                  mat.needsUpdate = true;
+                  sp.visible = true;
+                });
+              }
+              isAnimating = false;
+              isUnfolded = true;
+            },
+          );
+        } else {
+          // ── Fold ────────────────────────────────────────────────────────────
+
+          const stickerCurrent: THREE.Vector3[] = [];
+          const stickerCurrentQ: THREE.Quaternion[] = [];
+          const stickerHome: THREE.Vector3[] = [];
+          const stickerHomeQ: THREE.Quaternion[] = [];
+
+          for (const s of stickers) {
+            stickerCurrent.push(s.position.clone());
+            stickerCurrentQ.push(s.quaternion.clone());
+            stickerHome.push(s.userData.savedWorldPos.clone());
+            stickerHomeQ.push(s.userData.savedWorldQuat.clone());
+          }
+
+          // Show cubies immediately (they'll scale up)
+          cubies.forEach((c) => {
+            c.visible = true;
+            c.scale.setScalar(0.01);
+          });
+
+          const camStart = camera.position.clone();
+          const camTarget = cameraPose(
+            currentFront,
+            currentUp,
+            cameraRadius,
+          ).position;
+          const viewFront = currentFront.clone().normalize();
+          const viewUp = currentUp.clone().normalize();
+          const viewRight = getRight(viewFront, viewUp);
+          const crossCX = spacing / 2;
+          const lookStart = viewFront
+            .clone()
+            .multiplyScalar(cubeExtent * 0.7)
+            .add(viewRight.clone().multiplyScalar(crossCX));
+          const lookEnd = new THREE.Vector3(0, 0, 0);
+          const lookTmp = new THREE.Vector3();
+
+          const LABEL_FADE_OUT_FRACTION = 0.12;
+
+          addAnim(
+            DURATION,
+            (t, e) => {
+              if (showStateEditor) {
+                const fade = Math.min(t / LABEL_FADE_OUT_FRACTION, 1);
+                const opacity = 1 - fade;
+                labelSprites.forEach((sp) => {
+                  const mat = sp.material as THREE.SpriteMaterial;
+                  mat.opacity = opacity;
+                  mat.needsUpdate = true;
+                  sp.visible = opacity > 0.001;
+                });
+              }
+
+              stickers.forEach((s, i) => {
+                s.position.lerpVectors(stickerCurrent[i], stickerHome[i], e);
+                s.quaternion.slerpQuaternions(
+                  stickerCurrentQ[i],
+                  stickerHomeQ[i],
+                  e,
+                );
+              });
+              cubies.forEach((c) => c.scale.setScalar(0.01 + e * 0.99));
+              camera.position.lerpVectors(camStart, camTarget, e);
+              lookTmp.lerpVectors(lookStart, lookEnd, e);
+              camera.up.lerpVectors(viewUp, currentUp, e).normalize();
+              camera.lookAt(lookTmp);
+            },
+            () => {
+              // Re-attach stickers to their cubies (Three.js preserves world pos)
+              stickers.forEach((s) => s.userData.parentCubie.attach(s));
+              cubies.forEach((c) => c.scale.setScalar(1));
+              labelSprites.forEach((sp) => {
+                const mat = sp.material as THREE.SpriteMaterial;
+                mat.opacity = 0;
+                mat.needsUpdate = true;
+                sp.visible = false;
+              });
+              applyView(currentFront, currentUp, cameraRadius);
+              isAnimating = false;
+              isUnfolded = false;
+            },
+          );
+        }
+      }
+
+      // ── Event handlers ────────────────────────────────────────────────────────
+
+      function onKeyDown(e: KeyboardEvent) {
+        e.stopPropagation();
+
+        if (e.key === "h" || e.key === "H") {
+          setShowHelp(!showHelpRef.current);
+          return;
+        }
+
+        if (e.code === "Space") {
+          e.preventDefault();
+          toggleUnfold();
+          return;
+        }
+
+        if (isAnimating || isUnfolded) return;
+
+        // Arrow keys: discrete camera snap, always face-to-face
+        const right = getRight(currentFront, currentUp);
+        if (e.code === "ArrowLeft") {
+          snapCameraTo(neg(right), currentUp.clone());
+          return;
+        }
+        if (e.code === "ArrowRight") {
+          snapCameraTo(right, currentUp.clone());
+          return;
+        }
+        if (e.code === "ArrowUp") {
+          // up face becomes front
+          snapCameraTo(currentUp.clone(), neg(currentFront));
+          return;
+        }
+        if (e.code === "ArrowDown") {
+          // down face becomes front
+          snapCameraTo(neg(currentUp), currentFront.clone());
+          return;
+        }
+
+        // [ ] — roll around front axis (Z rotation of the view)
+        if (e.key === "[") {
+          // CCW roll: up moves to the left
+          const newUp = right.clone();
+          snapCameraTo(currentFront.clone(), newUp);
+          return;
+        }
+        if (e.key === "]") {
+          // CW roll: up moves to the right
+          const newUp = neg(right);
+          snapCameraTo(currentFront.clone(), newUp);
+          return;
+        }
+
+        const logicalFace = e.key.toUpperCase();
+        if (logicalFace in faceDef) {
+          const relativeFaceVec: Record<string, THREE.Vector3> = {
+            F: currentFront.clone(),
+            B: neg(currentFront),
+            U: currentUp.clone(),
+            D: neg(currentUp),
+            R: right.clone(),
+            L: neg(right),
+          };
+          const worldFace = worldFaceFromVec(relativeFaceVec[logicalFace]);
+          animateFaceMove(worldFace, !e.shiftKey);
+        }
+      }
+
+      function onWheel(e: WheelEvent) {
         e.preventDefault();
-        toggleUnfold();
-        return;
+        e.stopPropagation();
+        cameraRadius = Math.max(
+          2,
+          Math.min(40, cameraRadius + e.deltaY * 0.005),
+        );
+        applyView(currentFront, currentUp, cameraRadius);
       }
 
-      if (isAnimating || isUnfolded) return;
+      // ── Render loop ───────────────────────────────────────────────────────────
 
-      // Arrow keys: discrete camera snap, always face-to-face
-      const right = getRight(currentFront, currentUp);
-      if (e.code === "ArrowLeft") {
-        snapCameraTo(neg(right), currentUp.clone());
-        return;
+      const clock = new THREE.Clock();
+      let rafId: number;
+
+      function animate() {
+        rafId = requestAnimationFrame(animate);
+        const dt = clock.getDelta();
+        [...animCallbacks].forEach((fn) => fn(dt));
+        gl.render(scene, camera);
       }
-      if (e.code === "ArrowRight") {
-        snapCameraTo(right, currentUp.clone());
-        return;
+      animate();
+
+      // ── Attach events ─────────────────────────────────────────────────────────
+
+      mount.addEventListener("keydown", onKeyDown);
+      mount.addEventListener("wheel", onWheel, { passive: false });
+
+      // ── Raycast hover for state editor ────────────────────────────────────────
+      const raycaster = showStateEditor ? new THREE.Raycaster() : null;
+      function onMouseMove(e: MouseEvent) {
+        if (!raycaster) return;
+        const rect = gl.domElement.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+        const hits = raycaster.intersectObjects(
+          stickers as unknown as THREE.Object3D[],
+          false,
+        );
+        if (hits.length > 0) {
+          const s = hits[0].object as StickerMesh;
+          setHoveredIdxRef.current(stateIndexMap.get(s) ?? -1);
+        } else {
+          setHoveredIdxRef.current(-1);
+        }
       }
-      if (e.code === "ArrowUp") {
-        // up face becomes front
-        snapCameraTo(currentUp.clone(), neg(currentFront));
-        return;
-      }
-      if (e.code === "ArrowDown") {
-        // down face becomes front
-        snapCameraTo(neg(currentUp), currentFront.clone());
-        return;
-      }
+      if (showStateEditor) mount.addEventListener("mousemove", onMouseMove);
 
-      // [ ] — roll around front axis (Z rotation of the view)
-      if (e.key === "[") {
-        // CCW roll: up moves to the left
-        const newUp = right.clone();
-        snapCameraTo(currentFront.clone(), newUp);
-        return;
-      }
-      if (e.key === "]") {
-        // CW roll: up moves to the right
-        const newUp = neg(right);
-        snapCameraTo(currentFront.clone(), newUp);
-        return;
-      }
+      return () => {
+        cancelAnimationFrame(rafId);
+        mount.removeEventListener("keydown", onKeyDown);
+        mount.removeEventListener("wheel", onWheel);
+        if (showStateEditor)
+          mount.removeEventListener("mousemove", onMouseMove);
+        gl.dispose();
+        if (mount.contains(gl.domElement)) mount.removeChild(gl.domElement);
+      };
+    }, [width, height, size, showStateEditor]);
 
-      const logicalFace = e.key.toUpperCase();
-      if (logicalFace in faceDef) {
-        const relativeFaceVec: Record<string, THREE.Vector3> = {
-          F: currentFront.clone(),
-          B: neg(currentFront),
-          U: currentUp.clone(),
-          D: neg(currentUp),
-          R: right.clone(),
-          L: neg(right),
-        };
-        const worldFace = worldFaceFromVec(relativeFaceVec[logicalFace]);
-        animateFaceMove(worldFace, !e.shiftKey);
-      }
-    }
+    // ── JSX ───────────────────────────────────────────────────────────────────
 
-    function onWheel(e: WheelEvent) {
-      e.preventDefault();
-      e.stopPropagation();
-      cameraRadius = Math.max(2, Math.min(40, cameraRadius + e.deltaY * 0.005));
-      applyView(currentFront, currentUp, cameraRadius);
-    }
-
-    // ── Render loop ───────────────────────────────────────────────────────────
-
-    const clock = new THREE.Clock();
-    let rafId: number;
-
-    function animate() {
-      rafId = requestAnimationFrame(animate);
-      const dt = clock.getDelta();
-      [...animCallbacks].forEach((fn) => fn(dt));
-      gl.render(scene, camera);
-    }
-    animate();
-
-    // ── Attach events ─────────────────────────────────────────────────────────
-
-    mount.addEventListener("keydown", onKeyDown);
-    mount.addEventListener("wheel", onWheel, { passive: false });
-
-    // ── Raycast hover for state editor ────────────────────────────────────────
-    const raycaster = showStateEditor ? new THREE.Raycaster() : null;
-    function onMouseMove(e: MouseEvent) {
-      if (!raycaster) return;
-      const rect = gl.domElement.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-      const hits = raycaster.intersectObjects(
-        stickers as unknown as THREE.Object3D[],
-        false,
-      );
-      if (hits.length > 0) {
-        const s = hits[0].object as StickerMesh;
-        setHoveredIdxRef.current(stateIndexMap.get(s) ?? -1);
-      } else {
-        setHoveredIdxRef.current(-1);
-      }
-    }
-    if (showStateEditor) mount.addEventListener("mousemove", onMouseMove);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      mount.removeEventListener("keydown", onKeyDown);
-      mount.removeEventListener("wheel", onWheel);
-      if (showStateEditor) mount.removeEventListener("mousemove", onMouseMove);
-      gl.dispose();
-      if (mount.contains(gl.domElement)) mount.removeChild(gl.domElement);
-    };
-  }, [width, height, size, showStateEditor]);
-
-  // ── JSX ───────────────────────────────────────────────────────────────────
-
-  return (
-    <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-      <div style={{ position: "relative", width, height }}>
-        {webglError ? (
-          <div
-            style={{
-              width,
-              height,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#94a3b8",
-              fontFamily: "monospace",
-              fontSize: "0.9rem",
-              gap: "0.75rem",
-              textAlign: "center",
-              padding: "2rem",
-              boxSizing: "border-box",
-            }}
-          >
-            <span style={{ fontSize: "2rem" }}>⚠️</span>
-            <span>{webglError}</span>
-          </div>
-        ) : (
-          <>
+    return (
+      <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+        <div style={{ position: "relative", width, height }}>
+          {webglError ? (
             <div
-              ref={mountRef}
-              tabIndex={0}
-              style={{ width, height, outline: "none", cursor: "grab" }}
-            />
-            {/* ── State-editor overlay ─────────────────────────────────── */}
-            {showStateEditor && stateString.length > 0 && (
+              style={{
+                width,
+                height,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#94a3b8",
+                fontFamily: "monospace",
+                fontSize: "0.9rem",
+                gap: "0.75rem",
+                textAlign: "center",
+                padding: "2rem",
+                boxSizing: "border-box",
+              }}
+            >
+              <span style={{ fontSize: "2rem" }}>⚠️</span>
+              <span>{webglError}</span>
+            </div>
+          ) : (
+            <>
               <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 0,
-                  padding: "10px 0 8px",
-                  background: "rgba(0,0,0,0.45)",
-                }}
-              >
-                {/* Editable text input */}
-                <input
-                  ref={stateInputRef}
-                  type="text"
-                  value={stateString}
-                  maxLength={6 * size * size}
-                  spellCheck={false}
-                  onChange={(e) => applyStringRef.current(e.target.value)}
+                ref={mountRef}
+                tabIndex={0}
+                style={{ width, height, outline: "none", cursor: "grab" }}
+              />
+              {/* ── State-editor overlay ─────────────────────────────────── */}
+              {showStateEditor && stateString.length > 0 && (
+                <div
                   style={{
-                    fontFamily: "monospace",
-                    fontSize: "0.78rem",
-                    letterSpacing: "0.12em",
-                    background: "rgba(0,0,0,0.6)",
-                    color: "#e2e8f0",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    borderRadius: 4,
-                    padding: "4px 10px",
-                    outline: "none",
-                    textAlign: "center",
-                    width: Math.min(width - 40, size * size * 6 * 12 + 80),
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 0,
+                    padding: "10px 0 8px",
                   }}
-                />
-              </div>
-            )}
-            {showHelp && (
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  textAlign: "center",
-                  color: "rgba(148,163,184,0.8)",
-                  fontFamily: "monospace",
-                  fontSize: "0.62rem",
-                  lineHeight: 1.8,
-                  pointerEvents: "none",
-                  userSelect: "none",
-                }}
-              >
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>Click</span>{" "}
-                to focus ·{" "}
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                  Arrows
-                </span>{" "}
-                orbit ·{" "}
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>[ ]</span>{" "}
-                roll ·{" "}
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                  Scroll
-                </span>{" "}
-                zoom ·{" "}
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                  F B R L U D
-                </span>{" "}
-                move ·{" "}
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                  +Shift
-                </span>{" "}
-                inverse ·{" "}
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>Space</span>{" "}
-                unfold ·{" "}
-                <span style={{ color: "#e2e8f0", fontWeight: 600 }}>H</span>{" "}
-                hide help
-              </div>
-            )}
-          </>
-        )}
+                >
+                  {/* Editable text input */}
+                  <input
+                    ref={stateInputRef}
+                    type="text"
+                    value={stateString}
+                    maxLength={6 * size * size}
+                    spellCheck={false}
+                    onChange={(e) => applyStringRef.current(e.target.value)}
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "0.78rem",
+                      letterSpacing: "0.12em",
+                      background: "rgba(0,0,0,0.6)",
+                      color: "#e2e8f0",
+                      border: "1px solid rgba(255,255,255,0.25)",
+                      borderRadius: 4,
+                      padding: "4px 10px",
+                      outline: "none",
+                      textAlign: "center",
+                      width: Math.min(width - 40, size * size * 6 * 12 + 80),
+                    }}
+                  />
+                </div>
+              )}
+              {showHelp && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 12,
+                    left: 0,
+                    right: 0,
+                    textAlign: "center",
+                    color: "rgba(148,163,184,0.8)",
+                    fontFamily: "monospace",
+                    fontSize: "0.62rem",
+                    lineHeight: 1.8,
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                >
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                    Click
+                  </span>{" "}
+                  to focus ·{" "}
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                    Arrows
+                  </span>{" "}
+                  orbit ·{" "}
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>[ ]</span>{" "}
+                  roll ·{" "}
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                    Scroll
+                  </span>{" "}
+                  zoom ·{" "}
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                    F B R L U D
+                  </span>{" "}
+                  move ·{" "}
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                    +Shift
+                  </span>{" "}
+                  inverse ·{" "}
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                    Space
+                  </span>{" "}
+                  unfold ·{" "}
+                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>H</span>{" "}
+                  hide help
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
+
+export default RubikCube;

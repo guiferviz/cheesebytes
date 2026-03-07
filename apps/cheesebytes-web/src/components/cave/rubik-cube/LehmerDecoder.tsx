@@ -211,8 +211,11 @@ export const LehmerDecoder: React.FC<LehmerDecoderProps> = ({
             Decode (pool → pick)
           </span>
           <div
-            className="flex flex-col items-stretch w-full"
-            style={{ gap: Math.max(1, Math.min(4, 20 / n)) }}
+            className="mx-auto flex flex-col items-stretch max-w-full"
+            style={{
+              gap: Math.max(1, Math.min(4, 20 / n)),
+              width: "fit-content",
+            }}
           >
             {decodeSteps.map((step, i) => {
               const hl = isHighlighted(i);
@@ -227,13 +230,13 @@ export const LehmerDecoder: React.FC<LehmerDecoderProps> = ({
                   {/* Row label */}
                   <span
                     className="font-mono text-xs font-bold shrink-0 text-right"
-                    style={{ width: 32, color: "#888" }}
+                    style={{ width: 38, paddingRight: 6, color: "#888" }}
                   >
                     p[{i}]
                   </span>
 
                   {/* Pool with highlight */}
-                  <div className="flex items-center" style={{ gap }}>
+                  <div className="relative flex items-center" style={{ gap }}>
                     {step.pool.map((v, j) => {
                       const isPicked = j === step.digit;
                       const c = FACE_COLORS[v];
@@ -262,35 +265,38 @@ export const LehmerDecoder: React.FC<LehmerDecoderProps> = ({
                         </div>
                       );
                     })}
-                  </div>
 
-                  {/* Hover tooltip */}
-                  {hl && (
-                    <span
-                      className="font-mono shrink-0 flex items-center gap-1.5 text-orange-600 dark:text-orange-400 transition-opacity"
-                      style={{
-                        fontSize: Math.max(11, cell * 0.26),
-                        marginLeft: 6,
-                      }}
-                    >
-                      <span className="opacity-60">→</span>
-                      <span className="font-bold">
-                        index{" "}
-                        <span
-                          className="inline-flex items-center justify-center rounded"
-                          style={{
-                            minWidth: 18,
-                            padding: "0 4px",
-                            background: "rgba(224,120,48,0.18)",
-                            border: "1px solid rgba(224,120,48,0.4)",
-                          }}
-                        >
-                          {step.digit}
-                        </span>{" "}
-                        → picked {step.picked}
+                    {/* Hover tooltip */}
+                    {hl && (
+                      <span
+                        className="absolute font-mono flex items-center gap-1.5 text-orange-600 dark:text-orange-400 whitespace-nowrap pointer-events-none"
+                        style={{
+                          fontSize: Math.max(11, cell * 0.26),
+                          left: "100%",
+                          marginLeft: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                        }}
+                      >
+                        <span className="opacity-60">→</span>
+                        <span className="font-bold">
+                          index{" "}
+                          <span
+                            className="inline-flex items-center justify-center rounded"
+                            style={{
+                              minWidth: 18,
+                              padding: "0 4px",
+                              background: "rgba(224,120,48,0.18)",
+                              border: "1px solid rgba(224,120,48,0.4)",
+                            }}
+                          >
+                            {step.digit}
+                          </span>{" "}
+                          → picked {step.picked}
+                        </span>
                       </span>
-                    </span>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}

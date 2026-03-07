@@ -6,21 +6,27 @@ import {
   allPermutations,
   factorial,
 } from "./lehmerMath";
-import { CheeseSlideContainer } from "../shared";
 
 interface LehmerTableProps {
   initialN?: number;
   showNSelector?: boolean;
-  maxHeight?: number;
   highlightIndex?: number | null;
+  /** Which optional columns to show: "lehmer" and/or "computation". */
+  showColumns?: ("lehmer" | "computation")[];
+  /** Max height of the component. Use a fixed value like "24em" in blog posts,
+   *  or leave as default "100%" for slides where the parent has a defined height. */
+  maxHeight?: string;
 }
 
 export const LehmerTable: React.FC<LehmerTableProps> = ({
   initialN = 3,
   showNSelector = true,
-  maxHeight = 520,
   highlightIndex = null,
+  showColumns = ["lehmer", "computation"],
+  maxHeight = "100%",
 }) => {
+  const showLehmer = showColumns.includes("lehmer");
+  const showComputation = showColumns.includes("computation");
   const [nString, setNString] = useState<string>(initialN.toString());
   const [n, setN] = useState(Math.max(1, Math.min(9, initialN)));
   const [perms, setPerms] = useState<number[][]>([]);
@@ -48,21 +54,26 @@ export const LehmerTable: React.FC<LehmerTableProps> = ({
   const gap = 4;
 
   return (
-    <CheeseSlideContainer>
+    <div
+      style={{
+        width: "100%",
+        maxHeight,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 16,
+        overflow: "hidden",
+        fontFamily: "monospace",
+        userSelect: "none",
+      }}
+      className="not-prose"
+    >
       {showNSelector && (
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            marginBottom: 20,
-            fontFamily: "monospace",
-            fontSize: 16,
-            color: "#ccc",
-          }}
+          style={{ flexShrink: 0 }}
+          className="flex items-center justify-center gap-3 font-mono text-base text-gray-500 dark:text-gray-400"
         >
-          <span style={{ color: "#aaa" }}>n =</span>
+          <span className="text-gray-500 dark:text-gray-500">n =</span>
           <input
             type="text"
             value={nString}
@@ -72,27 +83,11 @@ export const LehmerTable: React.FC<LehmerTableProps> = ({
               const num = parseInt(val, 10);
               if (!isNaN(num) && num >= 1 && num <= 9) setN(num);
             }}
-            style={{
-              width: 48,
-              height: 38,
-              borderRadius: 6,
-              border: "2px solid #555",
-              background: "#2a2a2a",
-              color: "#e07830",
-              fontWeight: 700,
-              textAlign: "center",
-              fontFamily: "monospace",
-              fontSize: 18,
-              outline: "none",
-              transition: "all 0.15s",
-            }}
-            onFocus={(e) => (e.target.style.borderColor = "#e07830")}
-            onBlur={(e) => {
-              setNString(n.toString());
-              e.target.style.borderColor = "#555";
-            }}
+            onBlur={() => setNString(n.toString())}
+            className="w-12 h-10 rounded-md border-2 border-gray-300 bg-gray-100 text-center font-mono text-lg font-bold outline-none transition-colors focus:border-orange-500 dark:border-gray-600 dark:bg-gray-800"
+            style={{ color: "#e07830" }}
           />
-          <span style={{ fontSize: 13, color: "#666", paddingLeft: 8 }}>
+          <span className="text-sm text-gray-400 dark:text-gray-600 pl-2">
             ({factorial(n)} permutations)
           </span>
         </div>
@@ -101,35 +96,42 @@ export const LehmerTable: React.FC<LehmerTableProps> = ({
       {perms.length > 0 && (
         <div
           ref={scrollRef}
+          className="w-full max-w-lg rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-black"
           style={{
-            maxHeight,
+            flex: "0 1 auto",
+            minHeight: 0,
             overflowY: "auto",
-            borderRadius: 10,
-            border: "1px solid #3a3a3a",
-            width: "100%",
+            overflowX: "hidden",
+            isolation: "isolate",
           }}
         >
-          <table
-            style={{
-              borderCollapse: "collapse",
-              fontFamily: "monospace",
-              fontSize: 13,
-              width: "100%",
-            }}
-          >
+          <table className="w-full border-separate border-spacing-0 font-mono text-sm">
             <thead>
-              <tr
-                style={{
-                  position: "sticky",
-                  top: 0,
-                  background: "#161616",
-                  zIndex: 1,
-                }}
-              >
-                <th style={thStyle}>Index</th>
-                <th style={thStyle}>Permutation</th>
-                <th style={thStyle}>Lehmer Code</th>
-                <th style={thStyle}>Computation</th>
+              <tr>
+                <th
+                  className={`${thCls} sticky top-0 z-10 bg-gray-100 dark:bg-gray-900`}
+                >
+                  Index
+                </th>
+                <th
+                  className={`${thCls} sticky top-0 z-10 bg-gray-100 dark:bg-gray-900`}
+                >
+                  Permutation
+                </th>
+                {showLehmer && (
+                  <th
+                    className={`${thCls} sticky top-0 z-10 bg-gray-100 dark:bg-gray-900`}
+                  >
+                    Lehmer Code
+                  </th>
+                )}
+                {showComputation && (
+                  <th
+                    className={`${thCls} sticky top-0 z-10 bg-gray-100 dark:bg-gray-900`}
+                  >
+                    Computation
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -144,44 +146,36 @@ export const LehmerTable: React.FC<LehmerTableProps> = ({
                     style={{
                       background: isHighlighted
                         ? "rgba(224,120,48,0.18)"
-                        : rowIdx % 2 === 0
-                          ? "rgba(255,255,255,0.02)"
-                          : "transparent",
+                        : undefined,
                     }}
+                    className={
+                      !isHighlighted
+                        ? rowIdx % 2 === 0
+                          ? "bg-white dark:bg-transparent"
+                          : "bg-gray-50 dark:bg-white/[0.02]"
+                        : ""
+                    }
                   >
                     <td
-                      style={{
-                        ...tdStyle,
-                        fontWeight: 700,
-                        color: "#fff",
-                        fontSize: 14,
-                      }}
+                      className={`${tdCls} font-bold text-gray-900 dark:text-white text-sm`}
                     >
                       {idx}
                     </td>
-                    <td style={tdStyle}>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap,
-                          justifyContent: "center",
-                        }}
-                      >
+                    <td className={tdCls}>
+                      <div className="flex justify-center" style={{ gap }}>
                         {p.map((cIdx, j) => (
                           <div
                             key={j}
+                            className="flex items-center justify-center font-mono font-bold shrink-0"
                             style={{
                               width: cellSize,
                               height: cellSize,
                               borderRadius: 6,
                               background: FACE_COLORS[cIdx].hex,
-                              border: "2px solid #111",
-                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
+                              border: "2px solid rgba(0,0,0,0.12)",
+                              boxShadow:
+                                "inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 3px rgba(0,0,0,0.15)",
                               fontSize: 11,
-                              fontWeight: 700,
                               color: textColor(FACE_COLORS[cIdx].hex),
                             }}
                           >
@@ -190,28 +184,39 @@ export const LehmerTable: React.FC<LehmerTableProps> = ({
                         ))}
                       </div>
                     </td>
-                    <td style={tdStyle}>
-                      <span style={{ color: "#e07830" }}>
-                        [{lc.join(", ")}]
-                      </span>
-                    </td>
-                    <td style={{ ...tdStyle, color: "#999", fontSize: 11 }}>
-                      {lc.map((v, i) => {
-                        const f = factorial(n - 1 - i);
-                        return (
-                          <React.Fragment key={i}>
-                            {i > 0 && (
-                              <span style={{ color: "#555" }}> + </span>
-                            )}
-                            <span>
-                              <span style={{ color: "#e07830" }}>{v}</span>
-                              <span style={{ color: "#555" }}>×</span>
-                              {f}!
-                            </span>
-                          </React.Fragment>
-                        );
-                      })}
-                    </td>
+                    {showLehmer && (
+                      <td className={tdCls}>
+                        <span style={{ color: "#e07830" }}>
+                          [{lc.join(", ")}]
+                        </span>
+                      </td>
+                    )}
+                    {showComputation && (
+                      <td
+                        className={`${tdCls} text-gray-400 dark:text-gray-500 text-xs`}
+                      >
+                        {lc.map((v, i) => {
+                          const f = factorial(n - 1 - i);
+                          return (
+                            <React.Fragment key={i}>
+                              {i > 0 && (
+                                <span className="text-gray-300 dark:text-gray-600">
+                                  {" "}
+                                  +{" "}
+                                </span>
+                              )}
+                              <span>
+                                <span style={{ color: "#e07830" }}>{v}</span>
+                                <span className="text-gray-300 dark:text-gray-600">
+                                  ×
+                                </span>
+                                {f}!
+                              </span>
+                            </React.Fragment>
+                          );
+                        })}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -219,22 +224,12 @@ export const LehmerTable: React.FC<LehmerTableProps> = ({
           </table>
         </div>
       )}
-    </CheeseSlideContainer>
+    </div>
   );
 };
 
-const thStyle: React.CSSProperties = {
-  padding: "8px 14px",
-  textAlign: "center",
-  color: "#999",
-  borderBottom: "1px solid #444",
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-};
+const thCls =
+  "px-3.5 py-2 text-center text-sm font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 whitespace-nowrap";
 
-const tdStyle: React.CSSProperties = {
-  padding: "5px 12px",
-  textAlign: "center",
-  borderBottom: "1px solid #2a2a2a",
-  verticalAlign: "middle",
-};
+const tdCls =
+  "px-3 py-1.5 text-center border-b border-gray-100 dark:border-gray-800 align-middle";

@@ -7,6 +7,7 @@ import {
   LehmerTable,
   LehmerBuilder,
   LehmerDecoder,
+  CornerInvariant,
 } from "../../components/cave/rubik-cube";
 import { RubikStateGraph } from "../../components/cave/rubik-graph";
 import { LogoAnimation } from "../../components/cave/intro";
@@ -522,6 +523,10 @@ export const vectorizedCode = dedent`\
     />
   </section>
 
+  <section id="part-1">
+    <h1>Part 1: Naive</h1>
+  </section>
+
   <section id="cube">
     <aside class="notes">
       <p>
@@ -540,6 +545,38 @@ export const vectorizedCode = dedent`\
       width={1080}
       height={720}
       showStateEditor={true}
+      cameraRelativeEncoding={true}
+    />
+  </section>
+
+  <section id="cube">
+    <aside class="notes">
+      <p>Encoding no relativo a la camara.</p>
+    </aside>
+    <RubikCubeViz
+      client:only="react"
+      width={1080}
+      height={720}
+      showStateEditor={true}
+      cameraRelativeEncoding={false}
+    />
+  </section>
+
+  <section id="lehmer-table">
+    <aside class="notes">
+      <p>
+        If we list every possible permutation of n elements and sort them
+        lexicographically, we can assign each one a unique index (from 0 to
+        n!-1). This means we can identify any permutation with a single integer,
+        which is far more compact than storing the full array of length n.
+      </p>
+    </aside>
+    <LehmerTable
+      client:only="react"
+      initialN={3}
+      showNSelector={true}
+      showColumns={[]}
+      maxHeight="50vh"
     />
   </section>
 
@@ -568,20 +605,19 @@ export const vectorizedCode = dedent`\
     <LehmerDecoder client:only="react" initialN={4} showNSelector={true} />
   </section>
 
-  <section id="lehmer-table">
+  <section id="corner-invariant">
     <aside class="notes">
       <p>
-        Here is the complete table of all permutations for a given n. Each row
-        shows the colour arrangement, its Lehmer code, and the factoriadic index
-        computed from it.
+        Now we arrive at a deep structural property of the cube. Each of the 8
+        corners has an orientation value — 0, 1 or 2 — depending on whether its
+        blue/green sticker faces up/down (0), or has twisted clockwise (1) or
+        counter-clockwise (2). Apply any sequence of legal moves and watch: the
+        individual orientations change freely, but the sum of all 8 values,
+        taken modulo 3, is always zero. This is an invariant — a conservation
+        law that every legal state must respect.
       </p>
     </aside>
-    <LehmerTable
-      client:only="react"
-      initialN={3}
-      showNSelector={true}
-      maxHeight={520}
-    />
+    <CornerInvariant client:only="react" width={420} height={340} />
   </section>
 
   <section>

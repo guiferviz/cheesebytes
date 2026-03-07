@@ -145,8 +145,11 @@ export const LehmerBuilder: React.FC<LehmerBuilderProps> = ({
           </span>
 
           <div
-            className="flex flex-col items-stretch w-full"
-            style={{ gap: Math.max(1, Math.min(4, 20 / n)) }}
+            className="mx-auto flex flex-col items-stretch max-w-full"
+            style={{
+              gap: Math.max(1, Math.min(4, 20 / n)),
+              width: "fit-content",
+            }}
           >
             {Array.from({ length: n }, (_, row) => {
               const chosen = choices[row];
@@ -169,7 +172,8 @@ export const LehmerBuilder: React.FC<LehmerBuilderProps> = ({
                   <span
                     className="font-mono text-xs font-bold shrink-0 text-right"
                     style={{
-                      width: 32,
+                      width: 38,
+                      paddingRight: 6,
                       color: isActive
                         ? "#e07830"
                         : chosen !== null
@@ -196,7 +200,10 @@ export const LehmerBuilder: React.FC<LehmerBuilderProps> = ({
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center" style={{ gap }}>
+                      <div
+                        className="relative flex items-center"
+                        style={{ gap }}
+                      >
                         {pool.map((v) => {
                           const isPicked = chosen === v;
                           const c = FACE_COLORS[v];
@@ -246,34 +253,37 @@ export const LehmerBuilder: React.FC<LehmerBuilderProps> = ({
                             </div>
                           );
                         })}
-                      </div>
 
-                      {/* Hover tooltip — shows only when cursor is over a completed row */}
-                      {rowCompleted && hoveredRow === row && (
-                        <span
-                          className="font-mono shrink-0 flex items-center gap-1.5 text-orange-600 dark:text-orange-400 transition-opacity"
-                          style={{
-                            fontSize: Math.max(11, cell * 0.26),
-                            marginLeft: 6,
-                          }}
-                        >
-                          <span className="opacity-60">→</span>
-                          <span className="font-bold">
-                            picked {choices[row]} at index{" "}
-                            <span
-                              className="inline-flex items-center justify-center rounded"
-                              style={{
-                                minWidth: 18,
-                                padding: "0 4px",
-                                background: "rgba(224,120,48,0.18)",
-                                border: "1px solid rgba(224,120,48,0.4)",
-                              }}
-                            >
-                              {lehmerDigit}
+                        {/* Hover tooltip — shows only when cursor is over a completed row */}
+                        {rowCompleted && hoveredRow === row && (
+                          <span
+                            className="absolute font-mono flex items-center gap-1.5 text-orange-600 dark:text-orange-400 whitespace-nowrap pointer-events-none"
+                            style={{
+                              fontSize: Math.max(11, cell * 0.26),
+                              left: "100%",
+                              marginLeft: 8,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                            }}
+                          >
+                            <span className="opacity-60">→</span>
+                            <span className="font-bold">
+                              picked {choices[row]} at index{" "}
+                              <span
+                                className="inline-flex items-center justify-center rounded"
+                                style={{
+                                  minWidth: 18,
+                                  padding: "0 4px",
+                                  background: "rgba(224,120,48,0.18)",
+                                  border: "1px solid rgba(224,120,48,0.4)",
+                                }}
+                              >
+                                {lehmerDigit}
+                              </span>
                             </span>
                           </span>
-                        </span>
-                      )}
+                        )}
+                      </div>
                     </>
                   )}
                 </div>

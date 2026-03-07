@@ -1,0 +1,51 @@
+import { LehmerTable } from "../../../apps/cheesebytes-web/src/components/cave/rubik-cube/LehmerTable.tsx";
+
+El cubo de Rubik es el juego mas famoso del mundo, con mas de 350 millones de
+unidades vendidas, así que no lo voy a presentar. En este artículo vamos a
+resolverlo, pero no usando nuestros dedos, sino usando un código en Python.
+
+# Representation
+
+How to translate what we see in the cube to something that a computer can
+understand? We need to find a way to represent the state of the cube in a way
+that is both compact and easy to manipulate.
+
+# String representation aka sticker representation
+
+We can represent the cube as a string of 24 characters, each representing a
+sticker. For example, we can use the following mapping:
+
+    TODO: image of expanded cube with stickers labeled from 0 to 23
+
+So, the string "BBBBRRRRYYYYOOOOWWWWGGGG" would represent the solved state of
+the cube.
+
+# Problems with the string representation
+
+The string representation is easy to understand, but it is not very efficient.
+It takes 24 characters to represent the state of the cube. It also allows for
+invalid states, such as "BBBBBBBBBBBBBBBBBBBBBBBB", which is not a valid cube
+state. Having more than 4 stickers of the same color is not possible in a real
+cube, but also it is not possible to have something like
+"BBBRBRRRYYYYOOOOWWWWGGGG", where we have 4 stickers of each color but in an
+invalid arrangement that does not correspond to a real cube (only possible to
+achieve if we unstick the stickers and stick them in a different order).
+
+Also, even with valid states, we have several ways of representing the same
+cube. For example, the string "RRRRBBBBYYYYOOOOWWWWGGGG" represents the same
+cube as "BBBBRRRRYYYYOOOOWWWWGGGG". (TODO: correct this example).
+
+# Lehmer code
+
+Definimos nuestras permutaciones de la siguiente manera:
+
+    ¿de qué posición antigua viene lo que pongo en la posición i?
+
+    lo que estaba en i ahora está en p(i)
+
+<LehmerTable
+  client:only="react"
+  initialN={4}
+  showColumns={[]}
+  maxHeight="50vh"
+/>
