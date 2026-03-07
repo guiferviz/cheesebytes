@@ -4,6 +4,10 @@ import dedent from "dedent";
 import RevealLayout from "../../layouts/PresentationLayout.astro";
 import { RubikCube as RubikCubeViz } from "../../components/cave/rubik-cube";
 import { RubikStateGraph } from "../../components/cave/rubik-graph";
+import {
+  LehmerInteractive,
+  LehmerTable,
+} from "../../components/cave/lehmer-code";
 import { LogoAnimation } from "../../components/cave/intro";
 import PyodideWorkerRunner from "../../../src/components/PyodideWorkerRunner";
 
@@ -535,6 +539,33 @@ export const vectorizedCode = dedent`\
       width={1080}
       height={720}
       showStateEditor={true}
+    />
+  </section>
+
+  <section id="lehmer-interactive">
+    <aside class="notes">
+      <p>
+        To encode a permutation as a single number we use Lehmer codes. Drag the
+        coloured blocks to reorder them and watch how the Lehmer code and the
+        factoriadic index update in real time.
+      </p>
+    </aside>
+    <LehmerInteractive client:only="react" initialN={3} showNSelector={true} />
+  </section>
+
+  <section id="lehmer-table">
+    <aside class="notes">
+      <p>
+        Here is the complete table of all permutations for a given n. Each row
+        shows the colour arrangement, its Lehmer code, and the factoriadic index
+        computed from it.
+      </p>
+    </aside>
+    <LehmerTable
+      client:only="react"
+      initialN={3}
+      showNSelector={true}
+      maxHeight={520}
     />
   </section>
 
