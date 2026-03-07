@@ -2,12 +2,13 @@
 import dedent from "dedent";
 
 import RevealLayout from "../../layouts/PresentationLayout.astro";
-import { RubikCube as RubikCubeViz } from "../../components/cave/rubik-cube";
-import { RubikStateGraph } from "../../components/cave/rubik-graph";
 import {
-  LehmerInteractive,
+  RubikCube as RubikCubeViz,
   LehmerTable,
-} from "../../components/cave/lehmer-code";
+  LehmerBuilder,
+  LehmerDecoder,
+} from "../../components/cave/rubik-cube";
+import { RubikStateGraph } from "../../components/cave/rubik-graph";
 import { LogoAnimation } from "../../components/cave/intro";
 import PyodideWorkerRunner from "../../../src/components/PyodideWorkerRunner";
 
@@ -542,15 +543,29 @@ export const vectorizedCode = dedent`\
     />
   </section>
 
-  <section id="lehmer-interactive">
+  <section id="lehmer-builder">
     <aside class="notes">
       <p>
-        To encode a permutation as a single number we use Lehmer codes. Drag the
-        coloured blocks to reorder them and watch how the Lehmer code and the
-        factoriadic index update in real time.
+        Build a permutation step by step, row by row. At each position you
+        choose from the remaining values — the index of that choice in the
+        available pool is the corresponding Lehmer digit. Watch the Lehmer code
+        and factoriadic index change as you pick each element.
       </p>
     </aside>
-    <LehmerInteractive client:only="react" initialN={3} showNSelector={true} />
+    <LehmerBuilder client:only="react" initialN={4} showNSelector={true} />
+  </section>
+
+  <section id="lehmer-decoder">
+    <aside class="notes">
+      <p>
+        Now the reverse direction: given an index, we recover the permutation.
+        The slider lets you sweep through all n! indices. For each index we
+        perform factoriadic decomposition to get the Lehmer code, then decode it
+        step by step: at each position, pick the Lehmer-digit-th element from
+        the shrinking pool of available values.
+      </p>
+    </aside>
+    <LehmerDecoder client:only="react" initialN={4} showNSelector={true} />
   </section>
 
   <section id="lehmer-table">

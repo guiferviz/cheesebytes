@@ -498,8 +498,8 @@ export const CheeseSlideContainer: React.FC<SlideContainerProps> = ({
         - prose class adds margins we don't want
       */}
       <style>{`
-        .cheese-slide-container,
-        .cheese-slide-container * {
+        .cheese-slide-container > *,
+        .cheese-slide-container > * > .prose {
           margin-top: 0 !important;
           margin-bottom: 0 !important;
         }
