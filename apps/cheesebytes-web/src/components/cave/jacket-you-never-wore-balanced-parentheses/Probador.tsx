@@ -256,11 +256,15 @@ export const Probador: React.FC<ProbadorProps> = ({
     }
   }, [autoPlay, currentStep, nextStep]);
 
-  const isComplete =
+  const hasActionError = errorStep !== undefined;
+  const hasProcessedAllActions =
+    actions.length === 0 ||
     animationState === "complete" ||
-    (currentStep >= actions.length - 1 &&
-      animationState === "idle" &&
-      !errorStep);
+    (currentStep >= actions.length - 1 && animationState === "idle");
+  const hasUnclosedGarments =
+    hasProcessedAllActions && stack.length > 0 && !hasActionError;
+  const isValidSequence =
+    hasProcessedAllActions && stack.length === 0 && !hasActionError;
 
   return (
     <>
@@ -342,7 +346,7 @@ export const Probador: React.FC<ProbadorProps> = ({
                 </g>
 
                 {/* IMPOSSIBLE stamp */}
-                {showImpossibleStamp && (
+                {(showImpossibleStamp || hasUnclosedGarments) && (
                   <g
                     transform="translate(140, 180)"
                     style={{ animation: "stampAppear 0.3s ease-out forwards" }}
@@ -368,13 +372,13 @@ export const Probador: React.FC<ProbadorProps> = ({
                       fill="#dc2626"
                       transform="rotate(-12)"
                     >
-                      IMPOSSIBLE
+                      {hasUnclosedGarments ? "INVALID" : "IMPOSSIBLE"}
                     </text>
                   </g>
                 )}
 
                 {/* SUCCESS stamp */}
-                {isComplete && !errorStep && (
+                {isValidSequence && (
                   <g
                     transform="translate(140, 180)"
                     style={{ animation: "stampAppear 0.3s ease-out forwards" }}
@@ -415,7 +419,7 @@ export const Probador: React.FC<ProbadorProps> = ({
               mode={displayMode}
               showTypeCounters={showTypeCounters}
               showParentheses={showParentheses}
-              hasError={!!errorStep}
+              hasError={hasActionError || hasUnclosedGarments}
             />
           )}
         </div>
@@ -431,19 +435,29 @@ export const Probador: React.FC<ProbadorProps> = ({
             </button>
             <button
               onClick={nextStep}
-              disabled={animationState !== "idle" || !!errorStep || isComplete}
+              disabled={
+                animationState !== "idle" ||
+                hasActionError ||
+                hasUnclosedGarments ||
+                isValidSequence
+              }
               className={`
                 px-6 py-2 rounded-lg font-bold transition-all
                 ${
-                  animationState !== "idle" || !!errorStep || isComplete
+                  animationState !== "idle" ||
+                  hasActionError ||
+                  hasUnclosedGarments ||
+                  isValidSequence
                     ? "bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed"
                     : "bg-amber-500 hover:bg-amber-600 text-white shadow-md hover:shadow-lg"
                 }
               `}
             >
-              {isComplete
+              {isValidSequence
                 ? "Done!"
-                : errorStep !== undefined
+                : hasUnclosedGarments
+                  ? "Invalid!"
+                  : hasActionError
                   ? "Error!"
                   : "Next Step →"}
             </button>
@@ -451,10 +465,16 @@ export const Probador: React.FC<ProbadorProps> = ({
         )}
 
         {/* Status message */}
-        {errorStep !== undefined && (
+        {hasActionError && (
           <div className="text-red-600 dark:text-red-400 text-center max-w-md">
             <p className="font-bold">Cannot remove that garment!</p>
             <p className="text-sm">It's not on top of the stack.</p>
+          </div>
+        )}
+        {hasUnclosedGarments && (
+          <div className="text-red-600 dark:text-red-400 text-center max-w-md">
+            <p className="font-bold">Sequence is invalid.</p>
+            <p className="text-sm">Some openings were never closed.</p>
           </div>
         )}
       </div>
