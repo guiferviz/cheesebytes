@@ -48,6 +48,16 @@ for (const k of Object.keys(MOVES_PERM)) {
 const MOVE_NAMES = Object.keys(MOVES_PERM);
 const QTM_MOVES = MOVE_NAMES.filter((m) => !m.endsWith("2")); // quarter-turn only
 const HTM_MOVES = MOVE_NAMES; // half-turn (includes doubles)
+type Metric = "QTM" | "HTM";
+const MOVES_BY_METRIC: Record<Metric, string[]> = {
+  QTM: QTM_MOVES,
+  HTM: HTM_MOVES,
+};
+
+function orderMoves(metric: Metric, moves: string[]): string[] {
+  const moveSet = new Set(moves);
+  return MOVES_BY_METRIC[metric].filter((move) => moveSet.has(move));
+}
 
 // ─── Index  ↔  (perm, ori) codec ─────────────────────────────────────────────
 
@@ -601,8 +611,14 @@ export default function RubikStateGraph({
   const [rootIndex, setRootIndex] = useState(initialIndex);
   const [depth, setDepth] = useState(initialDepth);
   const [inputValue, setInputValue] = useState(String(initialIndex));
-  const [metric, setMetric] = useState<"QTM" | "HTM">("HTM");
+  const [metric, setMetric] = useState<Metric>("HTM");
   const [cubeView, setCubeView] = useState<"net" | "iso">("net");
+  const [enabledMovesByMetric, setEnabledMovesByMetric] = useState<
+    Record<Metric, string[]>
+  >(() => ({
+    QTM: [...QTM_MOVES],
+    HTM: [...HTM_MOVES],
+  }));
 
   // Collapsible settings
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -612,7 +628,12 @@ export default function RubikStateGraph({
   const [showIds, setShowIds] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
   const [edgeBend, setEdgeBend] = useState(15);
+  const [edgeWidth, setEdgeWidth] = useState(1.5);
   const [cubeSize, setCubeSize] = useState(32);
+  const availableMoves = MOVES_BY_METRIC[metric];
+  const activeMoveset = orderMoves(metric, enabledMovesByMetric[metric]);
+  const activeMovesKey = activeMoveset.join("|");
+  const activeMovesSet = new Set(activeMoveset);
 
   // Refs for live settings (read by zoom/tick closures without triggering rebuild)
   const cubeThresholdRef = useRef(cubeThreshold);
@@ -677,7 +698,6 @@ export default function RubikStateGraph({
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const activeMoveset = metric === "QTM" ? QTM_MOVES : HTM_MOVES;
     const { nodes, edges } = bfsExpand(rootIndex, depth, activeMoveset);
 
     // D3 links need object references
@@ -728,9 +748,10 @@ export default function RubikStateGraph({
     // The curved line (solid color, no alpha)
     const linkLine = linkG
       .append("path")
+      .attr("class", "edge-line")
       .attr("fill", "none")
       .attr("stroke", (d: any) => MOVE_COLOR[d.move] ?? "#888")
-      .attr("stroke-width", 1.5);
+      .attr("stroke-width", edgeWidth);
 
     // Arrowhead triangle placed at t=0.65 of the bézier (solid, matching color)
     const linkArrow = linkG
@@ -947,7 +968,7 @@ export default function RubikStateGraph({
     return () => {
       sim.stop();
     };
-  }, [rootIndex, depth, metric, width, height, getStickers]);
+  }, [rootIndex, depth, width, height, getStickers, activeMovesKey]);
 
   // ── Force-params useEffect: adjusts simulation without rebuilding ──────
   useEffect(() => {
@@ -966,6 +987,8 @@ export default function RubikStateGraph({
 
     // Update edge bend in link data (tick reads d.bendAmt)
     for (const lk of linksRef.current) lk.bendAmt = edgeBend;
+
+    container.selectAll(".edge-line").attr("stroke-width", edgeWidth);
 
     // Edge labels: visibility + theme stroke + ensure outline is always present
     container
@@ -1022,12 +1045,41 @@ export default function RubikStateGraph({
     isDark,
     cubeThreshold,
     edgeBend,
+    edgeWidth,
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseInt(inputValue, 10);
     if (!isNaN(val) && val >= 0) setRootIndex(val);
+  };
+
+  const setAllMoves = () => {
+    setEnabledMovesByMetric((current) => ({
+      ...current,
+      [metric]: [...MOVES_BY_METRIC[metric]],
+    }));
+  };
+
+  const clearMoves = () => {
+    setEnabledMovesByMetric((current) => ({
+      ...current,
+      [metric]: [],
+    }));
+  };
+
+  const toggleMove = (move: string) => {
+    setEnabledMovesByMetric((current) => {
+      const selectedMoves = current[metric];
+      const nextMoves = selectedMoves.includes(move)
+        ? selectedMoves.filter((item) => item !== move)
+        : [...selectedMoves, move];
+
+      return {
+        ...current,
+        [metric]: orderMoves(metric, nextMoves),
+      };
+    });
   };
 
   return (
@@ -1102,7 +1154,7 @@ export default function RubikStateGraph({
           <input
             type="range"
             min={0}
-            max={4}
+            max={10}
             value={depth}
             onChange={(e) => setDepth(Number(e.target.value))}
             style={{ width: 100, accentColor: "#ff8800" }}
@@ -1270,6 +1322,24 @@ export default function RubikStateGraph({
               alignItems: "center",
             }}
           >
+            Edge width: {edgeWidth.toFixed(1)}
+            <input
+              type="range"
+              min={0.5}
+              max={6}
+              step={0.5}
+              value={edgeWidth}
+              onChange={(e) => setEdgeWidth(Number(e.target.value))}
+              style={{ width: 100, accentColor: "#ff8800" }}
+            />
+          </label>
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             Cube threshold:{" "}
             {cubeThreshold === 0 ? "always" : cubeThreshold.toFixed(1)}
             <input
@@ -1328,6 +1398,104 @@ export default function RubikStateGraph({
               onChange={(e) => setShowLabels(e.target.checked)}
             />
           </label>
+          <details>
+            <summary
+              style={{
+                cursor: "pointer",
+                userSelect: "none",
+                color: isDark ? "#ddd" : "#333",
+              }}
+            >
+              Moves ({activeMoveset.length}/{availableMoves.length}) [{metric}]
+            </summary>
+            <div
+              style={{
+                marginTop: 8,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 10 }}>
+                  The graph expands only with the checked moves.
+                </span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={setAllMoves}
+                    style={{
+                      background: isDark ? "#333" : "#ddd",
+                      color: isDark ? "#ccc" : "#444",
+                      border: `1px solid ${isDark ? "#555" : "#bbb"}`,
+                      borderRadius: 4,
+                      padding: "2px 6px",
+                      cursor: "pointer",
+                      fontSize: 10,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearMoves}
+                    style={{
+                      background: isDark ? "#333" : "#ddd",
+                      color: isDark ? "#ccc" : "#444",
+                      border: `1px solid ${isDark ? "#555" : "#bbb"}`,
+                      borderRadius: 4,
+                      padding: "2px 6px",
+                      cursor: "pointer",
+                      fontSize: 10,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    none
+                  </button>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: 6,
+                }}
+              >
+                {availableMoves.map((move) => (
+                  <label
+                    key={move}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      background: activeMovesSet.has(move)
+                        ? isDark
+                          ? "rgba(255,136,0,0.16)"
+                          : "rgba(255,136,0,0.12)"
+                        : "transparent",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={activeMovesSet.has(move)}
+                      onChange={() => toggleMove(move)}
+                    />
+                    <span>{move}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
       )}
 
