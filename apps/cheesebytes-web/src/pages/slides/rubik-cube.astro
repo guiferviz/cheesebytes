@@ -554,18 +554,33 @@ export const vectorizedCode = dedent`\
         to the solved state.
       </p>
       <p>
+        Given the constraint of using only R moves, this is the entiry universe
+        of cubes we can generate. Only 4 possible cubes, assuming no rotations
+        of the cube. We can see that going from this state to the solved one
+        takes only one move. However, from this other one, even if it is the
+        result of applying a single R from the solved cube, it's 3 steps away.
+        The direction of the arrows matters. So in some sense, if we can compute
+        the full universe, we can also compute the minimum number of moves
+        needed to solve any given cube.
+      </p>
+      <p>
+        If we add the inverse of R, now the cube that is farthes from the solved
+        one is this one, it's only 2 steps away.
+      </p>
+      <p>
         Just considering 90 degree rotations of each face is what is called the
         quarter-turn metric. If we also allow 180 degree rotations, we get the
         half-turn metric. For example, we can define an R2 move that turns the
         right face 180 degrees. In that case, applying R twice in a row is not
         the same as applying R2, because the latter counts as a single move
-        while the former counts as two moves. This means that going from this
-        state to the solved one can be done in one move.
+        while the former counts as two moves. So defining what set of moves we
+        are using is crucial, because it changes the minimun number of moves
+        needed to solve a given configuration.
       </p>
       <p>
-        Note that defining R3 makes no sense, because it's the same as R'. So we
-        have 6 faces times 3 possible moves per face, for a total of 18 possible
-        moves.
+        Note that defining R3 makes no sense here, because it's the same as R'.
+        So we have 6 faces times 3 possible moves per face, for a total of 18
+        possible moves.
       </p>
     </aside>
   </section>

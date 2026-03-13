@@ -747,7 +747,8 @@ export default function RubikStateGraph({
       .selectAll("g")
       .data(links)
       .enter()
-      .append("g");
+      .append("g")
+      .style("transition", "opacity 0.25s ease");
 
     // The curved line (solid color, no alpha)
     const linkLine = linkG
@@ -782,7 +783,8 @@ export default function RubikStateGraph({
       .attr("text-anchor", "middle")
       .attr("font-family", "monospace")
       .attr("font-weight", "bold")
-      .attr("opacity", showLabels ? 1 : 0);
+      .attr("opacity", showLabels ? 1 : 0)
+      .style("transition", "opacity 0.25s ease");
 
     // Nodes
     const nodeG = container
@@ -793,6 +795,7 @@ export default function RubikStateGraph({
       .enter()
       .append("g")
       .attr("cursor", "pointer")
+      .style("transition", "opacity 0.25s ease")
       .call(
         d3
           .drag<SVGGElement, GraphNode>()
@@ -1058,38 +1061,83 @@ export default function RubikStateGraph({
     setVisHiddenMoves(new Set());
   }, [depth, rootIndex, activeMovesKey]);
 
-  // ── Visibility useEffect: hides nodes/edges without rebuilding ─────
+  // ── Visibility useEffect: BFS through visible edges only ───────────
   useEffect(() => {
     const container = containerGRef.current;
     if (!container) return;
 
     const effectiveStep = Math.min(visStep, depth);
+    const links = linksRef.current;
 
-    // Hide/show nodes by depth
+    // Build directed adjacency from edges whose move is visible
+    const adj = new Map<number, number[]>();
+    for (const lk of links) {
+      if (visHiddenMoves.has(lk.move)) continue;
+      const sid = typeof lk.source === "object" ? lk.source.id : lk.source;
+      const tid = typeof lk.target === "object" ? lk.target.id : lk.target;
+      if (!adj.has(sid)) adj.set(sid, []);
+      adj.get(sid)!.push(tid);
+    }
+
+    // BFS from root following only visible-move edges up to effectiveStep
+    // Track each node's discovery depth so we know which edges were traversed
+    const reachDepth = new Map<number, number>(); // nodeId → BFS depth
+    const queue: [number, number][] = [[rootIndex, 0]];
+    reachDepth.set(rootIndex, 0);
+    let head = 0;
+    while (head < queue.length) {
+      const [nodeId, d] = queue[head++];
+      if (d >= effectiveStep) continue;
+      const neighbors = adj.get(nodeId);
+      if (!neighbors) continue;
+      for (const n of neighbors) {
+        if (!reachDepth.has(n)) {
+          reachDepth.set(n, d + 1);
+          queue.push([n, d + 1]);
+        }
+      }
+    }
+
+    // Show/hide nodes
     container.selectAll(".nodes > g").each(function (this: any, d: any) {
-      d3.select(this).attr("display", d.depth <= effectiveStep ? null : "none");
+      const vis = reachDepth.has(d.id);
+      d3.select(this)
+        .style("opacity", vis ? 1 : 0)
+        .style("pointer-events", vis ? null : "none");
     });
 
-    // Hide/show edge lines + arrows by depth & move
+    // Show/hide edge groups (line + arrow)
+    // An edge src→tgt is visible only if:
+    //  - the move isn't hidden
+    //  - both endpoints are reachable
+    //  - the source was reached early enough to emit the edge (depth < effectiveStep)
     container.selectAll(".links > g").each(function (this: any, d: any) {
-      const sd = typeof d.source === "object" ? d.source.depth : Infinity;
-      const td = typeof d.target === "object" ? d.target.depth : Infinity;
+      const sid = typeof d.source === "object" ? d.source.id : d.source;
+      const tid = typeof d.target === "object" ? d.target.id : d.target;
+      const sd = reachDepth.get(sid);
       const vis =
-        sd <= effectiveStep &&
-        td <= effectiveStep &&
+        sd !== undefined &&
+        sd < effectiveStep &&
+        reachDepth.has(tid) &&
         !visHiddenMoves.has(d.move);
-      d3.select(this).attr("display", vis ? null : "none");
+      d3.select(this)
+        .style("opacity", vis ? 1 : 0)
+        .style("pointer-events", vis ? null : "none");
     });
 
-    // Hide/show edge labels
+    // Show/hide edge labels
     container.selectAll(".link-labels text").each(function (this: any, d: any) {
-      const sd = typeof d.source === "object" ? d.source.depth : Infinity;
-      const td = typeof d.target === "object" ? d.target.depth : Infinity;
+      const sid = typeof d.source === "object" ? d.source.id : d.source;
+      const tid = typeof d.target === "object" ? d.target.id : d.target;
+      const sd = reachDepth.get(sid);
       const vis =
-        sd <= effectiveStep &&
-        td <= effectiveStep &&
+        sd !== undefined &&
+        sd < effectiveStep &&
+        reachDepth.has(tid) &&
         !visHiddenMoves.has(d.move);
-      d3.select(this).attr("display", vis ? null : "none");
+      d3.select(this)
+        .style("opacity", vis ? 1 : 0)
+        .style("pointer-events", vis ? null : "none");
     });
   }, [visStep, visHiddenMoves, depth, rootIndex, activeMovesKey]);
 
