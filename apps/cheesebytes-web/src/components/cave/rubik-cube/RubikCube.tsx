@@ -41,12 +41,12 @@ const CAMERA_BIAS_UP = 0.3;
 // Requested scheme:
 // front=yellow, back=white, up=blue, down=green, right=orange, left=red
 const STICKER_COLOR: Record<string, number> = {
-  U: 0x0033cc,
-  D: 0x00aa00,
-  F: 0xffff00,
-  B: 0xdddddd,
-  R: 0xff6600,
-  L: 0xcc0000,
+  U: 0x4a7fd4,
+  D: 0x48a860,
+  F: 0xe8c832,
+  B: 0xd8d8d0,
+  R: 0xc8541a,
+  L: 0xd44040,
 };
 
 // ── Face definitions (axis / direction / slice index) ─────────────────────────
@@ -164,24 +164,24 @@ function makeCubie(gx: number, gy: number, gz: number, size: number) {
 const FACE_ORDER_STR = ["U", "L", "F", "R", "B", "D"] as const;
 
 const STICKER_CHAR: Record<number, string> = {
-  0x0033cc: "B", // Blue
-  0x00aa00: "G", // Green
-  0xffff00: "Y", // Yellow
-  0xdddddd: "W", // White
-  0xff6600: "O", // Orange
-  0xcc0000: "R", // Red
+  0x4a7fd4: "B", // Blue
+  0x48a860: "G", // Green
+  0xe8c832: "Y", // Yellow
+  0xd8d8d0: "W", // White
+  0xc8541a: "O", // Orange
+  0xd44040: "R", // Red
 };
 
 // also handle the 0xffffff variant just in case
 (STICKER_CHAR as Record<number, string>)[0xffffff] = "W";
 
 const CHAR_COLOR: Record<string, number> = {
-  B: 0x0033cc,
-  G: 0x00aa00,
-  Y: 0xffff00,
-  W: 0xdddddd,
-  O: 0xff6600,
-  R: 0xcc0000,
+  B: 0x4a7fd4,
+  G: 0x48a860,
+  Y: 0xe8c832,
+  W: 0xd8d8d0,
+  O: 0xc8541a,
+  R: 0xd44040,
 };
 
 const FACE_WORLD_NORMAL: Record<string, THREE.Vector3> = {

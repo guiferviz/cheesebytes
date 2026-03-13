@@ -145,12 +145,12 @@ export function applyMove(index: number, move: string): number {
 // ─── Sticker colours ──────────────────────────────────────────────────────────
 
 export const FACE_SOLVED_COLOR: Record<string, string> = {
-  U: "#0033cc", // Blue
-  D: "#00aa00", // Green
-  F: "#ffff00", // Yellow
-  B: "#dddddd", // White
-  R: "#ff6600", // Orange
-  L: "#cc0000", // Red
+  U: "#4a7fd4", // Blue
+  D: "#48a860", // Green
+  F: "#e8c832", // Yellow
+  B: "#d8d8d0", // White
+  R: "#c8541a", // Orange
+  L: "#d44040", // Red
 };
 
 /**
