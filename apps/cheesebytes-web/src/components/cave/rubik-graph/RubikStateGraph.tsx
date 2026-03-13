@@ -665,16 +665,14 @@ export default function RubikStateGraph({
         idFill: "#aaa",
         labelStroke: "#0a0a0a",
         stickerStroke: "#111",
-        controlBg: "rgba(10,10,10,0.85)",
-        controlText: "#ccc",
+
         panelBg: "rgba(15,15,15,0.95)",
       }
     : {
         idFill: "#444",
         labelStroke: "#ffffff",
         stickerStroke: "#bbb",
-        controlBg: "rgba(255,255,255,0.9)",
-        controlText: "#333",
+
         panelBg: "rgba(245,245,245,0.97)",
       };
 
@@ -1094,161 +1092,41 @@ export default function RubikStateGraph({
         overflow: overflow ? "visible" : "hidden",
       }}
     >
-      {/* Controls overlay */}
-      <div
+      {/* Gear button (top-right corner) */}
+      <button
+        onClick={() => setSettingsOpen((o) => !o)}
+        title="Graph settings"
         style={{
           position: "absolute",
           top: 8,
-          left: 8,
           right: 8,
-          display: "flex",
-          gap: 16,
-          alignItems: "center",
           zIndex: 10,
-          background: themeColors.controlBg,
-          padding: "6px 12px",
+          background: settingsOpen
+            ? isDark
+              ? "#555"
+              : "#ccc"
+            : isDark
+              ? "rgba(30,30,30,0.7)"
+              : "rgba(230,230,230,0.7)",
+          color: isDark ? "#ccc" : "#555",
+          border: `1px solid ${isDark ? "#555" : "#bbb"}`,
           borderRadius: 6,
-          fontFamily: "monospace",
-          fontSize: 13,
-          color: themeColors.controlText,
+          padding: "4px 8px",
+          cursor: "pointer",
+          fontSize: 16,
+          lineHeight: 1,
+          backdropFilter: "blur(6px)",
         }}
       >
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", gap: 6, alignItems: "center" }}
-        >
-          <label>State:</label>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            style={{
-              width: 90,
-              background: isDark ? "#222" : "#fff",
-              color: isDark ? "#eee" : "#222",
-              border: `1px solid ${isDark ? "#555" : "#bbb"}`,
-              borderRadius: 4,
-              padding: "2px 6px",
-              fontFamily: "monospace",
-              fontSize: 13,
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              background: isDark ? "#444" : "#ddd",
-              color: isDark ? "#eee" : "#222",
-              border: "none",
-              borderRadius: 4,
-              padding: "2px 8px",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Go
-          </button>
-        </form>
-
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <label>Depth: {depth}</label>
-          <input
-            type="range"
-            min={0}
-            max={10}
-            value={depth}
-            onChange={(e) => setDepth(Number(e.target.value))}
-            style={{ width: 100, accentColor: "#ff8800" }}
-          />
-        </div>
-
-        {/* Metric toggle */}
-        <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
-          {(["QTM", "HTM"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMetric(m)}
-              style={{
-                background: metric === m ? "#ff8800" : isDark ? "#333" : "#ddd",
-                color: metric === m ? "#000" : isDark ? "#aaa" : "#555",
-                border: `1px solid ${isDark ? "#555" : "#bbb"}`,
-                borderRadius: m === "QTM" ? "4px 0 0 4px" : "0 4px 4px 0",
-                padding: "2px 8px",
-                cursor: "pointer",
-                fontSize: 11,
-                fontFamily: "monospace",
-                fontWeight: metric === m ? "bold" : "normal",
-              }}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-
-        {/* Cube view toggle */}
-        <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
-          {(["net", "iso"] as const).map((v, i) => (
-            <button
-              key={v}
-              onClick={() => setCubeView(v)}
-              style={{
-                background:
-                  cubeView === v ? "#4488ff" : isDark ? "#333" : "#ddd",
-                color: cubeView === v ? "#000" : isDark ? "#aaa" : "#555",
-                border: `1px solid ${isDark ? "#555" : "#bbb"}`,
-                borderRadius: i === 0 ? "4px 0 0 4px" : "0 4px 4px 0",
-                padding: "2px 8px",
-                cursor: "pointer",
-                fontSize: 11,
-                fontFamily: "monospace",
-                fontWeight: cubeView === v ? "bold" : "normal",
-              }}
-            >
-              {v === "net" ? "2D" : "3D"}
-            </button>
-          ))}
-        </div>
-
-        <span
-          style={{
-            color: isDark ? "#666" : "#999",
-            fontSize: 11,
-            marginLeft: "auto",
-          }}
-        >
-          scroll to zoom · drag nodes · click to re-root
-        </span>
-
-        {/* Gear icon → toggle settings panel */}
-        <button
-          onClick={() => setSettingsOpen((o) => !o)}
-          title="Graph settings"
-          style={{
-            background: settingsOpen
-              ? isDark
-                ? "#555"
-                : "#ccc"
-              : isDark
-                ? "#333"
-                : "#ddd",
-            color: isDark ? "#ccc" : "#555",
-            border: `1px solid ${isDark ? "#555" : "#bbb"}`,
-            borderRadius: 4,
-            padding: "2px 6px",
-            cursor: "pointer",
-            fontSize: 14,
-            lineHeight: 1,
-          }}
-        >
-          ⚙
-        </button>
-      </div>
+        ⚙
+      </button>
 
       {/* ── Collapsible settings panel ────────────────────────── */}
       {settingsOpen && (
         <div
           style={{
             position: "absolute",
-            top: 42,
+            top: 40,
             right: 8,
             zIndex: 20,
             background: themeColors.panelBg,
@@ -1261,9 +1139,142 @@ export default function RubikStateGraph({
             display: "flex",
             flexDirection: "column",
             gap: 8,
-            minWidth: 220,
+            minWidth: 260,
+            maxHeight: "80vh",
+            overflowY: "auto",
           }}
         >
+          {/* State input */}
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", gap: 6, alignItems: "center" }}
+          >
+            <label>State:</label>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              style={{
+                flex: 1,
+                background: isDark ? "#222" : "#fff",
+                color: isDark ? "#eee" : "#222",
+                border: `1px solid ${isDark ? "#555" : "#bbb"}`,
+                borderRadius: 4,
+                padding: "2px 6px",
+                fontFamily: "monospace",
+                fontSize: 13,
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: isDark ? "#444" : "#ddd",
+                color: isDark ? "#eee" : "#222",
+                border: "none",
+                borderRadius: 4,
+                padding: "2px 8px",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              Go
+            </button>
+          </form>
+
+          {/* Depth slider */}
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            Depth: {depth}
+            <input
+              type="range"
+              min={0}
+              max={10}
+              value={depth}
+              onChange={(e) => setDepth(Number(e.target.value))}
+              style={{ width: 100, accentColor: "#ff8800" }}
+            />
+          </label>
+
+          {/* Metric toggle */}
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            Metric
+            <div style={{ display: "flex", gap: 0 }}>
+              {(["QTM", "HTM"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMetric(m)}
+                  style={{
+                    background:
+                      metric === m ? "#ff8800" : isDark ? "#333" : "#ddd",
+                    color: metric === m ? "#000" : isDark ? "#aaa" : "#555",
+                    border: `1px solid ${isDark ? "#555" : "#bbb"}`,
+                    borderRadius: m === "QTM" ? "4px 0 0 4px" : "0 4px 4px 0",
+                    padding: "2px 8px",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    fontWeight: metric === m ? "bold" : "normal",
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </label>
+
+          {/* Cube view toggle */}
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            Cube style
+            <div style={{ display: "flex", gap: 0 }}>
+              {(["net", "iso"] as const).map((v, i) => (
+                <button
+                  key={v}
+                  onClick={() => setCubeView(v)}
+                  style={{
+                    background:
+                      cubeView === v ? "#4488ff" : isDark ? "#333" : "#ddd",
+                    color: cubeView === v ? "#000" : isDark ? "#aaa" : "#555",
+                    border: `1px solid ${isDark ? "#555" : "#bbb"}`,
+                    borderRadius: i === 0 ? "4px 0 0 4px" : "0 4px 4px 0",
+                    padding: "2px 8px",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    fontWeight: cubeView === v ? "bold" : "normal",
+                  }}
+                >
+                  {v === "net" ? "2D" : "3D"}
+                </button>
+              ))}
+            </div>
+          </label>
+
+          <hr
+            style={{
+              border: "none",
+              borderTop: `1px solid ${isDark ? "#444" : "#ccc"}`,
+              margin: "2px 0",
+            }}
+          />
+
+          {/* Advanced sliders */}
           <label
             style={{
               display: "flex",
