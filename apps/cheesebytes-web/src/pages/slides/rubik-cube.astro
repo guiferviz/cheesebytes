@@ -529,20 +529,41 @@ export const vectorizedCode = dedent`\
     <aside class="notes">
       <p>
         First of all, we need to be precise about what we are trying to measure.
-        What do we mean by the smallest number of moves needed to solve it?
+        What do we mean by the smallest number of moves needed to solve a cube?
         Well, that depends on what counts as a move.
       </p>
       <p>
-        In the cubing community, there is a standard to identify each of the 6
-        faces with a letter. It doesn't matter what color if facing you, the
-        name of the faces are relative to the cube's orientation. For example,
-        right now the orange face is on the right, but if we rotate the cube, is
-        now the front face.
+        In the cubing community, each of the six faces is identified by a
+        letter. These names are relative to the cube's current orientation. So
+        the right face does not mean a fixed colour. It simply means the face
+        that is on the right from our current point of view.
+      </p>
+      <p>
+        For example, right now the orange face might be on the right. But if we
+        rotate the whole cube, that same orange face might become the front face
+        instead.
       </p>
       <p>
         Using this notation, we can say a move R is a clockwise rotation of the
         right face. We can also define the inverse of R as a counter-clockwise
         rotation of the same face.
+      </p>
+      <p>
+        But now we have to make a choice. We could say that turning a face by
+        180 degrees is also a basic move. In that case, we write R2. Or we could
+        decide that a 180 degree turn is really just two quarter turns in a row.
+      </p>
+
+      <p>
+        Both definitions are reasonable. The important thing is that we choose
+        one and stick to it. In the cubing community, if only quarter turns
+        count as single moves, that is called the quarter-turn metric. If half
+        turns like R2 also count as single moves, that is called the half-turn
+        metric.
+      </p>
+      <p>
+        Selecting one metric or another matters, because it changes the minimum
+        number of moves needed to solve a cube.
       </p>
       <p>
         We can start looking at this as a graph. Each configuration of the cube

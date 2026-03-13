@@ -1239,7 +1239,6 @@ export default function RubikStateGraph({
             border: `1px solid ${isDark ? "#444" : "#ccc"}`,
             borderRadius: 6,
             padding: "10px 14px",
-            fontFamily: "monospace",
             fontSize: 11,
             color: isDark ? "#bbb" : "#555",
             display: "flex",
@@ -1267,7 +1266,6 @@ export default function RubikStateGraph({
                 border: `1px solid ${isDark ? "#555" : "#bbb"}`,
                 borderRadius: 4,
                 padding: "2px 6px",
-                fontFamily: "monospace",
                 fontSize: 13,
               }}
             />
@@ -1329,7 +1327,6 @@ export default function RubikStateGraph({
                     padding: "2px 8px",
                     cursor: "pointer",
                     fontSize: 11,
-                    fontFamily: "monospace",
                     fontWeight: metric === m ? "bold" : "normal",
                   }}
                 >
@@ -1362,7 +1359,6 @@ export default function RubikStateGraph({
                     padding: "2px 8px",
                     cursor: "pointer",
                     fontSize: 11,
-                    fontFamily: "monospace",
                     fontWeight: cubeView === v ? "bold" : "normal",
                   }}
                 >
@@ -1541,9 +1537,7 @@ export default function RubikStateGraph({
                   gap: 8,
                 }}
               >
-                <span style={{ fontSize: 10 }}>
-                  The graph expands only with the checked moves.
-                </span>
+                <span style={{ fontSize: 10 }}>Expand only checked moves.</span>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
                     type="button"
@@ -1556,7 +1550,6 @@ export default function RubikStateGraph({
                       padding: "2px 6px",
                       cursor: "pointer",
                       fontSize: 10,
-                      fontFamily: "monospace",
                     }}
                   >
                     all
@@ -1572,7 +1565,6 @@ export default function RubikStateGraph({
                       padding: "2px 6px",
                       cursor: "pointer",
                       fontSize: 10,
-                      fontFamily: "monospace",
                     }}
                   >
                     none
@@ -1672,7 +1664,6 @@ export default function RubikStateGraph({
                   padding: "2px 6px",
                   cursor: "pointer",
                   fontSize: 10,
-                  fontFamily: "monospace",
                 }}
               >
                 all
@@ -1688,7 +1679,6 @@ export default function RubikStateGraph({
                   padding: "2px 6px",
                   cursor: "pointer",
                   fontSize: 10,
-                  fontFamily: "monospace",
                 }}
               >
                 none

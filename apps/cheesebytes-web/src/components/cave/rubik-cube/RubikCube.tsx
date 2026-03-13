@@ -562,7 +562,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
       applyView(currentFront, currentUp, cameraRadius);
 
-      type NotationMode = 0 | 1 | 2;
+      type NotationMode = 0 | 1 | 2 | 3;
       type ScreenPoint = { x: number; y: number; z: number };
       type NotationSvg = {
         group: SVGGElement;
@@ -576,15 +576,24 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       };
 
       let notationMode: NotationMode = 0;
-      let activeNotationMove: { face: FaceKey; cw: boolean } | null = null;
+      let activeNotationMove: {
+        face: FaceKey;
+        cw: boolean;
+        double?: boolean;
+      } | null = null;
       let hideNotationUntilFolded = false;
+      let doublePrefix = false;
+      let doublePrefixTimer: ReturnType<typeof setTimeout> | null = null;
 
       const SVG_NS = "http://www.w3.org/2000/svg";
       const faceSurfaceOffset = half * GAP + STICKER_LIFT + 0.06;
       const faceSpan = (size - 1) * GAP + STICKER_SZ;
       const notationArcRadius = faceSpan * 0.45;
       const notationAxisLength = faceSpan * 0.72; // axis line length beyond face surface
-      const notationArcSpan = (Math.PI * 3) / 2; // 270°
+      // Arc span depends on notation mode: 90° for quarter turns, 180° for doubles
+      function getNotationArcSpan(): number {
+        return notationMode === 3 ? Math.PI : Math.PI / 2;
+      }
       const notationArcSteps = 48;
 
       function svgEl<K extends keyof SVGElementTagNameMap>(
@@ -821,9 +830,11 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
             entry.label.setAttribute("y", labelPoint.y.toFixed(2));
           }
           entry.label.textContent =
-            notationMode === 2
-              ? `${worldToLogical[face]}'`
-              : worldToLogical[face];
+            notationMode === 3
+              ? `${worldToLogical[face]}2`
+              : notationMode === 2
+                ? `${worldToLogical[face]}'`
+                : worldToLogical[face];
 
           // ── Rotation arc (only for camera-facing faces) ───────────────────
           if (isFrontFacing) {
@@ -844,9 +855,9 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
                 (screenU.y - center2d.y) * (screenV.x - center2d.x);
               const screenFlipped = screenCross < 0;
 
-              const wantCW = notationMode === 1;
+              const wantCW = notationMode === 1 || notationMode === 3;
               const paramDir = wantCW === screenFlipped ? -1 : 1;
-              const arcEnd = paramDir * notationArcSpan;
+              const arcEnd = paramDir * getNotationArcSpan();
 
               const arcPoints: ScreenPoint[] = [];
               let hasInvalidArcPoint = false;
@@ -892,8 +903,13 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
                 const matchesCurrentMode =
                   activeNotationMove !== null &&
                   activeNotationMove.face === face &&
-                  ((notationMode === 1 && activeNotationMove.cw) ||
-                    (notationMode === 2 && !activeNotationMove.cw));
+                  ((notationMode === 1 &&
+                    activeNotationMove.cw &&
+                    !activeNotationMove.double) ||
+                    (notationMode === 2 &&
+                      !activeNotationMove.cw &&
+                      !activeNotationMove.double) ||
+                    (notationMode === 3 && !!activeNotationMove.double));
                 const arrowD = buildArcArrowHead(
                   lastArcPoint3d,
                   tangent3d,
@@ -915,8 +931,13 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
             isFrontFacing &&
             activeNotationMove !== null &&
             activeNotationMove.face === face &&
-            ((notationMode === 1 && activeNotationMove.cw) ||
-              (notationMode === 2 && !activeNotationMove.cw));
+            ((notationMode === 1 &&
+              activeNotationMove.cw &&
+              !activeNotationMove.double) ||
+              (notationMode === 2 &&
+                !activeNotationMove.cw &&
+                !activeNotationMove.double) ||
+              (notationMode === 3 && !!activeNotationMove.double));
 
           applyNotationStyle(
             entry,
@@ -1189,14 +1210,16 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       }
 
       // ── Face rotation ─────────────────────────────────────────────────────────
-      function animateFaceMove(face: string, cw: boolean) {
+      function animateFaceMove(face: string, cw: boolean, double = false) {
         if (isAnimating || isUnfolded) return;
         isAnimating = true;
-        activeNotationMove = { face: face as FaceKey, cw };
+        activeNotationMove = { face: face as FaceKey, cw, double };
         updateNotationOverlay();
 
         const def = faceDef[face];
-        const angle = (Math.PI / 2) * (cw ? def.sign : -def.sign);
+        const angle = double
+          ? Math.PI * def.sign
+          : (Math.PI / 2) * (cw ? def.sign : -def.sign);
         const slice = getSlice(face);
 
         const pivot = new THREE.Object3D();
@@ -1549,7 +1572,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
         }
 
         if (e.key === "n" || e.key === "N") {
-          notationMode = ((notationMode + 1) % 3) as NotationMode;
+          notationMode = ((notationMode + 1) % 4) as NotationMode;
           updateNotationOverlay();
           return;
         }
@@ -1597,8 +1620,26 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
           return;
         }
 
+        // '2' prefix for double moves
+        if (e.key === "2") {
+          doublePrefix = true;
+          if (doublePrefixTimer) clearTimeout(doublePrefixTimer);
+          doublePrefixTimer = setTimeout(() => {
+            doublePrefix = false;
+            doublePrefixTimer = null;
+          }, 1000);
+          return;
+        }
+
         const logicalFace = e.key.toUpperCase();
         if (logicalFace in faceDef) {
+          const isDouble = doublePrefix;
+          doublePrefix = false;
+          if (doublePrefixTimer) {
+            clearTimeout(doublePrefixTimer);
+            doublePrefixTimer = null;
+          }
+
           const relativeFaceVec: Record<string, THREE.Vector3> = {
             F: currentFront.clone(),
             B: neg(currentFront),
@@ -1608,7 +1649,11 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
             L: neg(right),
           };
           const worldFace = worldFaceFromVec(relativeFaceVec[logicalFace]);
-          animateFaceMove(worldFace, !e.shiftKey);
+          if (isDouble) {
+            animateFaceMove(worldFace, true, true);
+          } else {
+            animateFaceMove(worldFace, !e.shiftKey);
+          }
         }
       }
 
@@ -1664,6 +1709,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
       return () => {
         cancelAnimationFrame(rafId);
+        if (doublePrefixTimer) clearTimeout(doublePrefixTimer);
         mount.removeEventListener("keydown", onKeyDown);
         mount.removeEventListener("wheel", onWheel);
         if (showStateEditor)
