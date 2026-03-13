@@ -492,24 +492,25 @@ export const vectorizedCode = dedent`\
 ---
 
 <RevealLayout
-  title="The Rubik's Cube"
+  title="The 2x2x2 Rubik's Cube"
   description="Efficient representations and traversal of the Rubik's Cube state space"
   theme="dark"
 >
   <section>
     <aside class="notes">
       <p>
-        This is a Rubik's Cube. Six faces, nine stickers each, fifty-four
-        colours in total. You have probably held one at some point. Maybe you
-        solved it once. Maybe you gave up, peeled the stickers off, and called
-        it a day.
+        The Rubik's Cube has an absurd number of possible configurations. Far
+        too many to explore, even with a modern computer. But what about its
+        little brother, the 2 by 2? Is its universe small enough to explore
+        completely?
       </p>
       <p>
-        Today we are not going to talk about how to solve it using our fingers,
-        but using a computer.
+        And not just explore it. Can we compute the minimum number of moves
+        needed to solve every single cube? Spoiler: yes, we can. And we'll do it
+        in Python, directly in the browser. But getting there is not trivial.
       </p>
     </aside>
-    Hook
+    Hook here 🪝
   </section>
 
   <section id="intro">
@@ -524,22 +525,38 @@ export const vectorizedCode = dedent`\
   </section>
 
   <section id="part-1">
-    <h1>Part 1: Naive</h1>
+    <h1 class="text-9xl font-bold">Part 1: Naive</h1>
   </section>
 
   <section id="cube">
     <aside class="notes">
       <p>
-        The first step is to represent the cube in a way that a computer can
-        understand. We need to encode the state of the cube — which stickers are
-        where — into a data structure. There are many ways to do this, but a
-        straightforward approach is to use a string of characters, where each
-        character represents a sticker's colour and position. For example, we
-        can list the stickers in a specific order. This way, we can easily
-        manipulate the string to simulate moves and track the cube's state as we
-        solve it.
+        The first challenge is representation. Before we can explore the cube,
+        we need to describe it in code. We need to encode the position of every
+        sticker.
       </p>
     </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        There are many ways to do this, but a very natural starting point is to
+        work with the stickers. We choose a fixed order, and represent the cube
+        as a string where each character tells us the colour of one sticker.
+      </p>
+      <p>
+        Every cube state becomes just a different string. That gives us
+        something a computer can work with. The next question is: how do we make
+        a move?
+      </p>
+      <p>
+        A move does not create new stickers, and it does not change their
+        colours. It only moves them around. So every move is just a reordering
+        of the string.
+      </p>
+    </aside>
+
     <RubikCubeViz
       client:only="react"
       width={1080}
@@ -551,6 +568,12 @@ export const vectorizedCode = dedent`\
 
   <section id="cube">
     <aside class="notes">
+      <pre>
+        After around 3 hours and a peak memory consumption of 125GB the execution finishes.
+        Total states visited: 88179840
+        Move counts by distance:
+            {{0: 1, 1: 18, 2: 243, 3: 2874, 4: 28000, 5: 205416, 6: 1168516, 7: 5402628, 8: 20776176, 9: 45391616, 10: 15139616, 11: 64736}}
+      </pre>
       <p>Encoding no relativo a la camara.</p>
     </aside>
     <RubikCubeViz
@@ -625,10 +648,7 @@ export const vectorizedCode = dedent`\
       <p></p>
     </aside>
     <div style={{ height: "80vh" }}>
-      <PyodideWorkerRunner
-        client:only="react"
-        initialCode={stringRepresentationCode}
-      />
+      <PyodideWorkerRunner client:only="react" initialCode={vectorizedCode} />
     </div>
   </section>
 
@@ -648,5 +668,15 @@ export const vectorizedCode = dedent`\
       initialDepth={1}
       overflow={true}
     />
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        I usually say the code matters, but the idea comes first. In this case,
+        how we represent the cube's state is the key to making the problem
+        tractable. The algorithm is basially the same.
+      </p>
+    </aside>
   </section>
 </RevealLayout>

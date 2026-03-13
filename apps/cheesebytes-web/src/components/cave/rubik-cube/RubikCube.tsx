@@ -1241,28 +1241,22 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
     // ── JSX ───────────────────────────────────────────────────────────────────
 
+    const editorWidth = Math.min(width - 40, size * size * 6 * 12 + 80);
+    const layoutVars = {
+      "--rubik-width": `${width}px`,
+      "--rubik-height": `${height}px`,
+      "--rubik-editor-width": `${editorWidth}px`,
+    } as React.CSSProperties;
+
     return (
-      <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-        <div style={{ position: "relative", width, height }}>
+      <div className="flex w-full justify-center">
+        <div
+          className="relative [height:var(--rubik-height)] [width:var(--rubik-width)]"
+          style={layoutVars}
+        >
           {webglError ? (
-            <div
-              style={{
-                width,
-                height,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#94a3b8",
-                fontFamily: "monospace",
-                fontSize: "0.9rem",
-                gap: "0.75rem",
-                textAlign: "center",
-                padding: "2rem",
-                boxSizing: "border-box",
-              }}
-            >
-              <span style={{ fontSize: "2rem" }}>⚠️</span>
+            <div className="box-border flex h-full w-full flex-col items-center justify-center gap-3 p-8 text-center font-mono text-[0.9rem] text-slate-400">
+              <span className="text-[2rem]">⚠️</span>
               <span>{webglError}</span>
             </div>
           ) : (
@@ -1270,23 +1264,11 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
               <div
                 ref={mountRef}
                 tabIndex={0}
-                style={{ width, height, outline: "none", cursor: "grab" }}
+                className="h-full w-full cursor-grab outline-none"
               />
               {/* ── State-editor overlay ─────────────────────────────────── */}
               {showStateEditor && stateString.length > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 0,
-                    padding: "10px 0 8px",
-                  }}
-                >
+                <div className="absolute inset-x-0 top-0 flex flex-col items-center gap-0 px-0 pt-[10px] pb-2">
                   {/* Editable text input */}
                   <input
                     ref={stateInputRef}
@@ -1295,66 +1277,29 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
                     maxLength={6 * size * size}
                     spellCheck={false}
                     onChange={(e) => applyStringRef.current(e.target.value)}
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: "0.78rem",
-                      letterSpacing: "0.12em",
-                      background: "rgba(0,0,0,0.6)",
-                      color: "#e2e8f0",
-                      border: "1px solid rgba(255,255,255,0.25)",
-                      borderRadius: 4,
-                      padding: "4px 10px",
-                      outline: "none",
-                      textAlign: "center",
-                      width: Math.min(width - 40, size * size * 6 * 12 + 80),
-                    }}
+                    className="w-[var(--rubik-editor-width)] rounded border border-white/25 bg-black/60 px-[10px] py-1 text-center font-mono text-[1.2rem] tracking-[0.12em] text-slate-200 outline-none selection:bg-yellow-700"
                   />
                 </div>
               )}
               {showHelp && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: 12,
-                    left: 0,
-                    right: 0,
-                    textAlign: "center",
-                    color: "rgba(148,163,184,0.8)",
-                    fontFamily: "monospace",
-                    fontSize: "0.62rem",
-                    lineHeight: 1.8,
-                    pointerEvents: "none",
-                    userSelect: "none",
-                  }}
-                >
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                    Click
-                  </span>{" "}
-                  to focus ·{" "}
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                    Arrows
-                  </span>{" "}
+                <div className="pointer-events-none absolute inset-x-0 bottom-3 select-none text-center font-mono text-[0.62rem] leading-[1.8] text-slate-400/80">
+                  <span className="font-semibold text-slate-200">Click</span> to
+                  focus ·{" "}
+                  <span className="font-semibold text-slate-200">Arrows</span>{" "}
                   orbit ·{" "}
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>[ ]</span>{" "}
-                  roll ·{" "}
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                    Scroll
-                  </span>{" "}
+                  <span className="font-semibold text-slate-200">[ ]</span> roll
+                  · <span className="font-semibold text-slate-200">Scroll</span>{" "}
                   zoom ·{" "}
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                  <span className="font-semibold text-slate-200">
                     F B R L U D
                   </span>{" "}
                   move ·{" "}
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                    +Shift
-                  </span>{" "}
+                  <span className="font-semibold text-slate-200">+Shift</span>{" "}
                   inverse ·{" "}
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                    Space
-                  </span>{" "}
+                  <span className="font-semibold text-slate-200">Space</span>{" "}
                   unfold ·{" "}
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>H</span>{" "}
-                  hide help
+                  <span className="font-semibold text-slate-200">H</span> hide
+                  help
                 </div>
               )}
             </>
