@@ -193,6 +193,13 @@ const FACE_WORLD_NORMAL: Record<string, THREE.Vector3> = {
   L: new THREE.Vector3(-1, 0, 0),
 };
 
+const FACE_KEYS = ["F", "B", "R", "L", "U", "D"] as const;
+type FaceKey = (typeof FACE_KEYS)[number];
+
+const NOTATION_BASE_COLOR = "#f8fafc";
+const NOTATION_ACTIVE_COLOR = "#fde047";
+const NOTATION_SHADOW_COLOR = "rgba(15, 23, 42, 0.95)";
+
 /**
  * For each face, return the list of cubie grid positions [gx,gy,gz] in Z-scan
  * order (TL→TR then BL→BR, i.e. top-left of the face viewed head-on first).
@@ -375,6 +382,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
     ref,
   ) {
     const mountRef = useRef<HTMLDivElement>(null);
+    const notationOverlayRef = useRef<SVGSVGElement>(null);
     const [webglError, setWebglError] = useState<string | null>(null);
     const [showHelp, setShowHelp] = useState(initialShowHelp);
     const showHelpRef = useRef(true);
@@ -414,7 +422,9 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
     useEffect(() => {
       const mount = mountRef.current;
-      if (!mount) return;
+      const notationOverlay = notationOverlayRef.current;
+      if (!mount || !notationOverlay) return;
+      const overlaySvg = notationOverlay;
 
       const faceDef = buildFaceDef(size);
       const half = (size - 1) / 2;
@@ -468,6 +478,41 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
       const currentFront = WORLD_FACE_VEC.F.clone();
       const currentUp = WORLD_FACE_VEC.U.clone();
+      const faceVisualDef: Record<
+        FaceKey,
+        { normal: THREE.Vector3; u: THREE.Vector3; v: THREE.Vector3 }
+      > = {
+        F: {
+          normal: WORLD_FACE_VEC.F.clone(),
+          u: WORLD_FACE_VEC.R.clone(),
+          v: WORLD_FACE_VEC.U.clone(),
+        },
+        B: {
+          normal: WORLD_FACE_VEC.B.clone(),
+          u: WORLD_FACE_VEC.L.clone(),
+          v: WORLD_FACE_VEC.U.clone(),
+        },
+        R: {
+          normal: WORLD_FACE_VEC.R.clone(),
+          u: WORLD_FACE_VEC.B.clone(),
+          v: WORLD_FACE_VEC.U.clone(),
+        },
+        L: {
+          normal: WORLD_FACE_VEC.L.clone(),
+          u: WORLD_FACE_VEC.F.clone(),
+          v: WORLD_FACE_VEC.U.clone(),
+        },
+        U: {
+          normal: WORLD_FACE_VEC.U.clone(),
+          u: WORLD_FACE_VEC.R.clone(),
+          v: WORLD_FACE_VEC.B.clone(),
+        },
+        D: {
+          normal: WORLD_FACE_VEC.D.clone(),
+          u: WORLD_FACE_VEC.R.clone(),
+          v: WORLD_FACE_VEC.F.clone(),
+        },
+      };
 
       function getRight(front: THREE.Vector3, up: THREE.Vector3) {
         return up.clone().cross(front).normalize();
@@ -516,6 +561,379 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       }
 
       applyView(currentFront, currentUp, cameraRadius);
+
+      type NotationMode = 0 | 1 | 2;
+      type ScreenPoint = { x: number; y: number; z: number };
+      type NotationSvg = {
+        group: SVGGElement;
+        // axis line + arrowhead + label (shown for ALL 6 faces)
+        axisLine: SVGLineElement;
+        axisArrow: SVGPathElement;
+        label: SVGTextElement;
+        // rotation arc + arrowhead (shown only for camera-facing faces)
+        arc: SVGPathElement;
+        arcArrow: SVGPathElement;
+      };
+
+      let notationMode: NotationMode = 0;
+      let activeNotationMove: { face: FaceKey; cw: boolean } | null = null;
+      let hideNotationUntilFolded = false;
+
+      const SVG_NS = "http://www.w3.org/2000/svg";
+      const faceSurfaceOffset = half * GAP + STICKER_LIFT + 0.06;
+      const faceSpan = (size - 1) * GAP + STICKER_SZ;
+      const notationArcRadius = faceSpan * 0.45;
+      const notationAxisLength = faceSpan * 0.72; // axis line length beyond face surface
+      const notationArcSpan = (Math.PI * 3) / 2; // 270°
+      const notationArcSteps = 48;
+
+      function svgEl<K extends keyof SVGElementTagNameMap>(
+        tag: K,
+      ): SVGElementTagNameMap[K] {
+        return document.createElementNS(SVG_NS, tag);
+      }
+
+      while (overlaySvg.firstChild) {
+        overlaySvg.removeChild(overlaySvg.firstChild);
+      }
+      overlaySvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      overlaySvg.setAttribute("aria-hidden", "true");
+
+      const notationSvg = new Map<FaceKey, NotationSvg>();
+      for (const face of FACE_KEYS) {
+        const group = svgEl("g");
+        const axisLine = svgEl("line");
+        const axisArrow = svgEl("path");
+        const arc = svgEl("path");
+        const arcArrow = svgEl("path");
+        const label = svgEl("text");
+
+        group.setAttribute("display", "none");
+        group.style.filter = `drop-shadow(0 0 5px ${NOTATION_SHADOW_COLOR})`;
+
+        for (const pathLike of [axisLine, axisArrow, arc, arcArrow]) {
+          pathLike.setAttribute("fill", "none");
+          pathLike.setAttribute("stroke-linecap", "round");
+          pathLike.setAttribute("stroke-linejoin", "round");
+          pathLike.setAttribute("vector-effect", "non-scaling-stroke");
+        }
+
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("dominant-baseline", "middle");
+        label.setAttribute(
+          "font-family",
+          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        );
+        label.style.paintOrder = "stroke fill";
+        label.setAttribute("stroke", NOTATION_SHADOW_COLOR);
+        label.setAttribute("stroke-linejoin", "round");
+
+        group.append(arc, arcArrow, axisLine, axisArrow, label);
+        overlaySvg.appendChild(group);
+        notationSvg.set(face, {
+          group,
+          axisLine,
+          axisArrow,
+          label,
+          arc,
+          arcArrow,
+        });
+      }
+
+      function projectToScreen(point: THREE.Vector3): ScreenPoint | null {
+        const projected = point.clone().project(camera);
+        if (
+          !Number.isFinite(projected.x) ||
+          !Number.isFinite(projected.y) ||
+          !Number.isFinite(projected.z)
+        ) {
+          return null;
+        }
+        return {
+          x: (projected.x * 0.5 + 0.5) * width,
+          y: (-projected.y * 0.5 + 0.5) * height,
+          z: projected.z,
+        };
+      }
+
+      /** Build an arrowhead SVG path at `tip`, pointing from `ref` → `tip`. */
+      function buildArrowHead(
+        ref: ScreenPoint,
+        tip: ScreenPoint,
+        size: number,
+      ): string {
+        const dx = tip.x - ref.x;
+        const dy = tip.y - ref.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len;
+        const uy = dy / len;
+        const px = -uy;
+        const py = ux;
+        const baseX = tip.x - ux * size;
+        const baseY = tip.y - uy * size;
+        const wing = size * 0.52;
+        return [
+          `M ${tip.x.toFixed(2)} ${tip.y.toFixed(2)}`,
+          `L ${(baseX + px * wing).toFixed(2)} ${(baseY + py * wing).toFixed(2)}`,
+          `M ${tip.x.toFixed(2)} ${tip.y.toFixed(2)}`,
+          `L ${(baseX - px * wing).toFixed(2)} ${(baseY - py * wing).toFixed(2)}`,
+        ].join(" ");
+      }
+
+      /** Build arrowhead at the end of a projected arc, using 3D tangent
+       *  for perspective-correct direction even on oblique faces. */
+      function buildArcArrowHead(
+        arcEndPoint3d: THREE.Vector3,
+        arcTangent3d: THREE.Vector3,
+        size: number,
+      ): string | null {
+        const tip = projectToScreen(arcEndPoint3d);
+        // Project a point slightly behind the tip along the 3D tangent
+        const behindPoint = arcEndPoint3d
+          .clone()
+          .sub(arcTangent3d.clone().normalize().multiplyScalar(0.05));
+        const ref = projectToScreen(behindPoint);
+        if (!tip || !ref) return null;
+        return buildArrowHead(ref, tip, size);
+      }
+
+      function applyNotationStyle(
+        entry: NotationSvg,
+        active: boolean,
+        opacity: number,
+        isFrontFacing: boolean,
+      ) {
+        const color = active ? NOTATION_ACTIVE_COLOR : NOTATION_BASE_COLOR;
+        const axisColor = isFrontFacing ? color : "rgba(248,250,252,0.45)";
+        const strokeWidth = active ? 4.8 : 3.4;
+        const axisStrokeWidth = isFrontFacing ? strokeWidth : 2.2;
+        entry.group.style.opacity = opacity.toFixed(2);
+        // Axis (always visible)
+        entry.axisLine.setAttribute("stroke", axisColor);
+        entry.axisLine.setAttribute("stroke-width", axisStrokeWidth.toString());
+        entry.axisArrow.setAttribute("stroke", axisColor);
+        entry.axisArrow.setAttribute(
+          "stroke-width",
+          (axisStrokeWidth * 0.92).toFixed(2),
+        );
+        // Rotation arc (only visible faces)
+        entry.arc.setAttribute("stroke", color);
+        entry.arcArrow.setAttribute("stroke", color);
+        entry.arc.setAttribute("stroke-width", strokeWidth.toString());
+        entry.arcArrow.setAttribute(
+          "stroke-width",
+          (strokeWidth * 0.92).toFixed(2),
+        );
+        entry.label.setAttribute("fill", axisColor);
+        entry.label.setAttribute(
+          "font-size",
+          active
+            ? "24"
+            : notationMode === 2
+              ? "20"
+              : isFrontFacing
+                ? "18"
+                : "15",
+        );
+        entry.label.setAttribute("stroke-width", active ? "5.4" : "4.5");
+      }
+
+      function buildWorldToLogicalMap(): Record<FaceKey, FaceKey> {
+        const right = getRight(currentFront, currentUp);
+        const logicalFaceVec: Record<FaceKey, THREE.Vector3> = {
+          F: currentFront.clone(),
+          B: neg(currentFront),
+          U: currentUp.clone(),
+          D: neg(currentUp),
+          R: right.clone(),
+          L: neg(right),
+        };
+        const worldToLogical = {} as Record<FaceKey, FaceKey>;
+        for (const logicalFace of FACE_KEYS) {
+          const worldFace = worldFaceFromVec(logicalFaceVec[logicalFace]);
+          worldToLogical[worldFace] = logicalFace;
+        }
+        return worldToLogical;
+      }
+
+      function updateNotationOverlay() {
+        const shouldShow =
+          notationMode !== 0 && !isUnfolded && !hideNotationUntilFolded;
+        overlaySvg.style.opacity = shouldShow ? "1" : "0";
+
+        if (!shouldShow) {
+          notationSvg.forEach((entry) =>
+            entry.group.setAttribute("display", "none"),
+          );
+          return;
+        }
+
+        const worldToLogical = buildWorldToLogicalMap();
+
+        const depthOrder: Array<{ face: FaceKey; z: number }> = [];
+
+        for (const face of FACE_KEYS) {
+          const entry = notationSvg.get(face);
+          if (!entry) continue;
+
+          const basis = faceVisualDef[face];
+          const center3d = basis.normal
+            .clone()
+            .multiplyScalar(faceSurfaceOffset);
+
+          const toCamera = camera.position.clone().sub(center3d).normalize();
+          const facing = basis.normal.dot(toCamera);
+          const isFrontFacing = facing > 0;
+
+          // ── Axis line + label (always shown for all 6 faces) ──────────────
+          const axisTip3d = basis.normal
+            .clone()
+            .multiplyScalar(faceSurfaceOffset + notationAxisLength);
+          const center2d = projectToScreen(center3d);
+          const axisTip2d = projectToScreen(axisTip3d);
+
+          if (!center2d || !axisTip2d) {
+            entry.group.setAttribute("display", "none");
+            continue;
+          }
+
+          entry.group.setAttribute("display", "block");
+
+          entry.axisLine.setAttribute("x1", center2d.x.toFixed(2));
+          entry.axisLine.setAttribute("y1", center2d.y.toFixed(2));
+          entry.axisLine.setAttribute("x2", axisTip2d.x.toFixed(2));
+          entry.axisLine.setAttribute("y2", axisTip2d.y.toFixed(2));
+
+          entry.axisArrow.setAttribute(
+            "d",
+            buildArrowHead(center2d, axisTip2d, 10),
+          );
+
+          // Label just past the axis tip
+          const labelOffset3d = basis.normal
+            .clone()
+            .multiplyScalar(
+              faceSurfaceOffset + notationAxisLength + faceSpan * 0.18,
+            );
+          const labelPoint = projectToScreen(labelOffset3d);
+          if (labelPoint) {
+            entry.label.setAttribute("x", labelPoint.x.toFixed(2));
+            entry.label.setAttribute("y", labelPoint.y.toFixed(2));
+          }
+          entry.label.textContent =
+            notationMode === 2
+              ? `${worldToLogical[face]}'`
+              : worldToLogical[face];
+
+          // ── Rotation arc (only for camera-facing faces) ───────────────────
+          if (isFrontFacing) {
+            // Determine screen-space handedness of the face's (u,v) system
+            const eps = 0.05;
+            const screenU = projectToScreen(
+              center3d.clone().add(basis.u.clone().multiplyScalar(eps)),
+            );
+            const screenV = projectToScreen(
+              center3d.clone().add(basis.v.clone().multiplyScalar(eps)),
+            );
+            if (!screenU || !screenV) {
+              entry.arc.setAttribute("d", "");
+              entry.arcArrow.setAttribute("d", "");
+            } else {
+              const screenCross =
+                (screenU.x - center2d.x) * (screenV.y - center2d.y) -
+                (screenU.y - center2d.y) * (screenV.x - center2d.x);
+              const screenFlipped = screenCross < 0;
+
+              const wantCW = notationMode === 1;
+              const paramDir = wantCW === screenFlipped ? -1 : 1;
+              const arcEnd = paramDir * notationArcSpan;
+
+              const arcPoints: ScreenPoint[] = [];
+              let hasInvalidArcPoint = false;
+              let lastArcPoint3d = center3d.clone();
+              let prevArcPoint3d = center3d.clone();
+
+              for (let i = 0; i <= notationArcSteps; i++) {
+                const t = i / notationArcSteps;
+                const angle = arcEnd * t;
+                const arcPoint3d = center3d
+                  .clone()
+                  .add(
+                    basis.u
+                      .clone()
+                      .multiplyScalar(Math.cos(angle) * notationArcRadius),
+                  )
+                  .add(
+                    basis.v
+                      .clone()
+                      .multiplyScalar(Math.sin(angle) * notationArcRadius),
+                  );
+                const projectedArcPoint = projectToScreen(arcPoint3d);
+                if (!projectedArcPoint) {
+                  hasInvalidArcPoint = true;
+                  break;
+                }
+                arcPoints.push(projectedArcPoint);
+                prevArcPoint3d = lastArcPoint3d;
+                lastArcPoint3d = arcPoint3d;
+              }
+
+              if (!hasInvalidArcPoint && arcPoints.length >= 2) {
+                const arcPath = arcPoints
+                  .map(
+                    (point, index) =>
+                      `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+                  )
+                  .join(" ");
+                entry.arc.setAttribute("d", arcPath);
+
+                // 3D tangent → perspective-correct arrowhead direction
+                const tangent3d = lastArcPoint3d.clone().sub(prevArcPoint3d);
+                const matchesCurrentMode =
+                  activeNotationMove !== null &&
+                  activeNotationMove.face === face &&
+                  ((notationMode === 1 && activeNotationMove.cw) ||
+                    (notationMode === 2 && !activeNotationMove.cw));
+                const arrowD = buildArcArrowHead(
+                  lastArcPoint3d,
+                  tangent3d,
+                  matchesCurrentMode ? 15 : 12,
+                );
+                entry.arcArrow.setAttribute("d", arrowD ?? "");
+              } else {
+                entry.arc.setAttribute("d", "");
+                entry.arcArrow.setAttribute("d", "");
+              }
+            }
+          } else {
+            // Back-facing: hide rotation arc
+            entry.arc.setAttribute("d", "");
+            entry.arcArrow.setAttribute("d", "");
+          }
+
+          const matchesCurrentMode =
+            isFrontFacing &&
+            activeNotationMove !== null &&
+            activeNotationMove.face === face &&
+            ((notationMode === 1 && activeNotationMove.cw) ||
+              (notationMode === 2 && !activeNotationMove.cw));
+
+          applyNotationStyle(
+            entry,
+            matchesCurrentMode,
+            matchesCurrentMode ? 1 : isFrontFacing ? 0.95 : 0.6,
+            isFrontFacing,
+          );
+
+          depthOrder.push({ face, z: center2d.z });
+        }
+
+        depthOrder
+          .sort((a, b) => b.z - a.z)
+          .forEach(({ face }) =>
+            overlaySvg.appendChild(notationSvg.get(face)!.group),
+          );
+      }
 
       // ── Cubies + stickers ─────────────────────────────────────────────────────
       const cubies: THREE.Mesh[] = [];
@@ -774,6 +1192,8 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       function animateFaceMove(face: string, cw: boolean) {
         if (isAnimating || isUnfolded) return;
         isAnimating = true;
+        activeNotationMove = { face: face as FaceKey, cw };
+        updateNotationOverlay();
 
         const def = faceDef[face];
         const angle = (Math.PI / 2) * (cw ? def.sign : -def.sign);
@@ -808,6 +1228,8 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
             });
             scene.remove(pivot);
             isAnimating = false;
+            activeNotationMove = null;
+            updateNotationOverlay();
             updateStateDisplay();
           },
         );
@@ -857,6 +1279,8 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       function toggleUnfold() {
         if (isAnimating) return;
         isAnimating = true;
+        hideNotationUntilFolded = true;
+        updateNotationOverlay();
         const DURATION = 0.65;
 
         if (!isUnfolded) {
@@ -1023,6 +1447,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
               }
               isAnimating = false;
               isUnfolded = true;
+              updateNotationOverlay();
             },
           );
         } else {
@@ -1106,6 +1531,8 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
               applyView(currentFront, currentUp, cameraRadius);
               isAnimating = false;
               isUnfolded = false;
+              hideNotationUntilFolded = false;
+              updateNotationOverlay();
             },
           );
         }
@@ -1118,6 +1545,12 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
         if (e.key === "h" || e.key === "H") {
           setShowHelp(!showHelpRef.current);
+          return;
+        }
+
+        if (e.key === "n" || e.key === "N") {
+          notationMode = ((notationMode + 1) % 3) as NotationMode;
+          updateNotationOverlay();
           return;
         }
 
@@ -1198,6 +1631,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
         rafId = requestAnimationFrame(animate);
         const dt = clock.getDelta();
         [...animCallbacks].forEach((fn) => fn(dt));
+        updateNotationOverlay();
         gl.render(scene, camera);
       }
       animate();
@@ -1234,6 +1668,9 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
         mount.removeEventListener("wheel", onWheel);
         if (showStateEditor)
           mount.removeEventListener("mousemove", onMouseMove);
+        while (overlaySvg.firstChild) {
+          overlaySvg.removeChild(overlaySvg.firstChild);
+        }
         gl.dispose();
         if (mount.contains(gl.domElement)) mount.removeChild(gl.domElement);
       };
@@ -1266,6 +1703,10 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
                 tabIndex={0}
                 className="h-full w-full cursor-grab outline-none"
               />
+              <svg
+                ref={notationOverlayRef}
+                className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+              />
               {/* ── State-editor overlay ─────────────────────────────────── */}
               {showStateEditor && stateString.length > 0 && (
                 <div className="absolute inset-x-0 top-0 flex flex-col items-center gap-0 px-0 pt-[10px] pb-2">
@@ -1296,6 +1737,8 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
                   move ·{" "}
                   <span className="font-semibold text-slate-200">+Shift</span>{" "}
                   inverse ·{" "}
+                  <span className="font-semibold text-slate-200">N</span> show
+                  notation ·{" "}
                   <span className="font-semibold text-slate-200">Space</span>{" "}
                   unfold ·{" "}
                   <span className="font-semibold text-slate-200">H</span> hide
