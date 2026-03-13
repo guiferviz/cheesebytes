@@ -8,6 +8,7 @@ import {
   LehmerBuilder,
   LehmerDecoder,
   CornerInvariant,
+  EncodingShowcase,
 } from "../../components/cave/rubik-cube";
 import { RubikStateGraph } from "../../components/cave/rubik-graph";
 import { LogoAnimation } from "../../components/cave/intro";
@@ -536,6 +537,7 @@ export const vectorizedCode = dedent`\
         sticker.
       </p>
     </aside>
+    <EncodingShowcase client:only="react" width={1080} height={600} />
   </section>
 
   <section>
