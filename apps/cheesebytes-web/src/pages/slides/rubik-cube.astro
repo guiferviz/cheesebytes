@@ -525,6 +525,51 @@ export const vectorizedCode = dedent`\
     />
   </section>
 
+  <section>
+    <aside class="notes">
+      <p>
+        First of all, we need to be precise about what we are trying to measure.
+        What do we mean by the smallest number of moves needed to solve it?
+        Well, that depends on what counts as a move.
+      </p>
+      <p>
+        In the cubing community, there is a standard to identify each of the 6
+        faces with a letter. It doesn't matter what color if facing you, the
+        name of the faces are relative to the cube's orientation. For example,
+        right now the orange face is on the right, but if we rotate the cube, is
+        now the front face.
+      </p>
+      <p>
+        Using this notation, we can say a move R is a clockwise rotation of the
+        right face. We can also define the inverse of R as a counter-clockwise
+        rotation of the same face.
+      </p>
+      <p>
+        We can start looking at this as a graph. Each configuration of the cube
+        is a node of a graph and there is an edge between two nodes if there is
+        a single move that transforms one configuration into the other. For
+        example, this is the graph that we get if, starting from the solved
+        position, we apply a single R. If we apply R again in the resulting
+        configuration, we reach a new state. Applying it once more, we get back
+        to the solved state.
+      </p>
+      <p>
+        Just considering 90 degree rotations of each face is what is called the
+        quarter-turn metric. If we also allow 180 degree rotations, we get the
+        half-turn metric. For example, we can define an R2 move that turns the
+        right face 180 degrees. In that case, applying R twice in a row is not
+        the same as applying R2, because the latter counts as a single move
+        while the former counts as two moves. This means that going from this
+        state to the solved one can be done in one move.
+      </p>
+      <p>
+        Note that defining R3 makes no sense, because it's the same as R'. So we
+        have 6 faces times 3 possible moves per face, for a total of 18 possible
+        moves.
+      </p>
+    </aside>
+  </section>
+
   <section id="part-1">
     <h1 class="text-9xl font-bold">Part 1: Naive</h1>
   </section>

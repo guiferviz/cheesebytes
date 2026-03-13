@@ -635,6 +635,12 @@ export default function RubikStateGraph({
   const activeMovesKey = activeMoveset.join("|");
   const activeMovesSet = new Set(activeMoveset);
 
+  // ── Visibility controls (don't trigger graph rebuild) ────────────────
+  const [visStep, setVisStep] = useState(depth);
+  const [visHiddenMoves, setVisHiddenMoves] = useState<Set<string>>(
+    () => new Set(),
+  );
+
   // Refs for live settings (read by zoom/tick closures without triggering rebuild)
   const cubeThresholdRef = useRef(cubeThreshold);
   cubeThresholdRef.current = cubeThreshold;
@@ -1046,6 +1052,47 @@ export default function RubikStateGraph({
     edgeWidth,
   ]);
 
+  // ── Reset visibility when graph is rebuilt ──────────────────────────
+  useEffect(() => {
+    setVisStep(depth);
+    setVisHiddenMoves(new Set());
+  }, [depth, rootIndex, activeMovesKey]);
+
+  // ── Visibility useEffect: hides nodes/edges without rebuilding ─────
+  useEffect(() => {
+    const container = containerGRef.current;
+    if (!container) return;
+
+    const effectiveStep = Math.min(visStep, depth);
+
+    // Hide/show nodes by depth
+    container.selectAll(".nodes > g").each(function (this: any, d: any) {
+      d3.select(this).attr("display", d.depth <= effectiveStep ? null : "none");
+    });
+
+    // Hide/show edge lines + arrows by depth & move
+    container.selectAll(".links > g").each(function (this: any, d: any) {
+      const sd = typeof d.source === "object" ? d.source.depth : Infinity;
+      const td = typeof d.target === "object" ? d.target.depth : Infinity;
+      const vis =
+        sd <= effectiveStep &&
+        td <= effectiveStep &&
+        !visHiddenMoves.has(d.move);
+      d3.select(this).attr("display", vis ? null : "none");
+    });
+
+    // Hide/show edge labels
+    container.selectAll(".link-labels text").each(function (this: any, d: any) {
+      const sd = typeof d.source === "object" ? d.source.depth : Infinity;
+      const td = typeof d.target === "object" ? d.target.depth : Infinity;
+      const vis =
+        sd <= effectiveStep &&
+        td <= effectiveStep &&
+        !visHiddenMoves.has(d.move);
+      d3.select(this).attr("display", vis ? null : "none");
+    });
+  }, [visStep, visHiddenMoves, depth, rootIndex, activeMovesKey]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseInt(inputValue, 10);
@@ -1079,6 +1126,17 @@ export default function RubikStateGraph({
       };
     });
   };
+
+  const toggleVisMove = (move: string) => {
+    setVisHiddenMoves((prev) => {
+      const next = new Set(prev);
+      if (next.has(move)) next.delete(move);
+      else next.add(move);
+      return next;
+    });
+  };
+  const showAllVisMoves = () => setVisHiddenMoves(new Set());
+  const hideAllVisMoves = () => setVisHiddenMoves(new Set(activeMoveset));
 
   return (
     <div
@@ -1507,6 +1565,120 @@ export default function RubikStateGraph({
               </div>
             </div>
           </details>
+
+          <hr
+            style={{
+              border: "none",
+              borderTop: `1px solid ${isDark ? "#444" : "#ccc"}`,
+              margin: "2px 0",
+            }}
+          />
+
+          {/* ── Visibility (no rebuild) ── */}
+          <span
+            style={{
+              color: isDark ? "#ddd" : "#333",
+              fontWeight: "bold",
+              fontSize: 11,
+            }}
+          >
+            Visibility
+          </span>
+
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            Step: {Math.min(visStep, depth)}
+            <input
+              type="range"
+              min={0}
+              max={depth}
+              value={Math.min(visStep, depth)}
+              onChange={(e) => setVisStep(Number(e.target.value))}
+              style={{ width: 100, accentColor: "#88cc44" }}
+            />
+          </label>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 10 }}>Edge visibility by move</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                type="button"
+                onClick={showAllVisMoves}
+                style={{
+                  background: isDark ? "#333" : "#ddd",
+                  color: isDark ? "#ccc" : "#444",
+                  border: `1px solid ${isDark ? "#555" : "#bbb"}`,
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  cursor: "pointer",
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                }}
+              >
+                all
+              </button>
+              <button
+                type="button"
+                onClick={hideAllVisMoves}
+                style={{
+                  background: isDark ? "#333" : "#ddd",
+                  color: isDark ? "#ccc" : "#444",
+                  border: `1px solid ${isDark ? "#555" : "#bbb"}`,
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  cursor: "pointer",
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                }}
+              >
+                none
+              </button>
+            </div>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 6,
+            }}
+          >
+            {activeMoveset.map((move) => (
+              <label
+                key={move}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                  background: !visHiddenMoves.has(move)
+                    ? isDark
+                      ? "rgba(136,204,68,0.16)"
+                      : "rgba(136,204,68,0.12)"
+                    : "transparent",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={!visHiddenMoves.has(move)}
+                  onChange={() => toggleVisMove(move)}
+                />
+                <span>{move}</span>
+              </label>
+            ))}
+          </div>
         </div>
       )}
 
