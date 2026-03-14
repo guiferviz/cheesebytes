@@ -3,8 +3,11 @@
  *
  * Permutation diagram: before row → arrows → after row.
  *
- * - Hover 1 s over a sticker row → interactive tooltip with 3D cube; keyboard
- *   moves on that cube update the corresponding row state.
+ * - Click on a sticker row to open an interactive tooltip with a 3D cube;
+ *   keyboard moves on that cube update the corresponding row state.
+ * - Two tooltips can be open simultaneously (before & after), and can be
+ *   dragged anywhere on screen.
+ * - Hovering a sticker highlights its arrow + the connected sticker.
  * - Click the arrow zone (or placeholder) to pick a move from a dropdown.
  * - Initially no move is shown; on dropdown selection arrows + after row appear.
  */
@@ -113,7 +116,8 @@ interface Props {
 
 const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
   function StickerPermutation({ visibleStickers: initialVisible = 24 }, ref) {
-    const tooltipCubeRef = useRef<RubikCubeHandle>(null);
+    const beforeCubeRef = useRef<RubikCubeHandle>(null);
+    const afterCubeRef = useRef<RubikCubeHandle>(null);
 
     // Source of truth: "before" row = currentState, after = move(currentState).
     const [currentState, setCurrentState] = useState(SOLVED);
@@ -123,12 +127,35 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
     const [visibleStickers, setVisibleStickers] = useState(initialVisible);
     const settingsRef = useRef<HTMLDivElement>(null);
 
-    // Tooltip state
-    const [tooltipVisible, setTooltipVisible] = useState(false);
-    const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-    const tooltipRowRef = useRef<"before" | "after">("before");
-    const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Highlight state: which sticker index is hovered and on which row
+    const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+    const [hoverRow, setHoverRow] = useState<"before" | "after" | null>(null);
+
+    // Two independent tooltips (before / after)
+    interface TooltipState {
+      visible: boolean;
+      x: number;
+      y: number;
+    }
+    const [beforeTT, setBeforeTT] = useState<TooltipState>({
+      visible: false,
+      x: 0,
+      y: 0,
+    });
+    const [afterTT, setAfterTT] = useState<TooltipState>({
+      visible: false,
+      x: 0,
+      y: 0,
+    });
+
+    // Dragging state for each tooltip
+    const dragRef = useRef<{
+      row: "before" | "after";
+      startX: number;
+      startY: number;
+      origX: number;
+      origY: number;
+    } | null>(null);
 
     // Stable refs for use in callbacks
     const displayedMoveRef = useRef(displayedMove);
@@ -151,33 +178,38 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
     const selectMove = useCallback((notation: string) => {
       setDisplayedMove(notation);
       setDropdownOpen(false);
-      setTooltipVisible(false);
     }, []);
 
     // Tooltip cube keyboard move → update the row it belongs to
-    const handleTooltipMove = useCallback(
-      (face: string, cw: boolean, double: boolean) => {
-        const notation = double ? face + "2" : cw ? face : face + "'";
-        const p = MOVES_24[notation];
-        if (!p) return;
+    const makeTooltipMoveHandler = useCallback(
+      (row: "before" | "after") =>
+        (face: string, cw: boolean, double: boolean) => {
+          const notation = double ? face + "2" : cw ? face : face + "'";
+          const p = MOVES_24[notation];
+          if (!p) return;
 
-        const move = displayedMoveRef.current;
-        if (tooltipRowRef.current === "before" || !move) {
-          // P applied to before → currentState' = P(currentState)
-          setCurrentState((prev) => p.map((i) => prev[i]).join(""));
-        } else {
-          // P applied to after: after' = P(M(cs)), cs' = invM(P(M(cs)))
-          const mPerm = MOVES_24[move]!;
-          const invM = invertPerm(mPerm);
-          setCurrentState((prev) => {
-            const afterArr = mPerm.map((i) => prev[i]);
-            const afterNew = p.map((i) => afterArr[i]);
-            return invM.map((i) => afterNew[i]).join("");
-          });
-        }
-      },
+          const move = displayedMoveRef.current;
+          if (row === "before" || !move) {
+            setCurrentState((prev) => p.map((i) => prev[i]).join(""));
+          } else {
+            const mPerm = MOVES_24[move]!;
+            const invM = invertPerm(mPerm);
+            setCurrentState((prev) => {
+              const afterArr = mPerm.map((i) => prev[i]);
+              const afterNew = p.map((i) => afterArr[i]);
+              return invM.map((i) => afterNew[i]).join("");
+            });
+          }
+        },
       [],
     );
+
+    const handleBeforeMove = useCallback(makeTooltipMoveHandler("before"), [
+      makeTooltipMoveHandler,
+    ]);
+    const handleAfterMove = useCallback(makeTooltipMoveHandler("after"), [
+      makeTooltipMoveHandler,
+    ]);
 
     // ── Derived ──────────────────────────────────────────────────────────
 
@@ -186,6 +218,40 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
     const after = perm
       ? perm.map((i) => currentState[i]).join("")
       : currentState;
+
+    // Sync tooltip cubes when state/move changes
+    useEffect(() => {
+      if (beforeTT.visible) beforeCubeRef.current?.applyState(currentState);
+    }, [currentState, beforeTT.visible]);
+
+    useEffect(() => {
+      if (afterTT.visible) afterCubeRef.current?.applyState(after);
+    }, [after, afterTT.visible]);
+
+    // ── Highlight helpers ────────────────────────────────────────────────
+
+    // Compute which indices to highlight: the hovered sticker, its arrow
+    // partner, and the arrow between them.
+    const highlightSet = new Set<number>();
+    let highlightSrc: number | null = null;
+    let highlightDst: number | null = null;
+    if (hoverIdx !== null && hoverRow !== null && perm) {
+      if (hoverRow === "before") {
+        // Hovering position i in before → arrow goes from i to perm.indexOf(i)
+        const dst = perm.indexOf(hoverIdx);
+        highlightSet.add(hoverIdx); // before row
+        highlightSet.add(dst); // after row (destination)
+        highlightSrc = hoverIdx;
+        highlightDst = dst;
+      } else {
+        // Hovering position j in after → that position came from perm[j]
+        const src = perm[hoverIdx];
+        highlightSet.add(src); // before row (source)
+        highlightSet.add(hoverIdx); // after row
+        highlightSrc = src;
+        highlightDst = hoverIdx;
+      }
+    }
 
     // ── SVG layout ───────────────────────────────────────────────────────
 
@@ -199,28 +265,12 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
     const ddArrowH = 50;
     const labelW = 70;
     const xOf = (i: number) => labelW + i * (cellW + gap);
-    // Content-based viewBox width (actual stickers + optional ellipsis)
     const lastElemEnd = showEllipsis ? xOf(n) + cellW : xOf(n - 1) + cellW;
     const svgW = lastElemEnd + 20;
-    // Full 24-sticker width (used to compute display ratio)
     const fullSvgW = labelW + 24 * cellW + 23 * gap + 20;
-    // Display at proportional width, but at least 55% so few stickers aren't tiny
     const displayPct = Math.max(svgW / fullSvgW, 0.45) * 100;
 
-    // ── Tooltip helpers ──────────────────────────────────────────────────
-
-    const clearTimers = useCallback(() => {
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = null;
-      }
-      if (hideTimerRef.current) {
-        clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = null;
-      }
-    }, []);
-
-    useEffect(() => () => clearTimers(), [clearTimers]);
+    // ── Tooltip click handler ────────────────────────────────────────────
 
     const computeRowState = useCallback((row: "before" | "after") => {
       const cs = currentStateRef.current;
@@ -229,63 +279,65 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
       return MOVES_24[m].map((i) => cs[i]).join("");
     }, []);
 
-    const showTooltipAt = useCallback(
-      (x: number, y: number, row: "before" | "after") => {
-        tooltipRowRef.current = row;
-        setTooltipPos({ x, y });
-        setTooltipVisible(true);
-        tooltipCubeRef.current?.applyState(computeRowState(row));
+    const handleRowClick = useCallback(
+      (e: React.MouseEvent, row: "before" | "after") => {
+        const st = computeRowState(row);
+        const setter = row === "before" ? setBeforeTT : setAfterTT;
+        const cubeRef = row === "before" ? beforeCubeRef : afterCubeRef;
+        setter((prev) => {
+          if (prev.visible) return { ...prev, visible: false };
+          return { visible: true, x: e.clientX + 16, y: e.clientY - 160 };
+        });
+        // Apply state after React commits
+        requestAnimationFrame(() => cubeRef.current?.applyState(st));
       },
       [computeRowState],
     );
 
-    const startShowTimer = useCallback(
-      (x: number, y: number, row: "before" | "after") => {
-        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = setTimeout(() => {
-          showTooltipAt(x, y, row);
-        }, 1000);
-      },
-      [showTooltipAt],
-    );
-
-    const handleRowMouseEnter = useCallback(
-      (e: React.MouseEvent, row: "before" | "after") => {
-        if (hideTimerRef.current) {
-          clearTimeout(hideTimerRef.current);
-          hideTimerRef.current = null;
-        }
-        if (tooltipVisible && tooltipRowRef.current === row) return;
-        startShowTimer(e.clientX, e.clientY, row);
-      },
-      [tooltipVisible, startShowTimer],
-    );
-
-    const handleRowMouseMove = useCallback(
-      (e: React.MouseEvent, row: "before" | "after") => {
-        if (tooltipVisible) return;
-        startShowTimer(e.clientX, e.clientY, row);
-      },
-      [tooltipVisible, startShowTimer],
-    );
-
-    const handleRowMouseLeave = useCallback(() => {
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = null;
-      }
-      hideTimerRef.current = setTimeout(() => setTooltipVisible(false), 300);
+    const closeTooltip = useCallback((row: "before" | "after") => {
+      const setter = row === "before" ? setBeforeTT : setAfterTT;
+      setter((prev) => ({ ...prev, visible: false }));
     }, []);
 
-    const handleTooltipMouseEnter = useCallback(() => {
-      if (hideTimerRef.current) {
-        clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = null;
-      }
-    }, []);
+    // ── Drag handlers ────────────────────────────────────────────────────
 
-    const handleTooltipMouseLeave = useCallback(() => {
-      setTooltipVisible(false);
+    const handleDragStart = useCallback(
+      (e: React.MouseEvent, row: "before" | "after") => {
+        e.preventDefault();
+        const tt = row === "before" ? beforeTT : afterTT;
+        dragRef.current = {
+          row,
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: tt.x,
+          origY: tt.y,
+        };
+      },
+      [beforeTT, afterTT],
+    );
+
+    useEffect(() => {
+      const handleMouseMove = (e: MouseEvent) => {
+        const d = dragRef.current;
+        if (!d) return;
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        const setter = d.row === "before" ? setBeforeTT : setAfterTT;
+        setter((prev) => ({
+          ...prev,
+          x: d.origX + dx,
+          y: d.origY + dy,
+        }));
+      };
+      const handleMouseUp = () => {
+        dragRef.current = null;
+      };
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
     }, []);
 
     // ── Close dropdown / settings on outside click ─────────────────────
@@ -318,10 +370,24 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
       state: string,
       idxAbove: boolean,
       idxBelow: boolean,
+      row: "before" | "after",
     ) => {
       const padTop = idxAbove ? idxH + 2 : 4;
       const padBot = idxBelow ? idxH + 4 : 4;
       const h = padTop + cellH + padBot;
+
+      // Which index is highlighted for THIS row?
+      const hlIdx =
+        hoverRow === "before" && row === "before"
+          ? hoverIdx
+          : hoverRow === "before" && row === "after"
+            ? highlightDst
+            : hoverRow === "after" && row === "after"
+              ? hoverIdx
+              : hoverRow === "after" && row === "before"
+                ? highlightSrc
+                : null;
+
       return (
         <svg
           viewBox={`0 0 ${svgW} ${h}`}
@@ -331,8 +397,20 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
           {Array.from({ length: n }).map((_, i) => {
             const ch = state[i];
             const x = xOf(i);
+            const isHl = hlIdx === i && perm && perm[i] !== i;
             return (
-              <g key={i}>
+              <g
+                key={i}
+                onMouseEnter={() => {
+                  setHoverIdx(i);
+                  setHoverRow(row);
+                }}
+                onMouseLeave={() => {
+                  setHoverIdx(null);
+                  setHoverRow(null);
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 {idxAbove && (
                   <text
                     x={x + cellW / 2}
@@ -350,7 +428,9 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
                   height={cellH}
                   rx={4}
                   fill={CHAR_HEX[ch] ?? "#555"}
-                  opacity={0.85}
+                  opacity={isHl ? 1 : 0.85}
+                  stroke={isHl ? "#fff" : "none"}
+                  strokeWidth={isHl ? 2.5 : 0}
                 />
                 <text
                   x={x + cellW / 2}
@@ -371,6 +451,14 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
                     {i}
                   </text>
                 )}
+                {/* Invisible wider hit area */}
+                <rect
+                  x={x - gap / 2}
+                  y={0}
+                  width={cellW + gap}
+                  height={h}
+                  fill="transparent"
+                />
               </g>
             );
           })}
@@ -393,8 +481,10 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
       movePerm: number[],
       h: number,
       idSuffix: string,
+      enableHighlight = false,
     ) => {
       const mid = `sp-ah-${idSuffix}`;
+      const midHl = `sp-ah-hl-${idSuffix}`;
       return (
         <svg
           viewBox={`0 0 ${svgW} ${h}`}
@@ -412,6 +502,16 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
             >
               <path d="M0,0 L7,2.5 L0,5 Z" fill="#9ca3af" />
             </marker>
+            <marker
+              id={midHl}
+              markerWidth="7"
+              markerHeight="5"
+              refX="6"
+              refY="2.5"
+              orient="auto"
+            >
+              <path d="M0,0 L7,2.5 L0,5 Z" fill="#fff" />
+            </marker>
           </defs>
           <text
             x={labelW / 2}
@@ -427,6 +527,10 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
             if (src === dst) return null;
             const x1 = src < n ? xOf(src) + cellW / 2 : xOf(n) + cellW / 2;
             const x2 = dst < n ? xOf(dst) + cellW / 2 : xOf(n) + cellW / 2;
+            const isHl =
+              enableHighlight &&
+              highlightSrc !== null &&
+              src === highlightSrc;
             return (
               <line
                 key={src}
@@ -434,16 +538,68 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
                 y1={4}
                 x2={x2}
                 y2={h - 6}
-                stroke="#9ca3af"
-                strokeWidth={1.8}
-                markerEnd={`url(#${mid})`}
-                opacity={0.65}
+                stroke={isHl ? "#fff" : "#9ca3af"}
+                strokeWidth={isHl ? 2.8 : 1.8}
+                markerEnd={`url(#${isHl ? midHl : mid})`}
+                opacity={isHl ? 1 : 0.65}
               />
             );
           })}
         </svg>
       );
     };
+
+    // ── Tooltip renderer (portal) ────────────────────────────────────────
+
+    const renderTooltip = (
+      row: "before" | "after",
+      tt: TooltipState,
+      cubeRef: React.RefObject<RubikCubeHandle | null>,
+      onMove: (face: string, cw: boolean, double: boolean) => void,
+    ) =>
+      createPortal(
+        <div
+          className="fixed z-[9999] rounded-xl border border-gray-600 bg-gray-900/90 shadow-xl"
+          style={{
+            left: tt.x,
+            top: tt.y,
+            opacity: tt.visible ? 1 : 0,
+            visibility: tt.visible ? "visible" : "hidden",
+            pointerEvents: tt.visible ? "auto" : "none",
+            transition: "opacity 0.15s ease",
+          }}
+        >
+          {/* Drag handle + close button */}
+          <div
+            className="flex cursor-move items-center justify-between rounded-t-xl px-2 py-1"
+            style={{ background: "rgba(60,60,60,0.6)" }}
+            onMouseDown={(e) => handleDragStart(e, row)}
+          >
+            <span className="select-none font-mono text-[11px] text-gray-400">
+              {row === "before" ? "before" : "after"}
+            </span>
+            <button
+              className="flex h-5 w-5 items-center justify-center rounded text-gray-400 transition hover:bg-gray-600 hover:text-white"
+              onClick={() => closeTooltip(row)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="p-1">
+            <RubikCube
+              ref={cubeRef}
+              width={320}
+              height={300}
+              size={2}
+              showStateEditor={false}
+              showLabels={true}
+              initialShowHelp={false}
+              onMove={onMove}
+            />
+          </div>
+        </div>,
+        document.body,
+      );
 
     // ── Render ────────────────────────────────────────────────────────────
 
@@ -490,11 +646,10 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
           <div className="w-full">
             {/* Top sticker row (before / current state) */}
             <div
-              onMouseEnter={(e) => handleRowMouseEnter(e, "before")}
-              onMouseMove={(e) => handleRowMouseMove(e, "before")}
-              onMouseLeave={handleRowMouseLeave}
+              className="cursor-pointer"
+              onClick={(e) => handleRowClick(e, "before")}
             >
-              {renderStickerRow(before, true, false)}
+              {renderStickerRow(before, true, false, "before")}
             </div>
 
             {/* Arrow zone / placeholder — always clickable */}
@@ -504,7 +659,13 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
                 onClick={() => setDropdownOpen((o) => !o)}
               >
                 {perm ? (
-                  renderArrows(displayedMove!, perm, mainArrowH, "main")
+                  renderArrows(
+                    displayedMove!,
+                    perm,
+                    mainArrowH,
+                    "main",
+                    true,
+                  )
                 ) : (
                   <div className="flex items-center justify-center py-4">
                     <span className="select-none font-mono text-sm text-gray-500">
@@ -539,43 +700,18 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
             {/* Bottom sticker row (after) */}
             {perm && (
               <div
-                onMouseEnter={(e) => handleRowMouseEnter(e, "after")}
-                onMouseMove={(e) => handleRowMouseMove(e, "after")}
-                onMouseLeave={handleRowMouseLeave}
+                className="cursor-pointer"
+                onClick={(e) => handleRowClick(e, "after")}
               >
-                {renderStickerRow(after, false, true)}
+                {renderStickerRow(after, false, true, "after")}
               </div>
             )}
           </div>
         </div>
 
-        {/* Interactive tooltip cube (portal to body) */}
-        {createPortal(
-          <div
-            className="fixed z-[9999] rounded-xl border border-gray-600 bg-gray-900/90 p-1 shadow-xl"
-            style={{
-              left: tooltipPos.x + 16,
-              top: tooltipPos.y > 200 ? tooltipPos.y - 320 : tooltipPos.y + 20,
-              opacity: tooltipVisible ? 1 : 0,
-              visibility: tooltipVisible ? "visible" : "hidden",
-              pointerEvents: tooltipVisible ? "auto" : "none",
-              transition: "opacity 0.15s ease",
-            }}
-            onMouseEnter={handleTooltipMouseEnter}
-            onMouseLeave={handleTooltipMouseLeave}
-          >
-            <RubikCube
-              ref={tooltipCubeRef}
-              width={320}
-              height={300}
-              size={2}
-              showStateEditor={false}
-              initialShowHelp={false}
-              onMove={handleTooltipMove}
-            />
-          </div>,
-          document.body,
-        )}
+        {/* Two independent tooltip cubes (portals to body) */}
+        {renderTooltip("before", beforeTT, beforeCubeRef, handleBeforeMove)}
+        {renderTooltip("after", afterTT, afterCubeRef, handleAfterMove)}
       </CheeseSlideContainer>
     );
   },

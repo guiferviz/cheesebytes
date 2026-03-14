@@ -354,6 +354,8 @@ interface RubikCubeProps {
   size?: number;
   /** Show the string-representation editor overlay. */
   showStateEditor?: boolean;
+  /** Show index labels on stickers when unfolded (defaults to showStateEditor). */
+  showLabels?: boolean;
   /** Called after every move with the new sticker string. */
   onStateChange?: (stateString: string) => void;
   /** Called after every move with the face and direction. */
@@ -377,6 +379,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       height = 600,
       size = 2,
       showStateEditor = false,
+      showLabels: showLabelsProp,
       onStateChange,
       onMove,
       initialShowHelp = true,
@@ -390,6 +393,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
     const [showHelp, setShowHelp] = useState(initialShowHelp);
     const showHelpRef = useRef(true);
     showHelpRef.current = showHelp;
+    const showLabels = showLabelsProp ?? showStateEditor;
 
     // ── State-editor React state + imperative-bridge refs ──────────────────────
     const [stateString, setStateString] = useState("");
@@ -1073,7 +1077,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
        * them every time the unfold finishes.
        */
       const labelSprites: THREE.Sprite[] = [];
-      if (showStateEditor) {
+      if (showLabels) {
         for (const _s of stickers) {
           const mat = new THREE.SpriteMaterial({
             map: makeLabelTexture(0),
@@ -1091,7 +1095,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
       /** Refresh label textures + positions from the cached sticker→index map. */
       function refreshLabelsFromCache() {
-        if (!showStateEditor) return;
+        if (!showLabels) return;
         const wp = new THREE.Vector3();
         stickers.forEach((s, i) => {
           const idx = stateIndexMap.get(s) ?? i;
@@ -1149,10 +1153,10 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
         stateStringSnapshot = str;
         stateIndexMap = indexMap;
       }
+      if (showLabels) refreshLabelsFromCache();
       if (showStateEditor) {
         setStateStringRef.current(stateStringSnapshot);
         onStateChangeRef.current?.(stateStringSnapshot);
-        refreshLabelsFromCache();
       }
 
       // ── Animation queue ───────────────────────────────────────────────────────
@@ -1475,7 +1479,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
             },
             () => {
               cubies.forEach((c) => (c.visible = false));
-              if (showStateEditor) {
+              if (showLabels) {
                 refreshLabelsFromCache();
                 labelSprites.forEach((sp) => {
                   const mat = sp.material as THREE.SpriteMaterial;
@@ -1532,7 +1536,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
           addAnim(
             DURATION,
             (t, e) => {
-              if (showStateEditor) {
+              if (showLabels) {
                 const fade = Math.min(t / LABEL_FADE_OUT_FRACTION, 1);
                 const opacity = 1 - fade;
                 labelSprites.forEach((sp) => {
@@ -1736,7 +1740,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
         gl.dispose();
         if (mount.contains(gl.domElement)) mount.removeChild(gl.domElement);
       };
-    }, [width, height, size, showStateEditor]);
+    }, [width, height, size, showStateEditor, showLabels]);
 
     // ── JSX ───────────────────────────────────────────────────────────────────
 
