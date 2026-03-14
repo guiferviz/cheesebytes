@@ -238,7 +238,6 @@ function ClearButton({
         background: bg,
         border: "1px solid transparent",
         borderRadius: "4px",
-        cursor: "pointer",
         transition: "background 0.15s ease, color 0.15s ease",
         lineHeight: 1,
       }}
@@ -315,7 +314,6 @@ function RunButton({
         background: bg,
         border: `1px solid ${isRunning ? stopColor + "44" : border}`,
         borderRadius: "4px",
-        cursor: disabled ? "not-allowed" : "pointer",
         transition:
           "background 0.15s ease, color 0.15s ease, border 0.15s ease",
         lineHeight: 1,
