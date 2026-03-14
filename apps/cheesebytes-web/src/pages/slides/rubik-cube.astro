@@ -10,10 +10,12 @@ import {
   CornerInvariant,
   EncodingShowcase,
   CubeCompare,
+  StickerPermutation,
 } from "../../components/cave/rubik-cube";
 import { RubikStateGraph } from "../../components/cave/rubik-graph";
 import { LogoAnimation } from "../../components/cave/intro";
 import PyodideWorkerRunner from "../../../src/components/PyodideWorkerRunner";
+import RevealCode from "../../components/RevealCode";
 
 export const stringRepresentationCode = dedent`\
     import asyncio
@@ -553,6 +555,12 @@ export const vectorizedCode = dedent`\
         We could say that turning a face by 180 degrees is also a basic move. In
         that case, we call it R2.
       </p>
+    </aside>
+    <RubikCubeViz client:only="react" />
+  </section>
+
+  <section>
+    <aside class="notes">
       <p>
         Now that we have a way to describe moves, we can start thinking about
         the cube as a graph. Each configuration is a node, and there is an edge
@@ -602,22 +610,26 @@ export const vectorizedCode = dedent`\
       <p>
         There is also no need to define R3, because that is exactly the same as
         R prime. So for each face, we really have three meaningful moves:
-        clockwise, counter-clockwise, and half turn.
+        clockwise, counter-clockwise, and half turn. With six faces, that gives
+        us a total of eighteen possible moves.
       </p>
-      <p>With six faces, that gives us a total of eighteen possible moves.</p>
     </aside>
+    <RubikStateGraph
+      client:only="react"
+      initialIndex={0}
+      initialDepth={4}
+      initialMoves={["R", "R'", "R2"]}
+      overflow={true}
+    />
   </section>
 
-  <section id="part-1">
-    <h1 class="text-9xl font-bold">Part 1: Naive</h1>
-  </section>
-
-  <section id="cube">
+  <section>
     <aside class="notes">
       <p>
-        The first challenge is representation. Before we can explore the cube,
-        we need to describe it in code. We need to encode the position of every
-        sticker.
+        So now the problem is well defined. We have a set of allowed moves, and
+        that gives us a graph. But if we want to explore that graph with a
+        computer, we still need one more thing: a way to represent each state.
+        In other words, we need to encode the cube in code.
       </p>
     </aside>
     <EncodingShowcase client:only="react" width={1080} height={600} />
@@ -626,48 +638,122 @@ export const vectorizedCode = dedent`\
   <section>
     <aside class="notes">
       <p>
-        There are many ways to do this, but a very natural starting point is to
-        work with the stickers. We choose a fixed order, and represent the cube
-        as a string where each character tells us the colour of one sticker.
-      </p>
-      <p>
-        Every cube state becomes just a different string. That gives us
-        something a computer can work with. The next question is: how do we make
-        a move?
-      </p>
-      <p>
-        A move does not create new stickers, and it does not change their
-        colours. It only moves them around. So every move is just a reordering
-        of the string.
+        There are many ways to do this, but a very natural first idea is to work
+        with the stickers. We choose a fixed order, and represent the cube as a
+        string where each character tells us the colour of one sticker. Every
+        cube state becomes just a different string. That gives us something a
+        computer can work with.
       </p>
     </aside>
-
     <RubikCubeViz
       client:only="react"
-      width={1080}
-      height={720}
       showStateEditor={true}
       cameraRelativeEncoding={true}
     />
   </section>
 
-  <section id="cube">
+  <section id="sticker-perm">
     <aside class="notes">
-      <pre>
-        After around 3 hours and a peak memory consumption of 125GB the execution finishes.
-        Total states visited: 88179840
-        Move counts by distance:
-            {{0: 1, 1: 18, 2: 243, 3: 2874, 4: 28000, 5: 205416, 6: 1168516, 7: 5402628, 8: 20776176, 9: 45391616, 10: 15139616, 11: 64736}}
-      </pre>
-      <p>Encoding no relativo a la camara.</p>
+      <p>
+        Once we are able to encode any given cube as a string, the next question
+        is how to implement moves in code. A move does not change the stickers
+        themselves. It only changes their positions. So every move is just a
+        reordering of the string.
+      </p>
+      <p>
+        For example, the first four characters represent the up face. If we
+        apply a U move, those stickers rotate among themselves. And in the same
+        way, every other affected sticker moves to a new fixed position. So U is
+        just a fixed permutation of the string indices.
+      </p>
     </aside>
-    <RubikCubeViz
+    <StickerPermutation client:only="react" visibleStickers={24} />
+  </section>
+
+  <section>
+    <RevealCode
       client:only="react"
-      width={1080}
-      height={720}
-      showStateEditor={true}
-      cameraRelativeEncoding={false}
+      animation="fade"
+      code={`def bfs(start, max_depth):
+    visited = {start: 0}
+    frontier = {start}
+
+    for depth in range(1, max_depth + 1):
+        next_frontier = set()
+
+        for state in frontier:
+            for move in MOVES:
+                nxt = apply_move(state, move)
+                if nxt not in visited:
+                    visited[nxt] = depth
+                    next_frontier.add(nxt)
+
+        frontier = next_frontier
+
+    return visited`}
     />
+  </section>
+  <section>
+    <aside class="notes"></aside>
+    <div class="flex justify-center">
+      <div
+        class="grid grid-cols-[max-content_max-content] gap-x-4 gap-y-5 text-2xl"
+      >
+        <span class="text-right">Total execution time:</span>
+        <span class="font-bold text-3xl">~3 hours</span>
+        <span class="text-right">Peak memory consumption:</span>
+        <span class="font-bold text-3xl">125 GB</span>
+      </div>
+    </div>
+    <img
+      src="/public/cave/rubik-cube/naive-execution-time.png"
+      class="block mx-auto mt-8"
+    />
+  </section>
+
+  <section>
+    <div class="mt-10 flex justify-center">
+      <div
+        class="grid grid-cols-[max-content_max-content_1fr] items-center gap-x-4 gap-y-2 text-lg font-mono"
+      >
+        <span class="text-right text-gray-400">depth</span>
+        <span class="text-right text-gray-400">states</span>
+        <span></span>
+        {
+          [
+            [0, 1],
+            [1, 18],
+            [2, 243],
+            [3, 2874],
+            [4, 28000],
+            [5, 205416],
+            [6, 1168516],
+            [7, 5402628],
+            [8, 20776176],
+            [9, 45391616],
+            [10, 15139616],
+            [11, 64736],
+          ].map(([d, n]) => (
+            <>
+              <span class="text-right text-gray-400">{d}</span>
+              <span class="text-right tabular-nums">
+                {n.toLocaleString("en-US")}
+              </span>
+              <div class="h-4 rounded-sm bg-amber-400/30">
+                <div
+                  class="h-full rounded-sm bg-amber-400/80"
+                  style={`width: ${((n / 45391616) * 100).toFixed(2)}%`}
+                />
+              </div>
+            </>
+          ))
+        }
+        <span class="col-span-3 my-1 border-t border-gray-600"></span>
+        <span class="text-right text-gray-400">total</span>
+        <span class="text-right tabular-nums font-bold">88,179,840</span>
+        <span></span>
+      </div>
+    </div>
   </section>
 
   <section id="lehmer-table">
@@ -747,12 +833,6 @@ export const vectorizedCode = dedent`\
         and they collapse to dots. Click a node to re-centre the graph on it.
       </p>
     </aside>
-    <RubikStateGraph
-      client:only="react"
-      initialIndex={0}
-      initialDepth={1}
-      overflow={true}
-    />
   </section>
 
   <section>

@@ -579,12 +579,14 @@ function drawIsoCube(
 interface Props {
   initialIndex?: number;
   initialDepth?: number;
+  initialMoves?: string[];
   overflow?: boolean;
 }
 
 export default function RubikStateGraph({
   initialIndex = 0,
   initialDepth = 1,
+  initialMoves,
   overflow = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -595,7 +597,7 @@ export default function RubikStateGraph({
   > | null>(null);
 
   // Auto-detect parent size
-  const [size, setSize] = useState({ width: 1080, height: 680 });
+  const [size, setSize] = useState({ width: 1080, height: 720 });
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -612,20 +614,28 @@ export default function RubikStateGraph({
   const [depth, setDepth] = useState(initialDepth);
   const [inputValue, setInputValue] = useState(String(initialIndex));
   const [metric, setMetric] = useState<Metric>("HTM");
-  const [cubeView, setCubeView] = useState<"net" | "iso">("net");
+  const [cubeView, setCubeView] = useState<"net" | "iso">("iso");
   const [enabledMovesByMetric, setEnabledMovesByMetric] = useState<
     Record<Metric, string[]>
-  >(() => ({
-    QTM: [...QTM_MOVES],
-    HTM: [...HTM_MOVES],
-  }));
+  >(() => {
+    if (initialMoves && initialMoves.length > 0) {
+      return {
+        QTM: QTM_MOVES.filter((m) => initialMoves.includes(m)),
+        HTM: HTM_MOVES.filter((m) => initialMoves.includes(m)),
+      };
+    }
+    return {
+      QTM: [...QTM_MOVES],
+      HTM: [...HTM_MOVES],
+    };
+  });
 
   // Collapsible settings
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chargeStrength, setChargeStrength] = useState(-250);
-  const [linkDistance, setLinkDistance] = useState(80);
+  const [linkDistance, setLinkDistance] = useState(130);
   const [cubeThreshold, setCubeThreshold] = useState(0); // 0 = always show cube
-  const [showIds, setShowIds] = useState(true);
+  const [showIds, setShowIds] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
   const [edgeBend, setEdgeBend] = useState(15);
   const [edgeWidth, setEdgeWidth] = useState(1.5);
@@ -969,8 +979,8 @@ export default function RubikStateGraph({
     simRef.current = sim;
     tickFnRef.current = tick;
 
-    // Initial zoom to fit
-    svg.call(zoom.transform as any, d3.zoomIdentity.translate(0, 0).scale(1));
+    // Initial zoom: slightly zoomed in
+    svg.call(zoom.transform as any, d3.zoomIdentity.translate(0, 0).scale(1.3));
 
     return () => {
       sim.stop();

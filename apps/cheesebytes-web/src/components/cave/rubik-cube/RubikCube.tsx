@@ -356,6 +356,8 @@ interface RubikCubeProps {
   showStateEditor?: boolean;
   /** Called after every move with the new sticker string. */
   onStateChange?: (stateString: string) => void;
+  /** Called after every move with the face and direction. */
+  onMove?: (face: string, cw: boolean, double: boolean) => void;
   /** Initial visibility of the help bar (default true). */
   initialShowHelp?: boolean;
   /**
@@ -376,6 +378,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       size = 2,
       showStateEditor = false,
       onStateChange,
+      onMove,
       initialShowHelp = true,
       cameraRelativeEncoding = false,
     },
@@ -402,6 +405,8 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
     const applyStateExtRef = useRef<(s: string) => void>(() => {});
     const onStateChangeRef = useRef(onStateChange);
     onStateChangeRef.current = onStateChange;
+    const onMoveRef = useRef(onMove);
+    onMoveRef.current = onMove;
     setStateStringRef.current = setStateString;
     setHoveredIdxRef.current = setHoveredStrIdx;
 
@@ -1138,7 +1143,17 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       applyStringRef.current = applyStringFromEditor;
       applyStateExtRef.current = applyStringFromEditor;
 
-      if (showStateEditor) updateStateDisplay();
+      // Always build the sticker index map so applyState works even without editor
+      {
+        const { str, indexMap } = computeStickerMap();
+        stateStringSnapshot = str;
+        stateIndexMap = indexMap;
+      }
+      if (showStateEditor) {
+        setStateStringRef.current(stateStringSnapshot);
+        onStateChangeRef.current?.(stateStringSnapshot);
+        refreshLabelsFromCache();
+      }
 
       // ── Animation queue ───────────────────────────────────────────────────────
       type TickFn = (dt: number) => void;
@@ -1254,6 +1269,7 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
             activeNotationMove = null;
             updateNotationOverlay();
             updateStateDisplay();
+            onMoveRef.current?.(face, cw, double);
           },
         );
       }
