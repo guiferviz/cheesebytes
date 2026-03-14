@@ -29,18 +29,16 @@ export const stickerPermutationCode = dedent`\
     start = "BBBBRRRRYYYYOOOOWWWWGGGG"
     print(apply_move(start, MOVES["R"]))`;
 
-export const stringRepresentationCode = dedent`\
-    import asyncio
-    from collections import deque
-
+export const naiveCode = dedent`\
     MOVES = {
         "R": [0, 9, 2, 11, 4, 5, 6, 7, 8, 21, 10, 23, 14, 12, 15, 13, 3, 17, 1, 19, 20, 18, 22, 16],
         "D": [0, 1, 2, 3, 4, 5, 18, 19, 8, 9, 6, 7, 12, 13, 10, 11, 16, 17, 14, 15, 22, 20, 23, 21],
         "B": [13, 15, 2, 3, 1, 5, 0, 7, 8, 9, 10, 11, 12, 23, 14, 22, 18, 16, 19, 17, 20, 21, 4, 6],
-        #"F": [0, 1, 7, 5, 4, 20, 6, 21, 10, 8, 11, 9, 2, 13, 3, 15, 16, 17, 18, 19, 14, 12, 22, 23],
-        #"U": [2, 0, 3, 1, 8, 9, 6, 7, 12, 13, 10, 11, 16, 17, 14, 15, 4, 5, 18, 19, 20, 21, 22, 23],
-        #"L": [19, 1, 17, 3, 6, 4, 7, 5, 0, 9, 2, 11, 12, 13, 14, 15, 16, 22, 18, 20, 8, 21, 10, 23],
+        "F": [0, 1, 7, 5, 4, 20, 6, 21, 10, 8, 11, 9, 2, 13, 3, 15, 16, 17, 18, 19, 14, 12, 22, 23],
+        "U": [2, 0, 3, 1, 8, 9, 6, 7, 12, 13, 10, 11, 16, 17, 14, 15, 4, 5, 18, 19, 20, 21, 22, 23],
+        "L": [19, 1, 17, 3, 6, 4, 7, 5, 0, 9, 2, 11, 12, 13, 14, 15, 16, 22, 18, 20, 8, 21, 10, 23],
     }
+
 
     def invert_permutation(perm):
         inv = [0] * len(perm)
@@ -48,42 +46,61 @@ export const stringRepresentationCode = dedent`\
             inv[p] = i
         return inv
 
+
     def compose(p2, p1):
         return [p1[i] for i in p2]
 
-    for k in list(MOVES.keys()):
-        MOVES[k + "'"] = invert_permutation(MOVES[k])
-        #MOVES[k + "2"] = compose(MOVES[k], MOVES[k])
 
-    def move(state, move):
-        return "".join(state[i] for i in MOVES[move])
+    def get_moves(inverse=True, half_turn=True):
+        moves = {}
+        for k, v in MOVES.items():
+            moves[k] = v
+            if inverse:
+                moves[k + "'"] = invert_permutation(v)
+            if half_turn:
+                moves[k + "2"] = compose(v, v)
+        return moves
 
-    async def explore_moves(state, max_depth):
-        visited = {}
-        queue = deque([(state, 0)])
-        depth = 0
-        while queue:
-            s, d = queue.popleft()
-            if d > depth:
-                if d > max_depth:
-                    break
-                depth = d
-                print("Depth", depth)
-                await asyncio.sleep(0.1)
-            if s in visited:
-                continue
-            visited[s] = d
-            for m in MOVES.keys():
-                queue.append((move(s, m), d + 1))
+
+    def apply_move(state, move):
+        return "".join(state[i] for i in move)
+
+
+    def bfs(start, moves, max_depth):
+        visited = {start: 0}
+        frontier = {start}
+
+        for depth in range(1, max_depth + 1):
+            print("Starting Depth", depth)
+            next_frontier = set()
+
+            for state in frontier:
+                for move in moves.values():
+                    nxt = apply_move(state, move)
+                    if nxt not in visited:
+                        visited[nxt] = depth
+                        next_frontier.add(nxt)
+
+            frontier = next_frontier
+            print("Finished Depth", depth)
+            print("    next frontier size", len(frontier))
+            print("    visited so far", len(visited))
+
         return visited
 
-    initial_state = "BBBBRRRRYYYYOOOOWWWWGGGG"
-    visited = await explore_moves(initial_state, 20)
-    counts = {}
-    for dist in visited.values():
-        counts[dist] = counts.get(dist, 0) + 1
-    print("Total states visited:", len(visited))
-    print("Move counts by distance:", counts)`;
+
+    def main():
+        initial_state = "BBBBRRRRYYYYOOOOWWWWGGGG"
+        moves = get_moves(inverse=True, half_turn=True)
+        visited = bfs(initial_state, moves, 20)
+        counts = {}
+        for dist in visited.values():
+            counts[dist] = counts.get(dist, 0) + 1
+        print("Total states visited:", len(visited))
+        print("Move counts by distance:", counts)
+
+
+    main()`;
 
 export const intRepresentationCode = dedent`\
     from collections import deque
@@ -769,7 +786,23 @@ def apply_move(state, move):
       </p>
       <p>
         First we create a visited dictionary to keep track of which states we
-        have already seen and how far they are from solved.
+        have already seen and how far they are from solved. This is helpful for
+        counting how many steps a state is from solved, but can also be used to
+        reconstruct a solution. We will talk about this later.
+      </p>
+      <p>
+        We iterate each frontier. At the begining of the iteration we create a
+        set that would contain all the states of the next iteration.
+      </p>
+      <p>
+        Then, for each state in current frontier, we apply all possible moves to
+        it and get the next state. We check if it is already in visited, and if
+        not, we add it to both the visited and to the next frontier.
+      </p>
+      <p>
+        At the end of the depth look we update the frontier. At the end of the
+        search we just return the visited array with the depth for each state.
+        Using that array we can count how many states there are per depth.
       </p>
       <p>
         Another common way to implement BFS is using a queue. I opted for a
@@ -784,27 +817,44 @@ def apply_move(state, move):
       client:only="react"
       animation="fade"
       code={`def bfs(start, max_depth):
+    # STEP-1
     visited = {start: 0}
     frontier = {start}
 
+    # STEP-2
     for depth in range(1, max_depth + 1):
         next_frontier = set()
 
+        # STEP-3
         for state in frontier:
             for move in MOVES:
                 nxt = apply_move(state, move)
+                # STEP-4
                 if nxt not in visited:
                     visited[nxt] = depth
                     next_frontier.add(nxt)
 
+        # STEP-5
         frontier = next_frontier
 
+    # STEP-6
     return visited`}
     />
   </section>
 
   <section>
-    <aside class="notes"></aside>
+    <aside class="notes">
+      <p>Let's try and run the code.</p>
+    </aside>
+    <PyodideWorkerRunner client:only="react" initialCode={naiveCode} />
+  </section>
+
+  <section>
+    <aside class="notes">
+      This works locally, but in the browser it runs out of memory because
+      pyodide is limited to 2GB by compile time. Locally it took 13.15 GB as
+      peak memory and 34 minutes. That's something we can definitely improve.
+    </aside>
     <div class="flex justify-center">
       <div
         class="grid grid-cols-[max-content_max-content] gap-x-4 gap-y-5 text-2xl"
