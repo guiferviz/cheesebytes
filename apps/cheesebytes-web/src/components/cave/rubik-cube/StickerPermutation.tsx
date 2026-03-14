@@ -528,9 +528,7 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
             const x1 = src < n ? xOf(src) + cellW / 2 : xOf(n) + cellW / 2;
             const x2 = dst < n ? xOf(dst) + cellW / 2 : xOf(n) + cellW / 2;
             const isHl =
-              enableHighlight &&
-              highlightSrc !== null &&
-              src === highlightSrc;
+              enableHighlight && highlightSrc !== null && src === highlightSrc;
             return (
               <line
                 key={src}
@@ -659,13 +657,7 @@ const StickerPermutation = forwardRef<StickerPermutationHandle, Props>(
                 onClick={() => setDropdownOpen((o) => !o)}
               >
                 {perm ? (
-                  renderArrows(
-                    displayedMove!,
-                    perm,
-                    mainArrowH,
-                    "main",
-                    true,
-                  )
+                  renderArrows(displayedMove!, perm, mainArrowH, "main", true)
                 ) : (
                   <div className="flex items-center justify-center py-4">
                     <span className="select-none font-mono text-sm text-gray-500">
