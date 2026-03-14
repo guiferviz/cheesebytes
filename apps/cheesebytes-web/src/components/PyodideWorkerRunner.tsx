@@ -17,7 +17,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import CodeMirror from "@uiw/react-codemirror";
+import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
 import pyodideWorkerContext, {
@@ -25,6 +25,14 @@ import pyodideWorkerContext, {
   type MemoryStats,
   type RunOptions,
 } from "../utils/pyodideWorkerContext";
+
+// ── Font override for CodeMirror ─────────────────────────────────────────────
+const FONT = "'IosevkaTermSlab Nerd Font Mono', monospace";
+const fontTheme = EditorView.theme({
+  "&": { fontFamily: FONT },
+  ".cm-content": { fontFamily: FONT },
+  ".cm-gutters": { fontFamily: FONT },
+});
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,7 +112,7 @@ function StatusBadge({ status }: { status: WorkerStatus }) {
         alignItems: "center",
         gap: "0.4em",
         fontSize: "0.72rem",
-        fontFamily: "monospace",
+        fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
         color,
         userSelect: "none",
       }}
@@ -152,7 +160,7 @@ function MemoryPill({
         alignItems: "center",
         gap: "0.45em",
         fontSize: "0.72rem",
-        fontFamily: "monospace",
+        fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
       }}
     >
       {/* Bar: outer = full 2 GB ghost track, inner = actual usage fill */}
@@ -225,7 +233,7 @@ function ClearButton({
         gap: "0.35em",
         padding: "0.25rem 0.55rem",
         fontSize: "0.72rem",
-        fontFamily: "monospace",
+        fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
         color,
         background: bg,
         border: "1px solid transparent",
@@ -295,7 +303,7 @@ function RunButton({
         gap: "0.4em",
         padding: "0.25rem 0.7rem",
         fontSize: "0.72rem",
-        fontFamily: "monospace",
+        fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
         fontWeight: 500,
         color: disabled
           ? isDark
@@ -417,7 +425,7 @@ const PyodideWorkerRunner = forwardRef<
     }, []);
 
     const theme = isDark ? oneDark : undefined;
-    const extensions = useMemo(() => [python()], []);
+    const extensions = useMemo(() => [python(), fontTheme], []);
 
     // ── Worker readiness ───────────────────────────────────────────────────
     useEffect(() => {
@@ -580,7 +588,7 @@ const PyodideWorkerRunner = forwardRef<
           border: `1px solid ${cardBorder}`,
           borderRadius: "8px",
           overflow: "hidden",
-          fontFamily: "monospace",
+          fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
         }}
       >
         {/* ── Code editor ─────────────────────────────────────────────── */}
@@ -636,7 +644,7 @@ const PyodideWorkerRunner = forwardRef<
               <span
                 style={{
                   fontSize: "0.72rem",
-                  fontFamily: "monospace",
+                  fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
                   color:
                     status === "running"
                       ? isDark
