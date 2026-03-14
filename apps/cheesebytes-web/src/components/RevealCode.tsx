@@ -70,21 +70,21 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [visibleIndices, setVisibleIndices] = useState<Set<number>>(
-    new Set([0])
+    new Set([0]),
   );
   const [typingProgress, setTypingProgress] = useState<Map<number, number>>(
-    new Map()
+    new Map(),
   );
   const [startedTyping, setStartedTyping] = useState<Set<number>>(new Set());
 
   const blocks = useMemo(() => parseCode(code), [code]);
   const maxIndex = useMemo(
     () => Math.max(...blocks.map((b) => b.index), 0),
-    [blocks]
+    [blocks],
   );
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => a.position - b.position),
-    [blocks]
+    [blocks],
   );
 
   // Full code highlighted for the ghost (layout reservation)
@@ -201,7 +201,7 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
         const block = blocks.find((b) => b.index === idx);
         // Ensure we haven't exceeded length
         return block && (typingProgress.get(idx) ?? 0) < block.code.length;
-      }
+      },
     );
 
     if (activeTyping.length === 0) return;
@@ -270,8 +270,8 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
     });
   }, [sortedBlocks, animation, language]);
 
-  // CSS for fade animation
-  const fadeStyles = `
+  // CSS for fade animation + font override
+  const styles = `
     @keyframes rc-fade-in {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -279,11 +279,17 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
     .rc-fade-block {
       animation: rc-fade-in 0.5s ease-in-out;
     }
+    .rc-root pre,
+    .rc-root pre code,
+    .rc-root pre code span {
+      font-family: 'IosevkaTermSlab Nerd Font Mono', monospace !important;
+    }
   `;
 
   return (
     <div
       ref={containerRef}
+      className="rc-root"
       style={{
         display: "grid",
         placeItems: "center",
@@ -291,10 +297,11 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
         height: "100%",
       }}
     >
-      {animation === "fade" && <style>{fadeStyles}</style>}
+      <style>{styles}</style>
       <div style={{ display: "grid" }}>
         {/* Ghost Element to Reserve Space (row 1, col 1) */}
         <pre
+          className="text-lg"
           style={{
             gridArea: "1 / 1",
             margin: 0,
@@ -303,15 +310,22 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
           }}
         >
           <code
-            className={`hljs language-${language}`}
+            className={`hljs language-${language} rounded-lg`}
             dangerouslySetInnerHTML={{ __html: ghostHtml }}
           />
         </pre>
 
         {/* Actual Content (row 1, col 1 - overlaps ghost) */}
-        <pre style={{ gridArea: "1 / 1", margin: 0, textAlign: "left" }}>
+        <pre
+          className="text-lg"
+          style={{
+            gridArea: "1 / 1",
+            margin: 0,
+            textAlign: "left",
+          }}
+        >
           {animation === "fade" ? (
-            <code className={`hljs language-${language}`}>
+            <code className={`hljs language-${language} rounded-lg`}>
               {sortedBlocks.map(
                 (block, i) =>
                   visibleIndices.has(block.index) && (
@@ -322,7 +336,7 @@ export const RevealCode: React.FC<RevealCodeProps> = ({
                         __html: (i > 0 ? "\n" : "") + blockHighlights[i],
                       }}
                     />
-                  )
+                  ),
               )}
             </code>
           ) : (
