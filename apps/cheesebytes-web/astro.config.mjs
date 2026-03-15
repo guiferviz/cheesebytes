@@ -14,9 +14,10 @@ import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectConfigUrl = pathToFileURL(path.join(__dirname, 'astro.config.mjs')).href;
 
 const resolveExternalDependencies = {
   name: 'resolve-external-dependencies',
@@ -25,14 +26,16 @@ const resolveExternalDependencies = {
     if (importer && !source.startsWith('.') && !source.startsWith('/') && !source.startsWith('\0')) {
       // Si el archivo que importa NO está dentro de la carpeta del proyecto
       if (!importer.startsWith(__dirname)) {
-        // Intentamos resolver la dependencia como si la estuviéramos importando desde este mismo archivo de configuración
-        // Usamos 'astro.config.mjs' como base para asegurar que busque en los node_modules de este proyecto
-        const resolution = await this.resolve(source, path.join(__dirname, 'astro.config.mjs'), { 
-          skipSelf: true, 
-          ...options 
-        });
-        
-        if (resolution) return resolution;
+        try {
+          return fileURLToPath(await import.meta.resolve(source, projectConfigUrl));
+        } catch {
+          const resolution = await this.resolve(source, path.join(__dirname, 'astro.config.mjs'), {
+            skipSelf: true,
+            ...options,
+          });
+
+          if (resolution) return resolution;
+        }
       }
     }
   }
