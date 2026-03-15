@@ -373,6 +373,7 @@ const PyodideWorkerRunner = forwardRef<
       pyodideWorkerContext.isReady() ? "ready" : "loading",
     );
     const [editorHeight, setEditorHeight] = useState(300);
+    const rootRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
     const dragStartY = useRef(0);
     const dragStartH = useRef(0);
@@ -569,18 +570,54 @@ const PyodideWorkerRunner = forwardRef<
       };
     }, [code, autoRun, runDelay, runCode]);
 
+    // ── Ask Reveal to recompute slide layout when this runner resizes ─────
+    useEffect(() => {
+      const element = rootRef.current;
+      if (!element || typeof ResizeObserver === "undefined") return;
+
+      let frame: number | null = null;
+      const scheduleLayout = () => {
+        if (frame !== null) cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+          const reveal = (
+            window as typeof window & {
+              Reveal?: { layout?: () => void };
+            }
+          ).Reveal;
+          reveal?.layout?.();
+        });
+      };
+
+      const observer = new ResizeObserver(() => {
+        scheduleLayout();
+      });
+      observer.observe(element);
+      scheduleLayout();
+
+      return () => {
+        observer.disconnect();
+        if (frame !== null) cancelAnimationFrame(frame);
+      };
+    }, []);
+
     // ── Render ─────────────────────────────────────────────────────────────
     const cardBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
     const toolbarBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
     const toolbarBorder = isDark
       ? "rgba(255,255,255,0.07)"
       : "rgba(0,0,0,0.07)";
-    const outputBg = isDark ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.03)";
-    const outputColor = isDark ? "#cbd5e1" : "#334155";
-    const outputBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
+    const outputBg = isDark ? "#1f2430" : "#f8fafc";
+    const outputColor = isDark ? "#dbe4f0" : "#334155";
+    const outputBorder = isDark
+      ? "rgba(255,255,255,0.08)"
+      : "rgba(148,163,184,0.25)";
+    const outputShadow = isDark
+      ? "inset 0 1px 0 rgba(255,255,255,0.03)"
+      : "inset 0 1px 0 rgba(255,255,255,0.7)";
 
     return (
       <div
+        ref={rootRef}
         style={{
           textAlign: "left",
           border: `1px solid ${cardBorder}`,
@@ -695,7 +732,10 @@ const PyodideWorkerRunner = forwardRef<
               color: outputColor,
               background: outputBg,
               borderTop: `1px solid ${outputBorder}`,
+              boxShadow: outputShadow,
+              maxHeight: "min(28vh, 16rem)",
               overflowX: "auto",
+              overflowY: "auto",
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
             }}
