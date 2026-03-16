@@ -1,0 +1,530 @@
+---
+import dedent from "dedent";
+
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import {
+  RubikCube as RubikCubeViz,
+  LehmerTable,
+  LehmerBuilder,
+  LehmerDecoder,
+  CornerInvariant,
+  EncodingShowcase,
+  CubeCompare,
+  StickerPermutation,
+} from "../../components/cave/rubik-cube";
+import { RubikStateGraph } from "../../components/cave/rubik-graph";
+import { LogoAnimation } from "../../components/cave/intro";
+import PyodideWorkerRunner from "../../../src/components/PyodideWorkerRunner";
+import RevealCode from "../../components/RevealCode";
+export const intRepresentationCode = dedent`\
+    from collections import deque
+    import math
+
+
+    HALF_TURN_METRIC = True
+    N_PERMUTATIONS = math.factorial(7)
+    N_ORIENTATIONS = 3**6
+    N_INDICES = N_PERMUTATIONS * N_ORIENTATIONS
+    EMPTY_DIST = 255
+    MOVES_PERM = {
+        "U": [3, 0, 1, 2, 4, 5, 6],
+        "F": [0, 1, 3, 4, 5, 2, 6],
+        "R": [0, 2, 5, 3, 4, 6, 1],
+    }
+    MOVES_ORI = {
+        "U": [0, 0, 0, 0, 0, 0],
+        "F": [0, 0, 1, 2, 1, 2],
+        "R": [0, 1, 2, 0, 0, 1],
+    }
+
+
+    def invert_perm(perm):
+        inv = [0] * len(perm)
+        for i, p in enumerate(perm):
+            inv[p] = i
+        return inv
+
+
+    def compose(perm2, perm1):
+        return [perm1[i] for i in perm2]
+
+
+    for k in list(MOVES_PERM.keys()):
+        MOVES_PERM[k + "'"] = invert_perm(MOVES_PERM[k])
+        MOVES_ORI[k + "'"] = MOVES_ORI[k].copy()
+        if HALF_TURN_METRIC:
+            MOVES_PERM[k + "2"] = compose(MOVES_PERM[k], MOVES_PERM[k])
+            MOVES_ORI[k + "2"] = [0] * 6
+    MOVES = list(MOVES_PERM.keys())
+    assert list(MOVES_ORI.keys()) == MOVES
+
+
+    def index_to_lehmer(perm_index: int) -> list[int]:
+        n = 7
+        code = [0] * n
+        for i in range(2, n + 1):
+            code[-i] = perm_index % i
+            perm_index //= i
+        return code
+
+
+    def lehmer_to_perm(lehmer: list[int]) -> list[int]:
+        n = 7
+        perm = lehmer.copy()
+        for i in range(n - 1, -1, -1):
+            for j in range(i + 1, n):
+                if perm[j] >= perm[i]:
+                    perm[j] += 1
+        return perm
+
+
+    def decode_perm(perm_index: int) -> list[int]:
+        lehmer = index_to_lehmer(perm_index)
+        perm = lehmer_to_perm(lehmer)
+        return perm
+
+
+    def apply_perm(state, perm) -> list[int]:
+        return [state[i] for i in perm]
+
+
+    def lehmer_to_index(lehmer: list[int]) -> int:
+        result = 0
+        fact = 1
+        for i, value in enumerate(reversed(lehmer), start=1):
+            result += value * fact
+            fact *= i
+        return result
+
+
+    def perm_to_lehmer(perm: list[int]) -> list[int]:
+        for i in range(len(perm)):
+            for j in range(i + 1, len(perm)):
+                if perm[j] > perm[i]:
+                    perm[j] -= 1
+        return perm
+
+
+    def encode_perm(perm: list[int]) -> int:
+        lehmer = perm_to_lehmer(perm)
+        index = lehmer_to_index(lehmer)
+        return index
+
+
+    def apply_move_to_perm_index(perm_index, move) -> int:
+        perm = decode_perm(perm_index)
+        new_perm = apply_perm(perm, MOVES_PERM[move])
+        return encode_perm(new_perm)
+
+
+    def apply_ori(ori, move):
+        new_ori = [0] * 6
+        for i in range(6):
+            new_ori[i] = (ori[i] + move[i]) % 3
+        return new_ori
+
+
+    def apply_move_to_ori_index(ori_index, move) -> int:
+        ori = decode_ori(ori_index)
+        ori = apply_perm(ori, MOVES_PERM[move])
+        new_ori = apply_ori(ori, MOVES_ORI[move])
+        return encode_ori(new_ori)
+
+
+    def split_index(index: int) -> tuple[int, int]:
+        perm_index = index // N_ORIENTATIONS
+        ori_index = index % N_ORIENTATIONS
+        return perm_index, ori_index
+
+
+    def decode_ori(ori_index: int) -> list[int]:
+        result = [0] * 7
+        for i in range(6):
+            result[i] = ori_index % 3
+            ori_index //= 3
+        result[-1] = -sum(result) % 3
+        return result
+
+
+    def encode_ori(ori: list[int]) -> int:
+        result = 0
+        pos = 1
+        for i in range(6):
+            result += ori[i] * pos
+            pos *= 3
+        return result
+
+
+    def combine_indices(perm_index: int, ori_index: int) -> int:
+        return perm_index * N_ORIENTATIONS + ori_index
+
+
+    def create_perm_table() -> dict[str, list[int]]:
+        table = {i: [0] * N_PERMUTATIONS for i in MOVES}
+        for move in MOVES:
+            for p in range(N_PERMUTATIONS):
+                table[move][p] = apply_move_to_perm_index(p, move)
+        return table
+
+
+    def create_ori_table() -> dict[str, list[int]]:
+        table = {i: [0] * N_ORIENTATIONS for i in MOVES}
+        for move in MOVES:
+            for o in range(N_ORIENTATIONS):
+                table[move][o] = apply_move_to_ori_index(o, move)
+        return table
+
+
+    def neighbors(state, perm_table, ori_table):
+        for m in perm_table.keys():
+            perm_index, ori_index = split_index(state)
+            new_perm_index = perm_table[m][perm_index]
+            new_ori_index = ori_table[m][ori_index]
+            yield combine_indices(new_perm_index, new_ori_index)
+
+
+    def bfs(initial_index, max_depth, perm_table, ori_table):
+        dist = bytearray([EMPTY_DIST]) * N_INDICES
+        dist[initial_index] = 0
+        queue = deque([initial_index])
+        while queue:
+            index = queue.popleft()
+            depth = dist[index]
+            next_depth = depth + 1
+            for i in neighbors(index, perm_table, ori_table):
+                if dist[i] != EMPTY_DIST:
+                    continue
+                dist[i] = next_depth
+                if next_depth <= max_depth:
+                    queue.append(i)
+        return dist
+
+
+    def dist_count(dist: bytearray):
+        counts = {i: 0 for i in range(256)}
+        for i in range(N_INDICES):
+            counts[dist[i]] += 1
+        return {k: v for k, v in counts.items() if v >= 1}
+
+
+    def main():
+        perm_table = create_perm_table()  # 5040
+        ori_table = create_ori_table()  # 729
+        solved_state = 0
+        max_depth = 16
+        dist = bfs(solved_state, max_depth, perm_table, ori_table)
+        print(dist_count(dist))
+
+
+    main()`;
+
+export const vectorizedCode = dedent`\
+    import math
+    import time
+
+    import numpy as np
+
+
+    HALF_TURN_METRIC = True
+    N_PERMUTATIONS = math.factorial(7)
+    N_ORIENTATIONS = 3**6
+    N_INDICES = N_PERMUTATIONS * N_ORIENTATIONS
+    EMPTY_DIST = 255
+    MOVES_PERM = {
+        "U": [3, 0, 1, 2, 4, 5, 6],
+        "F": [0, 1, 3, 4, 5, 2, 6],
+        "R": [0, 2, 5, 3, 4, 6, 1],
+    }
+    MOVES_ORI = {
+        "U": [0, 0, 0, 0, 0, 0],
+        "F": [0, 0, 1, 2, 1, 2],
+        "R": [0, 1, 2, 0, 0, 1],
+    }
+
+
+    def invert_perm(perm):
+        inv = [0] * len(perm)
+        for i, p in enumerate(perm):
+            inv[p] = i
+        return inv
+
+
+    def compose(perm2, perm1):
+        return [perm1[i] for i in perm2]
+
+
+    for k in list(MOVES_PERM.keys()):
+        MOVES_PERM[k + "'"] = invert_perm(MOVES_PERM[k])
+        MOVES_ORI[k + "'"] = MOVES_ORI[k].copy()
+        if HALF_TURN_METRIC:
+            MOVES_PERM[k + "2"] = compose(MOVES_PERM[k], MOVES_PERM[k])
+            MOVES_ORI[k + "2"] = [0] * 6
+    MOVES = list(MOVES_PERM.keys())
+    assert list(MOVES_ORI.keys()) == MOVES
+
+
+    def index_to_lehmer(perm_index: int) -> list[int]:
+        n = 7
+        code = [0] * n
+        for i in range(2, n + 1):
+            code[-i] = perm_index % i
+            perm_index //= i
+        return code
+
+
+    def lehmer_to_perm(lehmer: list[int]) -> list[int]:
+        n = 7
+        perm = lehmer.copy()
+        for i in range(n - 1, -1, -1):
+            for j in range(i + 1, n):
+                if perm[j] >= perm[i]:
+                    perm[j] += 1
+        return perm
+
+
+    def decode_perm(perm_index: int) -> list[int]:
+        lehmer = index_to_lehmer(perm_index)
+        perm = lehmer_to_perm(lehmer)
+        return perm
+
+
+    def apply_perm(state, perm) -> list[int]:
+        return [state[i] for i in perm]
+
+
+    def lehmer_to_index(lehmer: list[int]) -> int:
+        result = 0
+        fact = 1
+        for i, value in enumerate(reversed(lehmer), start=1):
+            result += value * fact
+            fact *= i
+        return result
+
+
+    def perm_to_lehmer(perm: list[int]) -> list[int]:
+        for i in range(len(perm)):
+            for j in range(i + 1, len(perm)):
+                if perm[j] > perm[i]:
+                    perm[j] -= 1
+        return perm
+
+
+    def encode_perm(perm: list[int]) -> int:
+        lehmer = perm_to_lehmer(perm)
+        index = lehmer_to_index(lehmer)
+        return index
+
+
+    def apply_move_to_perm_index(perm_index, move) -> int:
+        perm = decode_perm(perm_index)
+        new_perm = apply_perm(perm, MOVES_PERM[move])
+        return encode_perm(new_perm)
+
+
+    def apply_ori(ori, move):
+        new_ori = [0] * 6
+        for i in range(6):
+            new_ori[i] = (ori[i] + move[i]) % 3
+        return new_ori
+
+
+    def apply_move_to_ori_index(ori_index, move) -> int:
+        ori = decode_ori(ori_index)
+        ori = apply_perm(ori, MOVES_PERM[move])
+        new_ori = apply_ori(ori, MOVES_ORI[move])
+        return encode_ori(new_ori)
+
+
+    def split_index(index: int) -> tuple[int, int]:
+        perm_index = index // N_ORIENTATIONS
+        ori_index = index % N_ORIENTATIONS
+        return perm_index, ori_index
+
+
+    def decode_ori(ori_index: int) -> list[int]:
+        result = [0] * 7
+        for i in range(6):
+            result[i] = ori_index % 3
+            ori_index //= 3
+        result[-1] = -sum(result) % 3
+        return result
+
+
+    def encode_ori(ori: list[int]) -> int:
+        result = 0
+        pos = 1
+        for i in range(6):
+            result += ori[i] * pos
+            pos *= 3
+        return result
+
+
+    def combine_indices(perm_index: int, ori_index: int) -> int:
+        return perm_index * N_ORIENTATIONS + ori_index
+
+
+    def create_perm_table() -> np.ndarray:
+        n_moves = len(MOVES)
+        table = np.zeros((n_moves, N_PERMUTATIONS), dtype=np.uint16)
+        for m_idx, move in enumerate(MOVES):
+            for p in range(N_PERMUTATIONS):
+                table[m_idx, p] = apply_move_to_perm_index(p, move)
+        return table
+
+
+    def create_ori_table() -> np.ndarray:
+        n_moves = len(MOVES)
+        table = np.zeros((n_moves, N_ORIENTATIONS), dtype=np.uint16)
+        for m_idx, move in enumerate(MOVES):
+            for o in range(N_ORIENTATIONS):
+                table[m_idx, o] = apply_move_to_ori_index(o, move)
+        return table
+
+
+    def bfs(initial_index, max_depth, perm_table, ori_table):
+        dist = np.full(N_INDICES, EMPTY_DIST, dtype=np.uint8)
+        dist[initial_index] = 0
+        frontier = np.array([initial_index], dtype=np.uint32)
+        n_moves = perm_table.shape[0]
+
+        for depth in range(max_depth + 1):
+            if len(frontier) == 0:
+                break
+
+            perm_idx = frontier // N_ORIENTATIONS
+            ori_idx = frontier % N_ORIENTATIONS
+
+            next_parts = []
+            for m in range(n_moves):
+                new_perm = perm_table[m, perm_idx].astype(np.uint32)
+                new_ori = ori_table[m, ori_idx].astype(np.uint32)
+                neighbors = new_perm * N_ORIENTATIONS + new_ori
+                mask = dist[neighbors] == EMPTY_DIST
+                new_states = neighbors[mask]
+                if len(new_states) > 0:
+                    dist[new_states] = depth + 1
+                    next_parts.append(new_states)
+
+            frontier = (
+                np.concatenate(next_parts) if next_parts else np.empty(0, dtype=np.uint32)
+            )
+
+        return dist
+
+
+    def dist_count(dist: np.ndarray):
+        counts = np.bincount(dist, minlength=256)
+        return {int(i): int(c) for i, c in enumerate(counts) if c > 0}
+
+
+    def main():
+        t_start = time.perf_counter()
+
+        perm_table = create_perm_table()  # 5040
+        ori_table = create_ori_table()  # 729
+        t_tables = time.perf_counter()
+        print(f"Tables built in {t_tables - t_start:.3f}s")
+
+        solved_state = 0
+        max_depth = 16
+        dist = bfs(solved_state, max_depth, perm_table, ori_table)
+        t_bfs = time.perf_counter()
+        print(f"BFS done in    {t_bfs - t_tables:.3f}s")
+        print(f"Total time     {t_bfs - t_start:.3f}s")
+
+        print(dist_count(dist))
+
+
+    main()`;
+---
+
+<RevealLayout>
+    <section id="lehmer-table">
+    <aside class="notes">
+      <p>
+        If we list every possible permutation of n elements and sort them
+        lexicographically, we can assign each one a unique index (from 0 to
+        n!-1). This means we can identify any permutation with a single integer,
+        which is far more compact than storing the full array of length n.
+      </p>
+    </aside>
+    <LehmerTable
+      client:only="react"
+      initialN={3}
+      showNSelector={true}
+      showColumns={[]}
+      maxHeight="50vh"
+    />
+  </section>
+
+  <section id="lehmer-builder">
+    <aside class="notes">
+      <p>
+        Build a permutation step by step, row by row. At each position you
+        choose from the remaining values — the index of that choice in the
+        available pool is the corresponding Lehmer digit. Watch the Lehmer code
+        and factoriadic index change as you pick each element.
+      </p>
+    </aside>
+    <LehmerBuilder client:only="react" initialN={4} showNSelector={true} />
+  </section>
+
+  <section id="lehmer-decoder">
+    <aside class="notes">
+      <p>
+        Now the reverse direction: given an index, we recover the permutation.
+        The slider lets you sweep through all n! indices. For each index we
+        perform factoriadic decomposition to get the Lehmer code, then decode it
+        step by step: at each position, pick the Lehmer-digit-th element from
+        the shrinking pool of available values.
+      </p>
+    </aside>
+    <LehmerDecoder client:only="react" initialN={4} showNSelector={true} />
+  </section>
+
+  <section id="corner-invariant">
+    <aside class="notes">
+      <p>
+        Now we arrive at a deep structural property of the cube. Each of the 8
+        corners has an orientation value — 0, 1 or 2 — depending on whether its
+        blue/green sticker faces up/down (0), or has twisted clockwise (1) or
+        counter-clockwise (2). Apply any sequence of legal moves and watch: the
+        individual orientations change freely, but the sum of all 8 values,
+        taken modulo 3, is always zero. This is an invariant — a conservation
+        law that every legal state must respect.
+      </p>
+    </aside>
+    <CornerInvariant client:only="react" width={420} height={340} />
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p></p>
+    </aside>
+    <div style={{ height: "80vh" }}>
+      <PyodideWorkerRunner client:only="react" initialCode={vectorizedCode} />
+    </div>
+  </section>
+
+  <section id="state-graph">
+    <aside class="notes">
+      <p>
+        Now let's visualise the state space as a graph. Each node is a cube
+        state and each edge is a single move connecting two states. You can type
+        any state index, adjust the BFS depth with the slider, and explore the
+        neighbourhood. Zoom in to see the unfolded cube on each node; zoom out
+        and they collapse to dots. Click a node to re-centre the graph on it.
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        I usually say the code matters, but the idea comes first. In this case,
+        how we represent the cube's state is the key to making the problem
+        tractable. The algorithm is basially the same.
+      </p>
+    </aside>
+  </section>
+</RevealLayout>
