@@ -8,4 +8,5 @@ export * from "./jacket-you-never-wore-balanced-parentheses";
 export * from "./trapping-rain-water";
 export * from "./majority-vote";
 export * from "./intro";
+export * from "./pathfinding-maze";
 export * from "./shared";

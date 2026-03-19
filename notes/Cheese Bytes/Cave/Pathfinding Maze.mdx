@@ -1,0 +1,67 @@
+---
+slug: cave/pathfinding-maze
+noteType: "cabrales-full"
+---
+
+import { PathfindingGrid } from "../../../apps/cheesebytes-web/src/components/cave/pathfinding-maze";
+
+Finding the shortest path between two points in a grid is one of the most visual
+problems in computer science. It appears everywhere: from video game AI to GPS
+navigation, from robot motion planning to network routing.
+
+But not all search algorithms are created equal. Some find the shortest path,
+others just find a path. Some explore everything, others are guided by
+intuition. The best way to understand the difference is to **watch them work**.
+
+Below you can experiment with four classic pathfinding algorithms on a grid with
+random obstacles. Click to draw or erase walls, move the start and end points,
+pick an algorithm, and hit **Run** to watch it explore.
+
+<div style={{ margin: "2rem 0" }}>
+  <PathfindingGrid client:load rows={30} cols={40} wallPercent={25} />
+</div>
+
+# The Algorithms
+
+## BFS (Breadth-First Search)
+
+BFS explores in all directions equally, layer by layer, like ripples in a pond.
+It always finds the **shortest path** in an unweighted grid because it visits
+all cells at distance $d$ before any cell at distance $d+1$.
+
+## DFS (Depth-First Search)
+
+DFS dives deep into one direction before backtracking. It can find a path
+quickly, but that path is often far from optimal — it meanders through the grid
+like someone exploring a maze by always turning left.
+
+## A\* (A-Star)
+
+A\* is BFS with a brain. It uses a **heuristic** (Manhattan distance in our
+case) to estimate how far each cell is from the goal. Cells that look more
+promising are explored first. With an admissible heuristic, A\* guarantees the
+shortest path while typically exploring far fewer cells than BFS.
+
+$$
+f(n) = g(n) + h(n)
+$$
+
+Where $g(n)$ is the cost so far and $h(n)$ is the estimated remaining cost.
+
+## IDA\* (Iterative Deepening A\*)
+
+IDA\* combines the optimality of A\* with the memory efficiency of DFS. Instead
+of keeping a priority queue, it performs a series of depth-limited DFS searches,
+increasing the depth limit each time. The limit is not a simple depth counter
+but the $f$-value threshold from A\*.
+
+# What to Try
+
+Try changing the wall density and see how each algorithm behaves. Place the
+start and goal in opposite corners, then swap them and compare the result. You
+can also try nearby cells, or cells separated by a wall. The differences become
+especially clear with algorithms like DFS, which explore in a fixed order.
+
+After each run, the panel below the visualization shows the number of explored
+cells and the length of the path found, so you can compare which algorithms
+explore more and whether they actually find the optimal path.
