@@ -41,7 +41,13 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
     col: initCols - 2,
   });
   const [walls, setWalls] = useState<Set<string>>(() =>
-    generateWalls(initRows, initCols, initWallPercent, { row: 1, col: 1 }, { row: initRows - 2, col: initCols - 2 }),
+    generateWalls(
+      initRows,
+      initCols,
+      initWallPercent,
+      { row: 1, col: 1 },
+      { row: initRows - 2, col: initCols - 2 },
+    ),
   );
 
   const [explored, setExplored] = useState<Set<string>>(new Set());
@@ -54,7 +60,10 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawAction, setDrawAction] = useState<"add" | "remove">("add");
 
-  const [stats, setStats] = useState<{ explored: number; pathLen: number } | null>(null);
+  const [stats, setStats] = useState<{
+    explored: number;
+    pathLen: number;
+  } | null>(null);
 
   // Compute cellSize to fill canvas wrapper width exactly
   useEffect(() => {
@@ -177,7 +186,20 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
         ctx.stroke();
       }
     }
-  }, [rows, cols, cellSize, canvasWidth, canvasHeight, walls, start, end, explored, frontier, path, currentPath]);
+  }, [
+    rows,
+    cols,
+    cellSize,
+    canvasWidth,
+    canvasHeight,
+    walls,
+    start,
+    end,
+    explored,
+    frontier,
+    path,
+    currentPath,
+  ]);
 
   // Map canvas coords to cell
   const canvasToCell = useCallback(
@@ -188,7 +210,8 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
-      const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+      const scaleY =
+        canvas.height / (window.devicePixelRatio || 1) / rect.height;
       const col = Math.floor((x * scaleX) / cellSize);
       const row = Math.floor((y * scaleY) / cellSize);
       if (row < 0 || row >= rows || col < 0 || col >= cols) return null;
@@ -222,7 +245,8 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
       setDrawAction(action);
       setWalls((prev) => {
         const next = new Set(prev);
-        if (action === "add") next.add(k); else next.delete(k);
+        if (action === "add") next.add(k);
+        else next.delete(k);
         return next;
       });
       // Clear search results when editing
@@ -243,7 +267,8 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
 
       setWalls((prev) => {
         const next = new Set(prev);
-        if (drawAction === "add") next.add(k); else next.delete(k);
+        if (drawAction === "add") next.add(k);
+        else next.delete(k);
         return next;
       });
     },
@@ -415,10 +440,7 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
         >
           ■ Stop
         </button>
-        <button
-          className={btnSecondary}
-          onClick={clearSearch}
-        >
+        <button className={btnSecondary} onClick={clearSearch}>
           Clear Search
         </button>
         <button

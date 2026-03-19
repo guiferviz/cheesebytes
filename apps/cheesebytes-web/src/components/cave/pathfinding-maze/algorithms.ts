@@ -18,14 +18,23 @@ function neighbors(
   for (const [dr, dc] of DIRS) {
     const nr = cell.row + dr;
     const nc = cell.col + dc;
-    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !walls.has(cellKey(nr, nc))) {
+    if (
+      nr >= 0 &&
+      nr < rows &&
+      nc >= 0 &&
+      nc < cols &&
+      !walls.has(cellKey(nr, nc))
+    ) {
       result.push({ row: nr, col: nc });
     }
   }
   return result;
 }
 
-function reconstructPath(cameFrom: Map<string, string>, endKey: string): Cell[] {
+function reconstructPath(
+  cameFrom: Map<string, string>,
+  endKey: string,
+): Cell[] {
   const path: Cell[] = [];
   let current: string | undefined = endKey;
   while (current !== undefined) {
@@ -75,7 +84,12 @@ function* bfs(
       }
 
       const curPath = reconstructPath(cameFrom, currentKey);
-      yield { explored: new Set(explored), frontier, path: null, currentPath: curPath };
+      yield {
+        explored: new Set(explored),
+        frontier,
+        path: null,
+        currentPath: curPath,
+      };
 
       const [cr, cc] = currentKey.split(",").map(Number);
       for (const nb of neighbors({ row: cr, col: cc }, rows, cols, walls)) {
@@ -118,7 +132,12 @@ function* dfs(
 
     const curPath = reconstructPath(cameFrom, currentKey);
     const frontier = new Set(stack.slice(-Math.min(stack.length, 50)));
-    yield { explored: new Set(explored), frontier, path: null, currentPath: curPath };
+    yield {
+      explored: new Set(explored),
+      frontier,
+      path: null,
+      currentPath: curPath,
+    };
 
     if (currentKey === endK) {
       const path = reconstructPath(cameFrom, endK);
@@ -179,7 +198,12 @@ function* astar(
     for (const o of open) {
       if (!explored.has(o.key)) frontierKeys.add(o.key);
     }
-    yield { explored: new Set(explored), frontier: frontierKeys, path: null, currentPath: curPath };
+    yield {
+      explored: new Set(explored),
+      frontier: frontierKeys,
+      path: null,
+      currentPath: curPath,
+    };
 
     if (current.key === endK) {
       const path = reconstructPath(cameFrom, endK);
