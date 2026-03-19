@@ -365,14 +365,7 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
     <aside class="notes">
       <p>
         When we run the code in Pyodide, a Python interpreter for the browser,
-        we hit its memory limit of around 2 GB. If we run the same code outside
-        the browser, using a regular Python interpreter, it does finish. But it
-        takes around 34 minutes and peaks at more than 13 GB of memory.
-      </p>
-      <p>
-        So yes, the code is correct. But it is clearly very inefficient. And
-        that is actually useful, because it gives us a chance to look more
-        carefully at what we have done and see how we can optimize it.
+        we hit its memory limit of around 2 GB.
       </p>
     </aside>
     <PyodideWorkerRunner client:only="react" initialCode={naiveCode} />
@@ -380,10 +373,12 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
 
   <section>
     <aside class="notes">
-      This works locally, but in the browser it runs out of memory because
-      pyodide is limited to 2GB by compile time. Locally it took 13.15 GB as
-      peak memory and took 34 minutes. That's something we can definitely
-      improve.
+      <p>
+        If we run the same code outside the browser, using a regular Python
+        interpreter, it does finish. But it takes around 34 minutes and peaks at
+        more than 13 GB of memory. The next step is not to change the algorithm,
+        but to examine the representation more carefully.
+      </p>
     </aside>
     <div class="flex justify-center">
       <div
@@ -395,10 +390,6 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
         <span class="font-bold text-3xl">13.15 GB</span>
       </div>
     </div>
-    <img
-      src="/public/cave/rubik-cube/naive-execution-time.png"
-      class="block mx-auto mt-8"
-    />
   </section>
 
   <section>
@@ -455,18 +446,15 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
   <section>
     <aside class="notes">
       <p>
-        There is a fundamental problem in our previous implementation that is
-        easier to fix than you think. First of all think about how we numbered
-        our stickers, the numbers are not fixed to a specific position on the
-        cube, but they are relative to the cube's orientation. For example, if
-        we turn the cube, now that the upper face is in front, the sticker
-        number 0 is in the upper face. This string is different from the
-        previous one, so we are indeed looking at a different state, at least
-        that's how the computer sees it. But for us, these two states are
-        exactly the same, because they are just different orientations of the
-        same cube. Always when working with puzzles and combinatorial objects we
-        need to be careful about rotations and symmetries, because they can make
-        our state space much larger than it needs to be.
+        There is an issue hiding inside our sticker encoding. We define our
+        strings relative to the camera. So if we rotate the whole cube in space,
+        the string changes. But from the puzzle's point of view, nothing
+        meaningful has changed. It is the same physical cube state, just viewed
+        from another angle. The computer sees those as different states. We do
+        not. And this is the kind of trap that appears all the time in
+        combinatorial problems. Symmetries can make the search space much larger
+        than it really is. So we need a way to collapse all those rotated
+        versions into one canonical representation.
       </p>
     </aside>
     <RubikCubeViz
@@ -479,22 +467,25 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
   <section>
     <aside class="notes">
       <p>
-        We need that somehow, the ids of the sticker to rotate with us, so that
-        the string does not change when we rotate the cube. How can we achieve
-        that? Well, we can just leave one corner fixed, and only move the other
-        7. It doesn't necessary mean to have untouch, but to have it always in
-        the same position. Let's say we want to keep fixed this corner, top left
-        of the front face. We are free to do any movement we wanto, but after
-        encoding this into a state, we need to put it back in the front upper
-        left position. In that way, any of the 24 rotations of a given cube will
-        be collapsed into one.
-      </p>
-      <p>
-        This also bring us to this curious case, were a right move takes us to
-        the same position as a left move. A right move leaves our reference
-        piece untouch, but a left move requieres us to do a turn of the cube to
-        place it back to its front top left position. The thing is that this
-        position is exactly the same as an R turn.
+        A neat way to handle this is to choose one corner as a reference and
+        always keep it in the same place. For example, we can always rotate the
+        cube so that the front-left corner ends up back in its home position.
+        That does not change the puzzle state. It only changes how we look at
+        it. And once we do that, all 24 whole-cube rotations collapse into a
+        single representation. The cube has 4 possible rotations for each choice
+        of front face, and 6 possible front faces, so 24 in total. But there is
+        more. Fixing one corner also makes some moves equivalent. For example,
+        imagine starting from the solved cube, doing an L move, and then
+        rotating the whole cube to put that reference corner back where it
+        belongs. What you get is exactly the same normalized state you would get
+        by starting from solved and doing an R move. So once we normalize the
+        cube this way, some moves become redundant. That means we do not need
+        all six face moves anymore. We only need the ones that leave the
+        reference corner in place. For example: R, B, and D. That is great,
+        because it removes branches from the search and avoids having to deal
+        with whole-cube rotations separately. With this change, we can solve all
+        cube states in about 40 seconds using around 300 MB of memory, directly
+        in Python and in the browser.
       </p>
     </aside>
     <RubikCubeViz
@@ -507,14 +498,12 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
   <section>
     <aside class="notes">
       <p>
-        So the solution is pretty simple, we don't need to change the encoding,
-        we don't need to deal with rotations, we only need to change the moves
-        we do. We need to select 3 of them and it will be enough to leave one
-        corner untouched. For example, we can choose R, B and D. With just these
-        three moves we can generate all states of the cube ignoring rotations
-        and symetries. As we have less moves, it's also faster, and, as we can
-        see it runs in around 100s using only 300MB of memory, which is a huge
-        improvement from the previous versions.
+        The biggest improvement has not come from changing the algorithm. It has
+        come from paying more attention to the representation. The algorithm is
+        still breadth-first search. What changed is that we stopped treating the
+        24 whole-cube rotations as different states. Once we do that, the
+        problem becomes much more manageable. Can we keep improving the
+        encoding? Of course. But that belongs in another video.
       </p>
     </aside>
     <PyodideWorkerRunner client:only="react" initialCode={naiveCode} />
