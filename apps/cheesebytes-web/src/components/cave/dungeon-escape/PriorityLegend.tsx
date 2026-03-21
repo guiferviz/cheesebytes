@@ -7,6 +7,14 @@ interface Props {
   onChange?: (newDirs: DirName[]) => void;
 }
 
+interface DragState {
+  dir: DirName;
+  pointerId: number;
+  startY: number;
+  originIndex: number;
+  offsetY: number;
+}
+
 const ALL_DIRS: DirName[] = ["up", "right", "down", "left"];
 const SLOT_HEIGHT = 48; // h-10 (40px) + gap (8px)
 
@@ -17,31 +25,17 @@ const SLOT_HEIGHT = 48; // h-10 (40px) + gap (8px)
  */
 export const PriorityLegend: React.FC<Props> = ({ dirs, onChange }) => {
   const [visual, setVisual] = useState(dirs);
-  const [draggedDir, setDraggedDir] = useState<DirName | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const slotsTopRef = useRef(0);
 
   useEffect(() => setVisual(dirs), [dirs]);
 
   const slotOf = (d: DirName) => visual.indexOf(d);
 
-  const captureOrigin = useCallback(() => {
-    if (!containerRef.current) return;
-    const firstSlot =
-      containerRef.current.querySelector<HTMLElement>("[data-slot]");
-    if (firstSlot) {
-      slotsTopRef.current = firstSlot.getBoundingClientRect().top;
-    }
-  }, []);
-
-  const indexFromY = useCallback((clientY: number) => {
-    const relY = clientY - slotsTopRef.current;
-    const idx = Math.round(relY / SLOT_HEIGHT);
-    return Math.max(0, Math.min(ALL_DIRS.length - 1, idx));
-  }, []);
-
   const reorder = useCallback((dragged: DirName, targetIdx: number) => {
     setVisual((prev) => {
+      const currentIdx = prev.indexOf(dragged);
+      if (currentIdx === targetIdx) return prev;
       const without = prev.filter((d) => d !== dragged);
       without.splice(targetIdx, 0, dragged);
       return without;
@@ -51,33 +45,64 @@ export const PriorityLegend: React.FC<Props> = ({ dirs, onChange }) => {
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, dir: DirName) => {
       e.preventDefault();
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-      captureOrigin();
-      setDraggedDir(dir);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setDragState({
+        dir,
+        pointerId: e.pointerId,
+        startY: e.clientY,
+        originIndex: visual.indexOf(dir),
+        offsetY: 0,
+      });
     },
-    [captureOrigin],
+    [visual],
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (draggedDir === null) return;
-      const target = indexFromY(e.clientY);
-      reorder(draggedDir, target);
+      if (dragState === null || e.pointerId !== dragState.pointerId) return;
+
+      const offsetY = e.clientY - dragState.startY;
+      const slotsMoved = Math.round(offsetY / SLOT_HEIGHT);
+      const target = Math.max(
+        0,
+        Math.min(ALL_DIRS.length - 1, dragState.originIndex + slotsMoved),
+      );
+
+      setDragState((prev) =>
+        prev && prev.pointerId === e.pointerId ? { ...prev, offsetY } : prev,
+      );
+      reorder(dragState.dir, target);
     },
-    [draggedDir, indexFromY, reorder],
+    [dragState, reorder],
   );
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
-      if (draggedDir === null) return;
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      if (dragState === null || e.pointerId !== dragState.pointerId) return;
+      const target = e.target as HTMLElement;
+      if (target.hasPointerCapture(e.pointerId)) {
+        target.releasePointerCapture(e.pointerId);
+      }
       const finalOrder = [...visual];
-      setDraggedDir(null);
+      setDragState(null);
       if (finalOrder.some((d, i) => d !== dirs[i])) {
         onChange?.(finalOrder);
       }
     },
-    [draggedDir, visual, dirs, onChange],
+    [dragState, visual, dirs, onChange],
+  );
+
+  const handlePointerCancel = useCallback(
+    (e: React.PointerEvent) => {
+      if (dragState === null || e.pointerId !== dragState.pointerId) return;
+      const target = e.target as HTMLElement;
+      if (target.hasPointerCapture(e.pointerId)) {
+        target.releasePointerCapture(e.pointerId);
+      }
+      setDragState(null);
+      setVisual(dirs);
+    },
+    [dragState, dirs],
   );
 
   return (
@@ -85,6 +110,7 @@ export const PriorityLegend: React.FC<Props> = ({ dirs, onChange }) => {
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       className="flex flex-col items-center select-none"
     >
       <span className="text-xs font-semibold tracking-wide uppercase text-neutral-500 dark:text-neutral-400 mb-2">
@@ -100,7 +126,11 @@ export const PriorityLegend: React.FC<Props> = ({ dirs, onChange }) => {
       >
         {ALL_DIRS.map((d) => {
           const slot = slotOf(d);
-          const isDragging = draggedDir === d;
+          const isDragging = dragState?.dir === d;
+          const dragOffsetY = isDragging ? dragState.offsetY : 0;
+          const baseY = isDragging
+            ? dragState.originIndex * SLOT_HEIGHT
+            : slot * SLOT_HEIGHT;
 
           return (
             <div
@@ -110,8 +140,8 @@ export const PriorityLegend: React.FC<Props> = ({ dirs, onChange }) => {
                 left: 0,
                 top: 0,
                 width: "100%",
-                transform: `translateY(${slot * SLOT_HEIGHT}px)`,
-                transition: isDragging ? "none" : "transform 150ms ease",
+                transform: `translate3d(${isDragging ? 6 : 0}px, ${baseY + dragOffsetY}px, 0)`,
+                transition: isDragging ? "none" : "transform 220ms ease",
                 zIndex: isDragging ? 10 : 1,
               }}
               className="flex items-center gap-1.5"
@@ -125,9 +155,9 @@ export const PriorityLegend: React.FC<Props> = ({ dirs, onChange }) => {
                   "flex items-center justify-center w-10 h-10 rounded-lg cursor-grab active:cursor-grabbing",
                   "bg-neutral-100 dark:bg-neutral-800",
                   "border",
-                  "transition-shadow duration-150",
+                  "transition duration-150",
                   isDragging
-                    ? "border-blue-400 dark:border-blue-500 scale-110 shadow-lg shadow-blue-500/20"
+                    ? "border-blue-400 dark:border-blue-500 scale-110 shadow-xl shadow-blue-500/25"
                     : "border-transparent hover:bg-neutral-200 dark:hover:bg-neutral-700",
                 ].join(" ")}
               >
