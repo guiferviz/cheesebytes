@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import type { Cell, AlgorithmType, SearchStep } from "./types";
 import { cellKey, ALGORITHM_LABELS, CELL_COLORS } from "./types";
-import { runAlgorithm, generateWalls } from "./algorithms";
+import { runAlgorithm, generateWalls, generateMaze } from "./algorithms";
 
 interface PathfindingGridProps {
   rows?: number;
@@ -28,12 +28,13 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
   const cancelledRef = useRef(false);
   const speedRef = useRef(initSpeed);
 
-  const [rows] = useState(initRows);
-  const [cols] = useState(initCols);
+  const [rows, setRows] = useState(initRows);
+  const [cols, setCols] = useState(initCols);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [wallPercent, setWallPercent] = useState(initWallPercent);
   const [algorithm, setAlgorithm] = useState<AlgorithmType>(defaultAlgorithm);
   const [speed, setSpeed] = useState(initSpeed);
+  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 99999));
 
   const [start, setStart] = useState<Cell>({ row: 1, col: 1 });
   const [end, setEnd] = useState<Cell>({
@@ -330,16 +331,46 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
     step();
   }, [algorithm, start, end, rows, cols, walls, clearSearch]);
 
-  const handleReset = useCallback(() => {
+  const handleRandomWalls = useCallback(() => {
     clearSearch();
-    setRunning(false);
     setWalls(generateWalls(rows, cols, wallPercent, start, end));
   }, [clearSearch, rows, cols, wallPercent, start, end]);
+
+  const handleGenerateMaze = useCallback(() => {
+    clearSearch();
+    setWalls(generateMaze(rows, cols, start, end, seed));
+  }, [clearSearch, rows, cols, start, end, seed]);
 
   const handleClearWalls = useCallback(() => {
     clearSearch();
     setWalls(new Set());
   }, [clearSearch]);
+
+  const handleResize = useCallback(
+    (newRows: number, newCols: number) => {
+      clearSearch();
+      const clampedStart = {
+        row: Math.min(start.row, newRows - 1),
+        col: Math.min(start.col, newCols - 1),
+      };
+      const clampedEnd = {
+        row: Math.min(end.row, newRows - 1),
+        col: Math.min(end.col, newCols - 1),
+      };
+      setStart(clampedStart);
+      setEnd(clampedEnd);
+      // Filter out walls that are out of bounds
+      setWalls((prev) => {
+        const next = new Set<string>();
+        for (const key of prev) {
+          const [r, c] = key.split(",").map(Number);
+          if (r < newRows && c < newCols) next.add(key);
+        }
+        return next;
+      });
+    },
+    [clearSearch, start, end],
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -363,7 +394,7 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
       ref={containerRef}
       className="flex flex-col gap-4 p-4 bg-gradient-to-b from-amber-50/80 to-orange-50/60 dark:from-stone-900/90 dark:to-stone-950/90 rounded-2xl select-none"
     >
-      {/* Controls row 1: Algorithm + speed */}
+      {/* Group 1: Algorithm & Animation */}
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
           Algorithm:
@@ -402,9 +433,25 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
         <span className="text-xs text-stone-500 dark:text-stone-400 w-12">
           {speed}ms
         </span>
+
+        <div className="w-px h-6 bg-stone-300 dark:bg-stone-600 mx-1" />
+
+        <button className={btnPrimary} onClick={handleRun} disabled={running}>
+          ▶ Run
+        </button>
+        <button
+          className={`${btnBase} bg-rose-500 hover:bg-rose-600 text-white`}
+          onClick={handleStop}
+          disabled={!running}
+        >
+          ■ Stop
+        </button>
+        <button className={btnSecondary} onClick={clearSearch}>
+          Clear Search
+        </button>
       </div>
 
-      {/* Controls row 2: Mode + actions */}
+      {/* Group 2: Click Mode */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-stone-600 dark:text-stone-400 mr-1">
           Click mode:
@@ -427,42 +474,73 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
         >
           🔴 End
         </button>
+      </div>
+
+      {/* Group 3: Construction / Prebuilt */}
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
+          Size:
+        </label>
+        <input
+          type="number"
+          min={5}
+          max={100}
+          value={rows}
+          onChange={(e) => {
+            const v = Math.max(5, Math.min(100, Number(e.target.value)));
+            setRows(v);
+            handleResize(v, cols);
+          }}
+          disabled={running}
+          className="w-14 px-1.5 py-1 rounded-lg text-sm text-center bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200"
+        />
+        <span className="text-xs text-stone-500 dark:text-stone-400">×</span>
+        <input
+          type="number"
+          min={5}
+          max={100}
+          value={cols}
+          onChange={(e) => {
+            const v = Math.max(5, Math.min(100, Number(e.target.value)));
+            setCols(v);
+            handleResize(rows, v);
+          }}
+          disabled={running}
+          className="w-14 px-1.5 py-1 rounded-lg text-sm text-center bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200"
+        />
 
         <div className="w-px h-6 bg-stone-300 dark:bg-stone-600 mx-1" />
 
-        <button className={btnPrimary} onClick={handleRun} disabled={running}>
-          ▶ Run
-        </button>
-        <button
-          className={`${btnBase} bg-rose-500 hover:bg-rose-600 text-white`}
-          onClick={handleStop}
-          disabled={!running}
-        >
-          ■ Stop
-        </button>
-        <button className={btnSecondary} onClick={clearSearch}>
-          Clear Search
-        </button>
-        <button
-          className={btnSecondary}
-          onClick={handleReset}
-          disabled={running}
-        >
-          New Maze
-        </button>
-        <button
-          className={btnSecondary}
-          onClick={handleClearWalls}
-          disabled={running}
-        >
-          Clear Walls
-        </button>
-      </div>
-
-      {/* Wall density slider */}
-      <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
-          Wall density:
+          Seed:
+        </label>
+        <input
+          type="number"
+          value={seed}
+          onChange={(e) => setSeed(Number(e.target.value))}
+          disabled={running}
+          className="w-20 px-1.5 py-1 rounded-lg text-sm text-center bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200"
+        />
+        <button
+          className={btnSecondary}
+          onClick={() => setSeed(Math.floor(Math.random() * 99999))}
+          disabled={running}
+          title="Randomize seed"
+        >
+          🎲
+        </button>
+        <button
+          className={btnPrimary}
+          onClick={handleGenerateMaze}
+          disabled={running}
+        >
+          Generate Maze
+        </button>
+
+        <div className="w-px h-6 bg-stone-300 dark:bg-stone-600 mx-1" />
+
+        <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
+          Density:
         </label>
         <input
           type="range"
@@ -471,11 +549,25 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
           value={wallPercent}
           onChange={(e) => setWallPercent(Number(e.target.value))}
           disabled={running}
-          className="w-32"
+          className="w-24"
         />
         <span className="text-xs text-stone-500 dark:text-stone-400">
           {wallPercent}%
         </span>
+        <button
+          className={btnSecondary}
+          onClick={handleRandomWalls}
+          disabled={running}
+        >
+          Random Walls
+        </button>
+        <button
+          className={btnSecondary}
+          onClick={handleClearWalls}
+          disabled={running}
+        >
+          Clear Walls
+        </button>
       </div>
 
       {/* Canvas */}

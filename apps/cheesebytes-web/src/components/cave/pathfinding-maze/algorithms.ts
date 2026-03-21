@@ -384,3 +384,119 @@ export function generateWalls(
   }
   return walls;
 }
+
+// ======================
+// Seeded PRNG (mulberry32)
+// ======================
+function mulberry32(seed: number) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ======================
+// DFS perfect maze generation
+// ======================
+export function generateMaze(
+  rows: number,
+  cols: number,
+  start: Cell,
+  end: Cell,
+  seed: number,
+  extraOpenPercent = 15,
+): Set<string> {
+  const rng = mulberry32(seed);
+
+  function shuffle<T>(arr: T[]) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  // Start with everything as wall
+  const walls = new Set<string>();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      walls.add(cellKey(r, c));
+    }
+  }
+
+  // Carve passages on odd-indexed interior cells via DFS
+  const visited = new Set<string>();
+  const stack: Cell[] = [];
+  const startR = 1;
+  const startC = 1;
+  visited.add(cellKey(startR, startC));
+  walls.delete(cellKey(startR, startC));
+  stack.push({ row: startR, col: startC });
+
+  const directions: [number, number][] = [
+    [-2, 0],
+    [2, 0],
+    [0, -2],
+    [0, 2],
+  ];
+
+  while (stack.length > 0) {
+    const cur = stack[stack.length - 1];
+    const nbs: { nr: number; nc: number; wr: number; wc: number }[] = [];
+
+    const shuffled = [...directions];
+    shuffle(shuffled);
+    for (const [dr, dc] of shuffled) {
+      const nr = cur.row + dr;
+      const nc = cur.col + dc;
+      if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1) {
+        if (!visited.has(cellKey(nr, nc))) {
+          nbs.push({ nr, nc, wr: cur.row + dr / 2, wc: cur.col + dc / 2 });
+        }
+      }
+    }
+
+    if (nbs.length === 0) {
+      stack.pop();
+      continue;
+    }
+
+    const { nr, nc, wr, wc } = nbs[0];
+    visited.add(cellKey(nr, nc));
+    walls.delete(cellKey(wr, wc));
+    walls.delete(cellKey(nr, nc));
+    stack.push({ row: nr, col: nc });
+  }
+
+  // Open extra passages to create multiple routes
+  const innerWalls: string[] = [];
+  for (let r = 1; r < rows - 1; r++) {
+    for (let c = 1; c < cols - 1; c++) {
+      const k = cellKey(r, c);
+      if (walls.has(k)) {
+        const adjFloors = [
+          [r - 1, c],
+          [r + 1, c],
+          [r, c - 1],
+          [r, c + 1],
+        ].filter(([ar, ac]) => !walls.has(cellKey(ar, ac)));
+        if (adjFloors.length >= 2) {
+          innerWalls.push(k);
+        }
+      }
+    }
+  }
+  shuffle(innerWalls);
+  const toOpen = Math.floor(innerWalls.length * (extraOpenPercent / 100));
+  for (let i = 0; i < toOpen; i++) {
+    walls.delete(innerWalls[i]);
+  }
+
+  // Ensure start and end cells are open
+  walls.delete(cellKey(start.row, start.col));
+  walls.delete(cellKey(end.row, end.col));
+
+  return walls;
+}
