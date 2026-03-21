@@ -1,0 +1,207 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import {
+  DungeonIntro,
+  Crossroads,
+  DFSLocal,
+  DFSGlobal,
+  BFSLocal,
+  BFSGlobal,
+  Comparison,
+  MapEditor,
+} from "../../components/cave/dungeon-escape";
+import { LogoAnimation } from "../../components/cave/intro";
+---
+
+<RevealLayout
+  title="Escaping a Dungeon"
+  description="Why breadth-first search (BFS) finds the shortest path and depth-first search (DFS) does not"
+  theme="dark"
+>
+  <section>
+    <aside class="notes">
+      <p>
+        Imagine you are trapped in a dungeon. There is an exit somewhere in this
+        maze. Finding any way out would already help. But if every step matters,
+        then not all paths are equally good.
+      </p>
+      <p>
+        So the real question is not just how to escape, but how to find the
+        shortest way out.
+      </p>
+    </aside>
+    <DungeonIntro client:only="react" />
+  </section>
+
+  <section>
+    <LogoAnimation
+      client:only="react"
+      width={2080}
+      height={600}
+      pixelScale={8}
+      duration={2700}
+      loop={true}
+    />
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        Let us zoom into a single crossroads. From here, we can move in several
+        directions. So how should we explore? One possibility is: pick one
+        direction and keep going for as long as possible.
+      </p>
+      <p>
+        Suppose we always try going up first. There may be other options nearby,
+        but for now we ignore them. We keep moving forward as long as the path
+        is still open.
+      </p>
+    </aside>
+    <Crossroads client:only="react" />
+  </section>
+
+  <section id="wip">
+    <aside class="notes">
+      <p></p>
+      <p>
+        Only when we get stuck do we go back to the last place where another
+        path was still unexplored and we follow the next direction in our
+        priority list. This strategy is called depth-first search.
+      </p>
+    </aside>
+    <DFSLocal client:only="react" />
+  </section>
+
+  <!-- Scene 4: Visited nodes -->
+  <section>
+    <aside class="notes">
+      <p>
+        To make this work, we also need to remember which positions we have
+        already visited. Otherwise, in a maze with loops, we could wander in
+        circles forever.
+      </p>
+      <p>
+        For example, in this position we have already visited the top cell, so
+        we move right instead, that is our priority number 2 and it's still
+        available.
+      </p>
+      <p>
+        The problem is that depth-first search can commit very early to a bad
+        path. It might eventually find an exit, but through a long detour.
+      </p>
+      <p>
+        And yes, if we had chosen a different movement priority, for example,
+        taking always the down direction if available, maybe it would have
+        gotten lucky and reached the optimal solution. But that is exactly the
+        point: depth-first search has no guarantee.
+      </p>
+    </aside>
+    <DFSGlobal client:only="react" />
+  </section>
+
+  <!-- Scene 6: BFS local behavior -->
+  <section>
+    <aside class="notes">
+      <p>There is another classic strategy.</p>
+      <p>
+        Instead of committing to one path, we explore every position that is one
+        step away from the start.
+      </p>
+      <p>
+        Then every position that is two steps away. Then three. Then four. This
+        is breadth-first search.
+      </p>
+    </aside>
+    <BFSLocal client:only="react" />
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        Breadth-first search expands layer by layer, so it reaches the nearest
+        exit first.
+      </p>
+      <p>
+        By the time breadth-first search reaches a position, it has already
+        explored every shorter path to it. That is why the first exit it finds
+        must be part of a shortest path.
+      </p>
+    </aside>
+    <BFSGlobal client:only="react" />
+  </section>
+
+  <!-- Scene 8: Side-by-side comparison -->
+  <section>
+    <aside class="notes">
+      <p>Both algorithms need to remember visited positions.</p>
+      <p>But they store very different things while searching.</p>
+      <p>
+        Depth-first search mostly keeps the current path in memory, plus the set
+        of visited nodes.
+      </p>
+      <p>
+        Breadth-first search must keep the whole frontier in memory, plus the
+        visited nodes, and enough information to reconstruct the final path.
+      </p>
+      <p>
+        So breadth-first search usually spends more memory in exchange for an
+        important guarantee.
+      </p>
+      <p>
+        So the trade-off is simple. Depth-first search uses less memory, but it
+        may return a long path. Breadth-first search uses more memory, but it
+        guarantees the shortest path. Escaping is easy. Escaping efficiently is
+        the real puzzle.
+      </p>
+    </aside>
+    <Comparison client:only="react" />
+  </section>
+
+  <!-- Summary -->
+  <section>
+    <aside class="notes">
+      <p>Of course, these are not the only ways to search.</p>
+      <p>
+        But breadth-first search and depth-first search are two of the most
+        classic starting points, and they already reveal a very important trade-
+        off between memory and optimality.
+      </p>
+      <p>We will look at other search strategies in future videos.</p>
+      <p>
+        This was today's Cheese Byte! Remember, the code matters, but the idea
+        comes first.
+      </p>
+    </aside>
+    <h2 style="margin-bottom: 1em;">DFS vs BFS</h2>
+    <div
+      style="display: grid; grid-template-columns: 1fr 1fr; gap: 2em; text-align: left; font-size: 0.85em;"
+    >
+      <div>
+        <h3>Depth-First Search</h3>
+        <ul>
+          <li>Explores one path as deep as possible</li>
+          <li>Uses less memory (only the current path)</li>
+          <li>No guarantee of shortest path</li>
+          <li>Result depends on direction priority</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Breadth-First Search</h3>
+        <ul>
+          <li>Explores layer by layer</li>
+          <li>Uses more memory (entire frontier)</li>
+          <li>Guarantees the shortest path</li>
+          <li>Independent of direction priority</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top: 1.5em; font-style: italic; opacity: 0.7;">
+      Escaping is easy. Escaping efficiently is the real puzzle.
+    </p>
+  </section>
+
+  <!-- Map Editor (helper slide for designing maps) -->
+  <section data-visibility="hidden">
+    <MapEditor client:only="react" />
+  </section>
+</RevealLayout>

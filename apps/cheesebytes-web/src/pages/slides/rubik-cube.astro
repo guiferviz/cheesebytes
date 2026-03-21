@@ -4,10 +4,6 @@ import dedent from "dedent";
 import RevealLayout from "../../layouts/PresentationLayout.astro";
 import {
   RubikCube as RubikCubeViz,
-  LehmerTable,
-  LehmerBuilder,
-  LehmerDecoder,
-  CornerInvariant,
   EncodingShowcase,
   CubeCompare,
   StickerPermutation,
@@ -469,23 +465,21 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
       <p>
         A neat way to handle this is to choose one corner as a reference and
         always keep it in the same place. For example, we can always rotate the
-        cube so that the front-left corner ends up back in its home position.
-        That does not change the puzzle state. It only changes how we look at
-        it. And once we do that, all 24 whole-cube rotations collapse into a
-        single representation. The cube has 4 possible rotations for each choice
-        of front face, and 6 possible front faces, so 24 in total. But there is
-        more. Fixing one corner also makes some moves equivalent. For example,
-        imagine starting from the solved cube, doing an L move, and then
-        rotating the whole cube to put that reference corner back where it
+        cube so that the blue-yellow-red corner ends up back in the front-left
+        position. That does not change the puzzle state. It only changes how we
+        look at it. And once we do that, all whole-cube rotations collapse into
+        a single representation. The cube has 4 possible rotations for each
+        choice of front face, and 6 possible front faces, so 24 in total. But
+        there is more. Fixing one corner also makes some moves equivalent. For
+        example, imagine starting from the solved cube, doing an L move, and
+        then rotating the whole cube to put that reference corner back where it
         belongs. What you get is exactly the same normalized state you would get
         by starting from solved and doing an R move. So once we normalize the
         cube this way, some moves become redundant. That means we do not need
         all six face moves anymore. We only need the ones that leave the
         reference corner in place. For example: R, B, and D. That is great,
         because it removes branches from the search and avoids having to deal
-        with whole-cube rotations separately. With this change, we can solve all
-        cube states in about 40 seconds using around 300 MB of memory, directly
-        in Python and in the browser.
+        with whole-cube rotations separately.
       </p>
     </aside>
     <RubikCubeViz
@@ -493,6 +487,15 @@ print(next_state)  # BYBYRRRRYGYGOOOOBWBWGWGW`}
       showStateEditor={true}
       cameraRelativeEncoding={false}
     />
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        With this change, we can solve all cube states in about 40 seconds using
+        around 300 MB of memory, directly in Python and in the browser.
+      </p>
+    </aside>
   </section>
 
   <section>
