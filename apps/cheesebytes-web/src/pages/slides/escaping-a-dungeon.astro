@@ -66,7 +66,6 @@ import { LogoAnimation } from "../../components/cave/intro";
     <DFSLocal client:only="react" />
   </section>
 
-  <!-- Scene 4: DFS in action -->
   <section>
     <aside class="notes">
       <p>
@@ -86,7 +85,6 @@ import { LogoAnimation } from "../../components/cave/intro";
     <DFSGlobal client:only="react" />
   </section>
 
-  <!-- Scene 5: Meet BFS -->
   <section>
     <aside class="notes">
       <p>
@@ -102,7 +100,6 @@ import { LogoAnimation } from "../../components/cave/intro";
     <BFSLocal client:only="react" />
   </section>
 
-  <!-- Scene 6: Why BFS wins this battle -->
   <section>
     <aside class="notes">
       <p>And this is why BFS wins this particular battle.</p>
@@ -120,7 +117,6 @@ import { LogoAnimation } from "../../components/cave/intro";
     <BFSGlobal client:only="react" />
   </section>
 
-  <!-- Scene 7: The trade-off -->
   <section>
     <aside class="notes">
       <p>So does that mean BFS is simply better? Not quite.</p>
@@ -142,7 +138,6 @@ import { LogoAnimation } from "../../components/cave/intro";
     <Comparison client:only="react" />
   </section>
 
-  <!-- Scene 8: Final verdict -->
   <section>
     <aside class="notes">
       <p>
@@ -166,7 +161,7 @@ import { LogoAnimation } from "../../components/cave/intro";
     </aside>
     <h2 style="margin-bottom: 0.6em; font-size: 1.8em;">The Verdict</h2>
     <table
-      style="width: 85%; margin: 0 auto; border-collapse: collapse; font-size: 1.05em; text-align: center;"
+      style="width: 85%; margin: 0 auto; border-collapse: collapse; font-size: 1.05em; text-align: center; zoom: 1.3;"
     >
       <thead>
         <tr>
@@ -203,8 +198,12 @@ import { LogoAnimation } from "../../components/cave/intro";
             style="padding: 0.55em 1em; text-align: left; opacity: 0.6; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em;"
             >Memory</td
           >
-          <td style="padding: 0.55em 1em;">Usually lower</td>
-          <td style="padding: 0.55em 1em;">Usually higher</td>
+          <td style="padding: 0.55em 1em;"
+            >Usually <span style="color: #4ade80;">lower</span></td
+          >
+          <td style="padding: 0.55em 1em;"
+            >Usually <span style="color: #f87171;">higher</span></td
+          >
         </tr>
         <tr>
           <td
