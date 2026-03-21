@@ -94,7 +94,9 @@ export const Comparison: React.FC = () => {
             <div
               style={{
                 textAlign: "center",
-                fontSize: 17,
+                fontSize: 20,
+                fontWeight: 900,
+                color: "#f59e0b",
                 marginBottom: 7,
               }}
             >
@@ -129,7 +131,9 @@ export const Comparison: React.FC = () => {
             <div
               style={{
                 textAlign: "center",
-                fontSize: 17,
+                fontSize: 20,
+                fontWeight: 900,
+                color: "#3b82f6",
                 marginBottom: 7,
               }}
             >

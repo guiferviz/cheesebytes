@@ -42,6 +42,19 @@ export const BFSLocal: React.FC<{
           showStart={true}
           showExit={false}
         />
+        {/* BFS label — right edge of viewport */}
+        <div
+          style={{
+            position: "fixed",
+            right: 0,
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 50,
+          }}
+          className="flex items-center justify-center px-4 py-3 rounded-l-xl text-4xl font-black tracking-widest text-blue-500"
+        >
+          BFS
+        </div>
       </div>
     </CheeseSlideContainer>
   );

@@ -38,24 +38,6 @@ export const Crossroads: React.FC = () => {
           showStart={true}
           showExit={false}
         />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 24,
-            marginTop: 12,
-            fontFamily: "monospace",
-            fontSize: 16,
-            color: "#999",
-          }}
-        >
-          <span>
-            Priority: <strong style={{ color: "#333" }}>↑ Up</strong>
-          </span>
-          <span>→ Right</span>
-          <span>↓ Down</span>
-          <span>← Left</span>
-        </div>
       </div>
     </CheeseSlideContainer>
   );

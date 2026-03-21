@@ -92,6 +92,19 @@ export const DFSGlobal: React.FC<{
         >
           <PriorityLegend dirs={dirs} onChange={handleReorder} />
         </div>
+        {/* DFS label — left edge of viewport */}
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 50,
+          }}
+          className="flex items-center justify-center px-4 py-3 rounded-r-xl text-4xl font-black tracking-widest text-amber-500"
+        >
+          DFS
+        </div>
       </div>
     </CheeseSlideContainer>
   );

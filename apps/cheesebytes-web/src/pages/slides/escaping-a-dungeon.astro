@@ -21,13 +21,13 @@ import { LogoAnimation } from "../../components/cave/intro";
   <section>
     <aside class="notes">
       <p>
-        Imagine you are trapped in a dungeon. There is an exit somewhere in this
-        maze. Finding any way out would already help. But if every step matters,
-        then not all paths are equally good.
+        One dungeon. Two algorithms. Depth-first search. The algorithm that
+        commits to one path early. Breadth-first search. The algorithm that
+        explores all nearby possibilities before going deeper.
       </p>
       <p>
-        So the real question is not just how to escape, but how to find the
-        shortest way out.
+        If you were trapped in this dungeon, and all you cared about was
+        escaping through the shortest path... which one would you trust?
       </p>
     </aside>
     <DungeonIntro client:only="react" />
@@ -48,13 +48,8 @@ import { LogoAnimation } from "../../components/cave/intro";
     <aside class="notes">
       <p>
         Let us zoom into a single crossroads. From here, we can move in several
-        directions. So how should we explore? One possibility is: pick one
-        direction and keep going for as long as possible.
-      </p>
-      <p>
-        Suppose we always try going up first. There may be other options nearby,
-        but for now we ignore them. We keep moving forward as long as the path
-        is still open.
+        directons. DFS is a risk-taker. It picks one direction, and commits to
+        it.
       </p>
     </aside>
     <Crossroads client:only="react" />
@@ -62,142 +57,211 @@ import { LogoAnimation } from "../../components/cave/intro";
 
   <section id="wip">
     <aside class="notes">
-      <p></p>
       <p>
-        Only when we get stuck do we go back to the last place where another
-        path was still unexplored and we follow the next direction in our
-        priority list. This strategy is called depth-first search.
+        If there's still a way forward, keep moving. If it hits a dead end,
+        backtrack to the most recent place where another option was left
+        unexplored, and continue from there.
       </p>
     </aside>
     <DFSLocal client:only="react" />
   </section>
 
-  <!-- Scene 4: Visited nodes -->
+  <!-- Scene 4: DFS in action -->
   <section>
     <aside class="notes">
       <p>
-        To make this work, we also need to remember which positions we have
-        already visited. Otherwise, in a maze with loops, we could wander in
-        circles forever.
+        To make this work, we also need to remember where we've been. Otherwise,
+        in a maze with loops, we could get wander in circles forever.
       </p>
       <p>
-        For example, in this position we have already visited the top cell, so
-        we move right instead, that is our priority number 2 and it's still
-        available.
+        DFS hates hesitation.But that same decisiveness can betray it. Because
+        it commits early, it may spend a long time deep inside a bad branch
+        before it even looks at a better option nearby.
       </p>
       <p>
-        The problem is that depth-first search can commit very early to a bad
-        path. It might eventually find an exit, but through a long detour.
-      </p>
-      <p>
-        And yes, if we had chosen a different movement priority, for example,
-        taking always the down direction if available, maybe it would have
-        gotten lucky and reached the optimal solution. But that is exactly the
-        point: depth-first search has no guarantee.
+        So DFS can absolutely find an exit. But it does not guarantee the
+        shortest one.
       </p>
     </aside>
     <DFSGlobal client:only="react" />
   </section>
 
-  <!-- Scene 6: BFS local behavior -->
+  <!-- Scene 5: Meet BFS -->
   <section>
     <aside class="notes">
-      <p>There is another classic strategy.</p>
       <p>
-        Instead of committing to one path, we explore every position that is one
-        step away from the start.
+        Now look at BFS. Breadth-first search refuses to commit too early. It
+        explores the dungeon in layers. First, everything one step away. Then
+        everything two steps away. Then three. Then four.
       </p>
       <p>
-        Then every position that is two steps away. Then three. Then four. This
-        is breadth-first search.
+        Instead of diving into one corridor, it keeps a frontier. A whole edge
+        of active possibilities. That is the price of being thorough.
       </p>
     </aside>
     <BFSLocal client:only="react" />
   </section>
 
+  <!-- Scene 6: Why BFS wins this battle -->
   <section>
     <aside class="notes">
+      <p>And this is why BFS wins this particular battle.</p>
       <p>
-        Breadth-first search expands layer by layer, so it reaches the nearest
-        exit first.
+        By the time breadth-first search reaches any position, it has already
+        explored every way of reaching that position in fewer steps.
       </p>
       <p>
-        By the time breadth-first search reaches a position, it has already
-        explored every shorter path to it. That is why the first exit it finds
-        must be part of a shortest path.
+        So when BFS reaches an exit for the first time, that exit cannot be
+        beaten by any shorter route. That is the guarantee. Not luck. Not
+        intuition. Just the consequence of exploring in order of distance from
+        the start.
       </p>
     </aside>
     <BFSGlobal client:only="react" />
   </section>
 
-  <!-- Scene 8: Side-by-side comparison -->
+  <!-- Scene 7: The trade-off -->
   <section>
     <aside class="notes">
-      <p>Both algorithms need to remember visited positions.</p>
-      <p>But they store very different things while searching.</p>
+      <p>So does that mean BFS is simply better? Not quite.</p>
       <p>
-        Depth-first search mostly keeps the current path in memory, plus the set
-        of visited nodes.
+        It is better if your question is: which algorithm guarantees the
+        shortest path in a dungeon like this? Then BFS wins.
       </p>
       <p>
-        Breadth-first search must keep the whole frontier in memory, plus the
-        visited nodes, and enough information to reconstruct the final path.
+        But it wins by paying for that guarantee. It has to keep the frontier
+        alive. It usually explores more, hence it spends more memory.
       </p>
       <p>
-        So breadth-first search usually spends more memory in exchange for an
-        important guarantee.
-      </p>
-      <p>
-        So the trade-off is simple. Depth-first search uses less memory, but it
-        may return a long path. Breadth-first search uses more memory, but it
-        guarantees the shortest path. Escaping is easy. Escaping efficiently is
-        the real puzzle.
+        DFS, on the other hand, is lighter. It commits early, explores deeply,
+        and often keeps less active state at once. So the real lesson is not
+        that one algorithm is always superior. The real lesson is that each one
+        optimizes something different.
       </p>
     </aside>
     <Comparison client:only="react" />
   </section>
 
-  <!-- Summary -->
+  <!-- Scene 8: Final verdict -->
   <section>
     <aside class="notes">
-      <p>Of course, these are not the only ways to search.</p>
       <p>
-        But breadth-first search and depth-first search are two of the most
-        classic starting points, and they already reveal a very important trade-
-        off between memory and optimality.
+        Of course, these are not the only ways to search, but breadth-first
+        search and depth-first search are two of the most classic starting
+        points and they already reveal a very important tradeoff between memory
+        and optimallity.
       </p>
-      <p>We will look at other search strategies in future videos.</p>
       <p>
-        This was today's Cheese Byte! Remember, the code matters, but the idea
+        So, if you were trapped in this dungeon, and all you cared about was
+        escaping through the shortest path... BFS is the Best For Shortest path.
+      </p>
+      <p>
+        DFS may still find a way out. Sometimes even quickly. But it does not
+        promise the best route.
+      </p>
+      <p>
+        This was today's Cheese Byte. Remember: the code matters, but the idea
         comes first.
       </p>
     </aside>
-    <h2 style="margin-bottom: 1em;">DFS vs BFS</h2>
-    <div
-      style="display: grid; grid-template-columns: 1fr 1fr; gap: 2em; text-align: left; font-size: 0.85em;"
+    <h2 style="margin-bottom: 0.6em; font-size: 1.8em;">The Verdict</h2>
+    <table
+      style="width: 85%; margin: 0 auto; border-collapse: collapse; font-size: 1.05em; text-align: center;"
     >
-      <div>
-        <h3>Depth-First Search</h3>
-        <ul>
-          <li>Explores one path as deep as possible</li>
-          <li>Uses less memory (only the current path)</li>
-          <li>No guarantee of shortest path</li>
-          <li>Result depends on direction priority</li>
-        </ul>
-      </div>
-      <div>
-        <h3>Breadth-First Search</h3>
-        <ul>
-          <li>Explores layer by layer</li>
-          <li>Uses more memory (entire frontier)</li>
-          <li>Guarantees the shortest path</li>
-          <li>Independent of direction priority</li>
-        </ul>
-      </div>
-    </div>
-    <p style="margin-top: 1.5em; font-style: italic; opacity: 0.7;">
-      Escaping is easy. Escaping efficiently is the real puzzle.
-    </p>
+      <thead>
+        <tr>
+          <th style="padding: 0.5em 1em;"></th>
+          <th
+            style="padding: 0.5em 1em; color: #f59e0b; border-bottom: 2px solid #f59e0b; font-size: 1.6em; font-weight: 900;"
+            >DFS</th
+          >
+          <th
+            style="padding: 0.5em 1em; color: #3b82f6; border-bottom: 2px solid #3b82f6; font-size: 1.6em; font-weight: 900;"
+            >BFS</th
+          >
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td
+            style="padding: 0.55em 1em; text-align: left; opacity: 0.6; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em;"
+            >Style</td
+          >
+          <td style="padding: 0.55em 1em;"
+            >Goes deep first <span style="opacity: 0.45; font-size: 0.85em;"
+              >(Commitment)</span
+            ></td
+          >
+          <td style="padding: 0.55em 1em;"
+            >Layer by layer <span style="opacity: 0.45; font-size: 0.85em;"
+              >(Coverage)</span
+            ></td
+          >
+        </tr>
+        <tr>
+          <td
+            style="padding: 0.55em 1em; text-align: left; opacity: 0.6; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em;"
+            >Memory</td
+          >
+          <td style="padding: 0.55em 1em;">Usually lower</td>
+          <td style="padding: 0.55em 1em;">Usually higher</td>
+        </tr>
+        <tr>
+          <td
+            style="padding: 0.55em 1em; text-align: left; opacity: 0.6; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em;"
+            >Shortest path</td
+          >
+          <td style="padding: 0.55em 1em;">
+            <svg
+              viewBox="0 0 96 96"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style="display: inline-block; width: 1.4em; height: 1.4em; vertical-align: middle;"
+            >
+              <rect
+                x="4"
+                y="4"
+                width="88"
+                height="88"
+                rx="18"
+                fill="rgba(153,27,27,0.2)"></rect>
+              <path
+                d="M32 32 L64 64"
+                stroke="#f87171"
+                stroke-width="10"
+                stroke-linecap="round"></path>
+              <path
+                d="M64 32 L32 64"
+                stroke="#f87171"
+                stroke-width="10"
+                stroke-linecap="round"></path>
+            </svg>
+          </td>
+          <td style="padding: 0.55em 1em;">
+            <svg
+              viewBox="0 0 96 96"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style="display: inline-block; width: 1.4em; height: 1.4em; vertical-align: middle;"
+            >
+              <rect
+                x="4"
+                y="4"
+                width="88"
+                height="88"
+                rx="18"
+                fill="rgba(22,163,74,0.2)"></rect>
+              <path
+                d="M28 50 L42 64 L68 32"
+                stroke="#4ade80"
+                stroke-width="10"
+                stroke-linecap="round"
+                stroke-linejoin="round"></path>
+            </svg>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 
   <!-- Map Editor (helper slide for designing maps) -->
