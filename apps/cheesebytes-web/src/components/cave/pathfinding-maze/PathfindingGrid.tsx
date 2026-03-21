@@ -32,22 +32,23 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
   const [cols, setCols] = useState(initCols);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [wallPercent, setWallPercent] = useState(initWallPercent);
+  const [mazeOpenPercent, setMazeOpenPercent] = useState(15);
   const [algorithm, setAlgorithm] = useState<AlgorithmType>(defaultAlgorithm);
   const [speed, setSpeed] = useState(initSpeed);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 99999));
 
-  const [start, setStart] = useState<Cell>({ row: 1, col: 1 });
+  const [start, setStart] = useState<Cell>({ row: 0, col: 0 });
   const [end, setEnd] = useState<Cell>({
-    row: initRows - 2,
-    col: initCols - 2,
+    row: initRows - 1,
+    col: initCols - 1,
   });
   const [walls, setWalls] = useState<Set<string>>(() =>
     generateWalls(
       initRows,
       initCols,
       initWallPercent,
-      { row: 1, col: 1 },
-      { row: initRows - 2, col: initCols - 2 },
+      { row: 0, col: 0 },
+      { row: initRows - 1, col: initCols - 1 },
     ),
   );
 
@@ -338,8 +339,8 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
 
   const handleGenerateMaze = useCallback(() => {
     clearSearch();
-    setWalls(generateMaze(rows, cols, start, end, seed));
-  }, [clearSearch, rows, cols, start, end, seed]);
+    setWalls(generateMaze(rows, cols, start, end, seed, mazeOpenPercent));
+  }, [clearSearch, rows, cols, start, end, seed, mazeOpenPercent]);
 
   const handleClearWalls = useCallback(() => {
     clearSearch();
@@ -388,187 +389,214 @@ export const PathfindingGrid: React.FC<PathfindingGridProps> = ({
     active
       ? `${btnBase} bg-amber-400 text-white ring-2 ring-amber-600`
       : btnSecondary;
+  const controlPanel =
+    "flex flex-col gap-3 rounded-xl border border-stone-200/80 bg-white/70 px-4 py-3 dark:border-stone-700 dark:bg-stone-900/60";
+  const controlTitle =
+    "text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400";
+  const fieldLabel = "text-sm font-medium text-stone-600 dark:text-stone-400";
+  const inputClass =
+    "rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm text-stone-700 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200";
 
   return (
     <div
       ref={containerRef}
       className="flex flex-col gap-4 p-4 bg-gradient-to-b from-amber-50/80 to-orange-50/60 dark:from-stone-900/90 dark:to-stone-950/90 rounded-2xl select-none"
     >
-      {/* Group 1: Algorithm & Animation */}
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
-          Algorithm:
-        </label>
-        <select
-          value={algorithm}
-          onChange={(e) => {
-            clearSearch();
-            setAlgorithm(e.target.value as AlgorithmType);
-          }}
-          disabled={running}
-          className="px-2 py-1 rounded-lg text-sm bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200"
-        >
-          {Object.entries(ALGORITHM_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </select>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <section className={controlPanel}>
+          <span className={controlTitle}>Edit Grid</span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={btnActive(mode === "wall")}
+              onClick={() => setMode("wall")}
+            >
+              🧱 Walls
+            </button>
+            <button
+              className={btnActive(mode === "start")}
+              onClick={() => setMode("start")}
+            >
+              🟢 Start
+            </button>
+            <button
+              className={btnActive(mode === "end")}
+              onClick={() => setMode("end")}
+            >
+              🔴 End
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className={fieldLabel}>Size</label>
+            <input
+              type="number"
+              min={5}
+              max={100}
+              value={rows}
+              onChange={(e) => {
+                const v = Math.max(5, Math.min(100, Number(e.target.value)));
+                setRows(v);
+                handleResize(v, cols);
+              }}
+              disabled={running}
+              className={`w-16 text-center ${inputClass}`}
+            />
+            <span className="text-xs text-stone-500 dark:text-stone-400">
+              ×
+            </span>
+            <input
+              type="number"
+              min={5}
+              max={100}
+              value={cols}
+              onChange={(e) => {
+                const v = Math.max(5, Math.min(100, Number(e.target.value)));
+                setCols(v);
+                handleResize(rows, v);
+              }}
+              disabled={running}
+              className={`w-16 text-center ${inputClass}`}
+            />
+          </div>
+        </section>
 
-        <label className="text-sm font-medium text-stone-600 dark:text-stone-400 ml-2">
-          Speed:
-        </label>
-        <input
-          type="range"
-          min={1}
-          max={200}
-          value={201 - speed}
-          onChange={(e) => {
-            const v = 201 - Number(e.target.value);
-            setSpeed(v);
-            speedRef.current = v;
-          }}
-          className="w-24"
-        />
-        <span className="text-xs text-stone-500 dark:text-stone-400 w-12">
-          {speed}ms
-        </span>
+        <section className={controlPanel}>
+          <span className={controlTitle}>Maze Builder</span>
+          <div className="flex items-center gap-2">
+            <label className={fieldLabel}>Seed</label>
+            <input
+              type="number"
+              value={seed}
+              onChange={(e) => setSeed(Number(e.target.value))}
+              disabled={running}
+              className={`min-w-0 flex-1 text-center ${inputClass}`}
+            />
+            <button
+              className={btnSecondary}
+              onClick={() => setSeed(Math.floor(Math.random() * 99999))}
+              disabled={running}
+              title="Randomize seed"
+            >
+              🎲
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className={fieldLabel}>Remove walls</label>
+            <input
+              type="range"
+              min={0}
+              max={40}
+              value={mazeOpenPercent}
+              onChange={(e) => setMazeOpenPercent(Number(e.target.value))}
+              disabled={running}
+              className="min-w-0 flex-1"
+            />
+            <span className="w-10 text-right text-xs text-stone-500 dark:text-stone-400">
+              {mazeOpenPercent}%
+            </span>
+          </div>
+          <button
+            className={`${btnPrimary} self-start`}
+            onClick={handleGenerateMaze}
+            disabled={running}
+          >
+            Generate Maze
+          </button>
+        </section>
 
-        <div className="w-px h-6 bg-stone-300 dark:bg-stone-600 mx-1" />
-
-        <button className={btnPrimary} onClick={handleRun} disabled={running}>
-          ▶ Run
-        </button>
-        <button
-          className={`${btnBase} bg-rose-500 hover:bg-rose-600 text-white`}
-          onClick={handleStop}
-          disabled={!running}
-        >
-          ■ Stop
-        </button>
-        <button className={btnSecondary} onClick={clearSearch}>
-          Clear Search
-        </button>
+        <section className={controlPanel}>
+          <span className={controlTitle}>Walls</span>
+          <div className="flex items-center gap-3">
+            <label className={fieldLabel}>Density</label>
+            <input
+              type="range"
+              min={0}
+              max={50}
+              value={wallPercent}
+              onChange={(e) => setWallPercent(Number(e.target.value))}
+              disabled={running}
+              className="min-w-0 flex-1"
+            />
+            <span className="w-10 text-right text-xs text-stone-500 dark:text-stone-400">
+              {wallPercent}%
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={btnSecondary}
+              onClick={handleRandomWalls}
+              disabled={running}
+            >
+              Random Walls
+            </button>
+            <button
+              className={btnSecondary}
+              onClick={handleClearWalls}
+              disabled={running}
+            >
+              Clear Walls
+            </button>
+          </div>
+        </section>
       </div>
 
-      {/* Group 2: Click Mode */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-stone-600 dark:text-stone-400 mr-1">
-          Click mode:
-        </span>
-        <button
-          className={btnActive(mode === "wall")}
-          onClick={() => setMode("wall")}
-        >
-          🧱 Walls
-        </button>
-        <button
-          className={btnActive(mode === "start")}
-          onClick={() => setMode("start")}
-        >
-          🟢 Start
-        </button>
-        <button
-          className={btnActive(mode === "end")}
-          onClick={() => setMode("end")}
-        >
-          🔴 End
-        </button>
-      </div>
+      <section className={controlPanel}>
+        <span className={controlTitle}>Search</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className={fieldLabel}>Algorithm</label>
+          <select
+            value={algorithm}
+            onChange={(e) => {
+              clearSearch();
+              setAlgorithm(e.target.value as AlgorithmType);
+            }}
+            disabled={running}
+            className={`min-w-[220px] flex-1 ${inputClass}`}
+          >
+            {Object.entries(ALGORITHM_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
 
-      {/* Group 3: Construction / Prebuilt */}
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
-          Size:
-        </label>
-        <input
-          type="number"
-          min={5}
-          max={100}
-          value={rows}
-          onChange={(e) => {
-            const v = Math.max(5, Math.min(100, Number(e.target.value)));
-            setRows(v);
-            handleResize(v, cols);
-          }}
-          disabled={running}
-          className="w-14 px-1.5 py-1 rounded-lg text-sm text-center bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200"
-        />
-        <span className="text-xs text-stone-500 dark:text-stone-400">×</span>
-        <input
-          type="number"
-          min={5}
-          max={100}
-          value={cols}
-          onChange={(e) => {
-            const v = Math.max(5, Math.min(100, Number(e.target.value)));
-            setCols(v);
-            handleResize(rows, v);
-          }}
-          disabled={running}
-          className="w-14 px-1.5 py-1 rounded-lg text-sm text-center bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200"
-        />
+          <label className={fieldLabel}>Speed</label>
+          <input
+            type="range"
+            min={1}
+            max={200}
+            value={201 - speed}
+            onChange={(e) => {
+              const v = 201 - Number(e.target.value);
+              setSpeed(v);
+              speedRef.current = v;
+            }}
+            className="w-32"
+          />
+          <span className="w-12 text-right text-xs text-stone-500 dark:text-stone-400">
+            {speed}ms
+          </span>
 
-        <div className="w-px h-6 bg-stone-300 dark:bg-stone-600 mx-1" />
-
-        <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
-          Seed:
-        </label>
-        <input
-          type="number"
-          value={seed}
-          onChange={(e) => setSeed(Number(e.target.value))}
-          disabled={running}
-          className="w-20 px-1.5 py-1 rounded-lg text-sm text-center bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200"
-        />
-        <button
-          className={btnSecondary}
-          onClick={() => setSeed(Math.floor(Math.random() * 99999))}
-          disabled={running}
-          title="Randomize seed"
-        >
-          🎲
-        </button>
-        <button
-          className={btnPrimary}
-          onClick={handleGenerateMaze}
-          disabled={running}
-        >
-          Generate Maze
-        </button>
-
-        <div className="w-px h-6 bg-stone-300 dark:bg-stone-600 mx-1" />
-
-        <label className="text-sm font-medium text-stone-600 dark:text-stone-400">
-          Density:
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={50}
-          value={wallPercent}
-          onChange={(e) => setWallPercent(Number(e.target.value))}
-          disabled={running}
-          className="w-24"
-        />
-        <span className="text-xs text-stone-500 dark:text-stone-400">
-          {wallPercent}%
-        </span>
-        <button
-          className={btnSecondary}
-          onClick={handleRandomWalls}
-          disabled={running}
-        >
-          Random Walls
-        </button>
-        <button
-          className={btnSecondary}
-          onClick={handleClearWalls}
-          disabled={running}
-        >
-          Clear Walls
-        </button>
-      </div>
+          <div className="flex flex-wrap gap-2 md:ml-auto">
+            <button
+              className={btnPrimary}
+              onClick={handleRun}
+              disabled={running}
+            >
+              ▶ Run
+            </button>
+            <button
+              className={`${btnBase} bg-rose-500 hover:bg-rose-600 text-white`}
+              onClick={handleStop}
+              disabled={!running}
+            >
+              ■ Stop
+            </button>
+            <button className={btnSecondary} onClick={clearSearch}>
+              Clear Search
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* Canvas */}
       <div

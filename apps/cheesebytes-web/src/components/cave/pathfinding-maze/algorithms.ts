@@ -410,11 +410,74 @@ export function generateMaze(
   extraOpenPercent = 15,
 ): Set<string> {
   const rng = mulberry32(seed);
+  const directions: [number, number][] = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ];
 
   function shuffle<T>(arr: T[]) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function inBounds(row: number, col: number) {
+    return row >= 0 && row < rows && col >= 0 && col < cols;
+  }
+
+  function connectCellToMaze(cell: Cell) {
+    const originKey = cellKey(cell.row, cell.col);
+    walls.delete(originKey);
+
+    const immediateOpen = directions.some(([dr, dc]) => {
+      const nr = cell.row + dr;
+      const nc = cell.col + dc;
+      return inBounds(nr, nc) && !walls.has(cellKey(nr, nc));
+    });
+    if (immediateOpen) return;
+
+    const queue: Cell[] = [cell];
+    const seen = new Set<string>([originKey]);
+    const parent = new Map<string, string>();
+    let targetKey: string | null = null;
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const currentKey = cellKey(current.row, current.col);
+
+      if (currentKey !== originKey && !walls.has(currentKey)) {
+        targetKey = currentKey;
+        break;
+      }
+
+      for (const [dr, dc] of directions) {
+        const nr = current.row + dr;
+        const nc = current.col + dc;
+        if (!inBounds(nr, nc)) continue;
+        const nextKey = cellKey(nr, nc);
+        if (seen.has(nextKey)) continue;
+        seen.add(nextKey);
+        parent.set(nextKey, currentKey);
+        queue.push({ row: nr, col: nc });
+      }
+    }
+
+    if (!targetKey) return;
+
+    const pathToOpen: Cell[] = [];
+    let cursor: string | undefined = targetKey;
+    while (cursor) {
+      const [row, col] = cursor.split(",").map(Number);
+      pathToOpen.push({ row, col });
+      if (cursor === originKey) break;
+      cursor = parent.get(cursor);
+    }
+
+    for (const step of pathToOpen) {
+      walls.delete(cellKey(step.row, step.col));
     }
   }
 
@@ -435,7 +498,7 @@ export function generateMaze(
   walls.delete(cellKey(startR, startC));
   stack.push({ row: startR, col: startC });
 
-  const directions: [number, number][] = [
+  const carveDirections: [number, number][] = [
     [-2, 0],
     [2, 0],
     [0, -2],
@@ -446,7 +509,7 @@ export function generateMaze(
     const cur = stack[stack.length - 1];
     const nbs: { nr: number; nc: number; wr: number; wc: number }[] = [];
 
-    const shuffled = [...directions];
+    const shuffled = [...carveDirections];
     shuffle(shuffled);
     for (const [dr, dc] of shuffled) {
       const nr = cur.row + dr;
@@ -468,6 +531,28 @@ export function generateMaze(
     walls.delete(cellKey(wr, wc));
     walls.delete(cellKey(nr, nc));
     stack.push({ row: nr, col: nc });
+  }
+
+  // For even dimensions the DFS only carves odd-indexed cells, leaving a dead
+  // strip at the last interior column/row.  Mirror the wall/open pattern from
+  // the adjacent odd column/row so the maze extends cleanly without turrets.
+  if (cols % 2 === 0 && cols >= 4) {
+    const src = cols - 3; // last odd interior column
+    const dst = cols - 2; // even dead-strip column
+    for (let r = 1; r < rows - 1; r++) {
+      if (!walls.has(cellKey(r, src))) {
+        walls.delete(cellKey(r, dst));
+      }
+    }
+  }
+  if (rows % 2 === 0 && rows >= 4) {
+    const src = rows - 3; // last odd interior row
+    const dst = rows - 2; // even dead-strip row
+    for (let c = 1; c < cols - 1; c++) {
+      if (!walls.has(cellKey(src, c))) {
+        walls.delete(cellKey(dst, c));
+      }
+    }
   }
 
   // Open extra passages to create multiple routes
@@ -494,9 +579,9 @@ export function generateMaze(
     walls.delete(innerWalls[i]);
   }
 
-  // Ensure start and end cells are open
-  walls.delete(cellKey(start.row, start.col));
-  walls.delete(cellKey(end.row, end.col));
+  // Ensure start and end cells are open and connected to the carved maze.
+  connectCellToMaze(start);
+  connectCellToMaze(end);
 
   return walls;
 }
