@@ -10,7 +10,6 @@ import {
   Comparison,
   MapEditor,
 } from "../../components/cave/dungeon-escape";
-import { LogoAnimation } from "../../components/cave/intro";
 ---
 
 <RevealLayout
@@ -31,17 +30,6 @@ import { LogoAnimation } from "../../components/cave/intro";
       </p>
     </aside>
     <DungeonIntro client:only="react" />
-  </section>
-
-  <section>
-    <LogoAnimation
-      client:only="react"
-      width={2080}
-      height={600}
-      pixelScale={8}
-      duration={2700}
-      loop={true}
-    />
   </section>
 
   <section>
