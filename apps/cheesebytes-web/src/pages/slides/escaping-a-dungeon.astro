@@ -23,7 +23,7 @@ import { LogoAnimation } from "../../components/cave/intro";
       <p>
         One dungeon. Two algorithms. Depth-first search. The algorithm that
         commits to one path early. Breadth-first search. The algorithm that
-        explores all nearby possibilities before going deeper.
+        explores nearby possibilities layer by layer before going deeper.
       </p>
       <p>
         If you were trapped in this dungeon, and all you cared about was
@@ -47,20 +47,19 @@ import { LogoAnimation } from "../../components/cave/intro";
   <section>
     <aside class="notes">
       <p>
-        Let us zoom into a single crossroads. From here, we can move in several
-        directons. DFS is a risk-taker. It picks one direction, and commits to
-        it.
+        Let's zoom into a single crossroads. From here, we can move in several
+        directions.
       </p>
     </aside>
     <Crossroads client:only="react" />
   </section>
 
-  <section id="wip">
+  <section>
     <aside class="notes">
       <p>
-        If there's still a way forward, keep moving. If it hits a dead end,
-        backtrack to the most recent place where another option was left
-        unexplored, and continue from there.
+        DFS is a risk-taker. It chooses one direction and follows it. If it can
+        keep going, it does. If it reaches a dead end, it goes back to the last
+        place where another path was available, and tries that one next.
       </p>
     </aside>
     <DFSLocal client:only="react" />
@@ -70,12 +69,12 @@ import { LogoAnimation } from "../../components/cave/intro";
     <aside class="notes">
       <p>
         To make this work, we also need to remember where we've been. Otherwise,
-        in a maze with loops, we could get wander in circles forever.
+        in a maze with loops, we could wander in circles forever.
       </p>
       <p>
-        DFS hates hesitation.But that same decisiveness can betray it. Because
-        it commits early, it may spend a long time deep inside a bad branch
-        before it even looks at a better option nearby.
+        DFS hates hesitation. But that same strength can also be a weakness.
+        Because it commits early, it may go deep into a bad branch before it
+        even checks a better one nearby.
       </p>
       <p>
         So DFS can absolutely find an exit. But it does not guarantee the
@@ -90,7 +89,8 @@ import { LogoAnimation } from "../../components/cave/intro";
       <p>
         Now look at BFS. Breadth-first search refuses to commit too early. It
         explores the dungeon in layers. First, everything one step away. Then
-        everything two steps away. Then three. Then four.
+        everything two steps away. Then three. And so on, until it finds the
+        exit.
       </p>
       <p>
         Instead of diving into one corridor, it keeps a frontier. A whole edge
@@ -102,16 +102,12 @@ import { LogoAnimation } from "../../components/cave/intro";
 
   <section>
     <aside class="notes">
-      <p>And this is why BFS wins this particular battle.</p>
       <p>
-        By the time breadth-first search reaches any position, it has already
-        explored every way of reaching that position in fewer steps.
-      </p>
-      <p>
-        So when BFS reaches an exit for the first time, that exit cannot be
-        beaten by any shorter route. That is the guarantee. Not luck. Not
-        intuition. Just the consequence of exploring in order of distance from
-        the start.
+        This is why BFS wins if shortest path is the goal. It explores the maze
+        layer by layer, always checking the closest positions first. So when BFS
+        reaches the destination, it knows there is no shorter path. If there
+        were a shorter way, it would have found it earlier. That is the
+        guarantee.
       </p>
     </aside>
     <BFSGlobal client:only="react" />
@@ -119,20 +115,20 @@ import { LogoAnimation } from "../../components/cave/intro";
 
   <section>
     <aside class="notes">
-      <p>So does that mean BFS is simply better? Not quite.</p>
       <p>
-        It is better if your question is: which algorithm guarantees the
-        shortest path in a dungeon like this? Then BFS wins.
+        So does that mean BFS is simply better? Not quite. It is better if your
+        question is: which algorithm guarantees the shortest path in a dungeon
+        like this? In that case, BFS wins.
       </p>
       <p>
-        But it wins by paying for that guarantee. It has to keep the frontier
-        alive. It usually explores more, hence it spends more memory.
+        But it pays for that guarantee. It has to keep the whole frontier in
+        memory. That usually means more memory usage.
       </p>
       <p>
-        DFS, on the other hand, is lighter. It commits early, explores deeply,
-        and often keeps less active state at once. So the real lesson is not
-        that one algorithm is always superior. The real lesson is that each one
-        optimizes something different.
+        DFS is lighter. It commits early, goes deep, and usually keeps less
+        active information at the same time. So the real lesson is not that one
+        algorithm is always better. The real lesson is that each one is good at
+        a different thing.
       </p>
     </aside>
     <Comparison client:only="react" />
@@ -144,11 +140,11 @@ import { LogoAnimation } from "../../components/cave/intro";
         Of course, these are not the only ways to search, but breadth-first
         search and depth-first search are two of the most classic starting
         points and they already reveal a very important tradeoff between memory
-        and optimallity.
+        and optimality.
       </p>
       <p>
         So, if you were trapped in this dungeon, and all you cared about was
-        escaping through the shortest path... BFS is the Best For Shortest path.
+        escaping through the shortest path... BFS is your best friend.
       </p>
       <p>
         DFS may still find a way out. Sometimes even quickly. But it does not
