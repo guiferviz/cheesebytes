@@ -19,8 +19,8 @@ import RevealCode from "../../components/RevealCode";
   <section>
     <aside class="notes">
       <p>
-        A grid of water and land. Some cells are land, the rest are water.
-        An island is a group of land cells connected horizontally or vertically.
+        A grid of water and land. Some cells are land, the rest are water. An
+        island is a group of land cells connected horizontally or vertically.
         Diagonal doesn't count. How many islands are there?
       </p>
     </aside>
@@ -31,14 +31,14 @@ import RevealCode from "../../components/RevealCode";
   <section>
     <aside class="notes">
       <p>
-        To answer that, we need a way to identify each island. The idea:
-        when we find a land cell, we flood-fill outward to mark every cell
-        connected to it. That's one island. We use BFS here — start from
-        the cell, visit all neighbors, then their neighbors, and so on.
+        To answer that, we need a way to identify each island. The idea: when we
+        find a land cell, we flood-fill outward to mark every cell connected to
+        it. That's one island. We use BFS here — start from the cell, visit all
+        neighbors, then their neighbors, and so on.
       </p>
       <p>
-        Once the flood is done, every cell in that island is marked.
-        We won't count them again.
+        Once the flood is done, every cell in that island is marked. We won't
+        count them again.
       </p>
     </aside>
     <FloodFillDemo client:only="react" />
@@ -48,13 +48,13 @@ import RevealCode from "../../components/RevealCode";
   <section>
     <aside class="notes">
       <p>
-        Now we scan the whole grid: left to right, top to bottom.
-        Every time we hit an unvisited land cell, we flood-fill it and
-        increment the counter. Water and already-visited cells are skipped.
+        Now we scan the whole grid: left to right, top to bottom. Every time we
+        hit an unvisited land cell, we flood-fill it and increment the counter.
+        Water and already-visited cells are skipped.
       </p>
       <p>
-        Each island gets a different color. At the end, the counter tells
-        us the total number of islands.
+        Each island gets a different color. At the end, the counter tells us the
+        total number of islands.
       </p>
     </aside>
     <FullScan client:only="react" />
@@ -70,8 +70,8 @@ import RevealCode from "../../components/RevealCode";
       </p>
       <p>
         For counting islands it doesn't matter which one you use. Both produce
-        the same result. The choice is about preference and constraints:
-        DFS is simpler to write recursively, BFS avoids deep recursion.
+        the same result. The choice is about preference and constraints: DFS is
+        simpler to write recursively, BFS avoids deep recursion.
       </p>
     </aside>
     <Comparison client:only="react" />
@@ -81,38 +81,30 @@ import RevealCode from "../../components/RevealCode";
   <section id="code" class="text-lg">
     <aside class="notes">
       <p>
-        Let's look at the code. We start with the flood fill.
-        It receives the grid, a starting position, and the visited set.
+        Let's look at the code. We start with the flood fill. It receives the
+        grid, a starting position, and the visited set.
+      </p>
+      <p>We use a queue. We mark the starting cell as visited and add it.</p>
+      <p>
+        For each cell in the queue, we check its four neighbors: up, down, left,
+        right.
       </p>
       <p>
-        We use a queue. We mark the starting cell as visited and add it.
+        If a neighbor is inside the grid, is land, and hasn't been visited, we
+        mark it and add it to the queue. When the queue empties, the whole
+        island is marked.
       </p>
       <p>
-        For each cell in the queue, we check its four neighbors:
-        up, down, left, right.
+        Now the main function. We get the grid dimensions and prepare a visited
+        set and a counter.
       </p>
+      <p>We scan every cell, row by row, left to right.</p>
+      <p>If it's water or already visited, we skip it.</p>
       <p>
-        If a neighbor is inside the grid, is land, and hasn't been visited,
-        we mark it and add it to the queue. When the queue empties,
-        the whole island is marked.
+        Otherwise, it's a new island. We increment the counter and call flood
+        fill to mark all its cells.
       </p>
-      <p>
-        Now the main function. We get the grid dimensions and prepare
-        a visited set and a counter.
-      </p>
-      <p>
-        We scan every cell, row by row, left to right.
-      </p>
-      <p>
-        If it's water or already visited, we skip it.
-      </p>
-      <p>
-        Otherwise, it's a new island. We increment the counter
-        and call flood fill to mark all its cells.
-      </p>
-      <p>
-        When the scan finishes, we return the count.
-      </p>
+      <p>When the scan finishes, we return the count.</p>
     </aside>
     <RevealCode
       client:only="react"
@@ -161,8 +153,8 @@ def count_islands(grid: list[str]) -> int:
         once in the scan, once during flood fill.
       </p>
       <p>
-        Space complexity: O(rows × cols) for the visited set. The queue or
-        stack for the flood fill is bounded by the size of the largest island.
+        Space complexity: O(rows × cols) for the visited set. The queue or stack
+        for the flood fill is bounded by the size of the largest island.
       </p>
     </aside>
     <h2 style="margin-bottom: 0.5em; font-size: 1.6em;">Complexity</h2>
@@ -184,18 +176,14 @@ def count_islands(grid: list[str]) -> int:
             style="padding: 0.55em 1em; text-align: left; opacity: 0.6; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em;"
             >Time</td
           >
-          <td style="padding: 0.55em 1em; font-family: monospace;"
-            >O(R × C)</td
-          >
+          <td style="padding: 0.55em 1em; font-family: monospace;">O(R × C)</td>
         </tr>
         <tr>
           <td
             style="padding: 0.55em 1em; text-align: left; opacity: 0.6; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.05em;"
             >Space</td
           >
-          <td style="padding: 0.55em 1em; font-family: monospace;"
-            >O(R × C)</td
-          >
+          <td style="padding: 0.55em 1em; font-family: monospace;">O(R × C)</td>
         </tr>
         <tr>
           <td
@@ -212,8 +200,8 @@ def count_islands(grid: list[str]) -> int:
   <section>
     <aside class="notes">
       <p>
-        Try it yourself. Click cells to toggle land and water, then press
-        "Count Islands" to run the scan. Each island gets its own color.
+        Try it yourself. Click cells to toggle land and water, then press "Count
+        Islands" to run the scan. Each island gets its own color.
       </p>
     </aside>
     <Interactive client:only="react" />

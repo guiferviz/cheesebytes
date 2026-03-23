@@ -8,12 +8,23 @@ const DIRS: [number, number][] = [
   [0, 1],
 ];
 
-function neighbors(p: Pos, rows: number, cols: number, land: Set<string>): Pos[] {
+function neighbors(
+  p: Pos,
+  rows: number,
+  cols: number,
+  land: Set<string>,
+): Pos[] {
   const result: Pos[] = [];
   for (const [dr, dc] of DIRS) {
     const nr = p.r + dr;
     const nc = p.c + dc;
-    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && land.has(posKey(nr, nc))) {
+    if (
+      nr >= 0 &&
+      nr < rows &&
+      nc >= 0 &&
+      nc < cols &&
+      land.has(posKey(nr, nc))
+    ) {
       result.push({ r: nr, c: nc });
     }
   }

@@ -125,7 +125,8 @@ export const IslandRenderer: React.FC<IslandRendererProps> = ({
           activeIslandIndex !== undefined &&
           islandMap?.has(key) &&
           islandMap.get(key) === activeIslandIndex
-        ) continue;
+        )
+          continue;
         const [r, c] = key.split(",").map(Number);
         fillCell(r, c);
       }
@@ -152,7 +153,19 @@ export const IslandRenderer: React.FC<IslandRendererProps> = ({
       ctx.textBaseline = "middle";
       ctx.fillText(`Islands: ${islandCount}`, width - 20, 28);
     }
-  }, [width, height, rows, cols, land, islandMap, frontier, cursor, scanned, activeIslandIndex, islandCount]);
+  }, [
+    width,
+    height,
+    rows,
+    cols,
+    land,
+    islandMap,
+    frontier,
+    cursor,
+    scanned,
+    activeIslandIndex,
+    islandCount,
+  ]);
 
   return (
     <canvas
