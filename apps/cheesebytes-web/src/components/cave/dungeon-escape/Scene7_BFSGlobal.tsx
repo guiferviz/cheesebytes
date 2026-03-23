@@ -45,6 +45,7 @@ export const BFSGlobal: React.FC = () => {
           explored={state.explored}
           frontier={state.frontier}
           currentPath={state.done ? [] : state.currentPath}
+          paths={pathOverlays}
           exploredColor={DUNGEON_COLORS.explored}
           frontierColor={DUNGEON_COLORS.frontier}
           showStart={true}
