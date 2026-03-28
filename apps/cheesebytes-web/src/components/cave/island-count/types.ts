@@ -30,6 +30,31 @@ export interface FloodStep {
   scanned: Set<string>;
 }
 
+/** Step emitted by the union-find row scanner. */
+export interface UnionFindStep {
+  /** Current scan cursor. */
+  cursor: Pos | null;
+  /** Map from cell key → group colour index (for IslandRenderer). */
+  islandMap: Map<string, number>;
+  /** Running island count. */
+  islandCount: number;
+  /** Cells highlighted this tick (new assignment or merge repaint). */
+  highlight: Set<string>;
+  /** True when the scan is complete. */
+  done: boolean;
+  /** Cells the scanner has already passed over. */
+  scanned: Set<string>;
+  /** What happened on this tick. */
+  action:
+    | "scan"
+    | "new-group"
+    | "join-left"
+    | "join-top"
+    | "join-both"
+    | "merge"
+    | "done";
+}
+
 export const ISLAND_COLORS = {
   water: "#3b82f6",
   land: "#f59e0b",

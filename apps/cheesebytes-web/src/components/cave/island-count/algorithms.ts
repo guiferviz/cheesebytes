@@ -1,4 +1,4 @@
-import type { Pos, FloodStep } from "./types";
+import type { Pos, FloodStep, UnionFindStep } from "./types";
 import { posKey, LAND, MAP_ROWS, MAP_COLS } from "./types";
 
 const DIRS: [number, number][] = [
@@ -197,4 +197,105 @@ export function defaultFloodBFS() {
 
 export function defaultFloodDFS() {
   return floodFillDFS(LAND, MAP_ROWS, MAP_COLS);
+}
+
+// ── Union-Find row-scan algorithm ────────────────────────────────────────────
+// Scans left-to-right, top-to-bottom.  Only needs the previous row's group IDs
+// plus a union-find over active groups → O(min(R,C)) memory when scanning along
+// the shorter axis.  No DFS / BFS — just a counter and group merges.
+
+/**
+ * Scan the grid row by row assigning group IDs to land cells.
+ *
+ * - Land cell with no land neighbour above or to the left → new group (counter++)
+ * - Land cell with exactly one land neighbour → join that group
+ * - Land cell with two land neighbours in the **same** group → join
+ * - Land cell with two land neighbours in **different** groups → merge (counter--)
+ *
+ * Yields a UnionFindStep after every cursor advance and every assignment / merge
+ * so the animation can show each micro-step.
+ */
+export function* unionFindScan(
+  land: Set<string>,
+  rows: number,
+  cols: number,
+): Generator<UnionFindStep> {
+  // cell key → colour-palette index (kept consistent across merges)
+  const groups = new Map<string, number>();
+  const scanned = new Set<string>();
+  let islandCount = 0;
+  let nextColour = 0;
+
+  const snap = (
+    cursor: Pos | null,
+    highlight: Set<string>,
+    action: UnionFindStep["action"],
+    done = false,
+  ): UnionFindStep => ({
+    cursor,
+    islandMap: new Map(groups),
+    islandCount,
+    highlight: new Set(highlight),
+    done,
+    scanned: new Set(scanned),
+    action,
+  });
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const key = posKey(r, c);
+
+      // 1. Cursor advance
+      yield snap({ r, c }, new Set(), "scan");
+
+      scanned.add(key);
+
+      if (!land.has(key)) continue;
+
+      const leftKey = c > 0 ? posKey(r, c - 1) : null;
+      const topKey = r > 0 ? posKey(r - 1, c) : null;
+      const leftG =
+        leftKey !== null && groups.has(leftKey) ? groups.get(leftKey)! : null;
+      const topG =
+        topKey !== null && groups.has(topKey) ? groups.get(topKey)! : null;
+
+      if (leftG === null && topG === null) {
+        // No land neighbours — new group
+        const colour = nextColour++;
+        groups.set(key, colour);
+        islandCount++;
+        yield snap({ r, c }, new Set([key]), "new-group");
+      } else if (leftG !== null && topG === null) {
+        groups.set(key, leftG);
+        yield snap({ r, c }, new Set([key]), "join-left");
+      } else if (leftG === null && topG !== null) {
+        groups.set(key, topG);
+        yield snap({ r, c }, new Set([key]), "join-top");
+      } else if (leftG === topG) {
+        // Both neighbours same group — just join
+        groups.set(key, leftG!);
+        yield snap({ r, c }, new Set([key]), "join-both");
+      } else {
+        // Two different groups meet — merge
+        const keep = leftG!;
+        const absorb = topG!;
+        groups.set(key, keep);
+        const merged = new Set<string>([key]);
+        for (const [cell, g] of groups) {
+          if (g === absorb) {
+            groups.set(cell, keep);
+            merged.add(cell);
+          }
+        }
+        islandCount--;
+        yield snap({ r, c }, merged, "merge");
+      }
+    }
+  }
+
+  yield snap(null, new Set(), "done", true);
+}
+
+export function defaultUnionFind() {
+  return unionFindScan(LAND, MAP_ROWS, MAP_COLS);
 }

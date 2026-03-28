@@ -6,6 +6,7 @@ import {
   FullScan,
   Comparison,
   Interactive,
+  UnionFind,
 } from "../../components/cave/island-count";
 import RevealCode from "../../components/RevealCode";
 ---
@@ -196,7 +197,86 @@ def count_islands(grid: list[str]) -> int:
     </table>
   </section>
 
-  <!-- Slide 6: Interactive -->
+  <!-- Slide 7: Union-Find scan -->
+  <section>
+    <aside class="notes">
+      <p>
+        Can we do better on memory? Yes. Instead of flooding each island with
+        BFS/DFS, we scan the grid row by row and assign group IDs.
+      </p>
+      <p>
+        When a land cell has no land neighbour above or to the left, it starts a
+        new group — increment the counter. When it has one land neighbour, it
+        joins that group. When it connects two different groups, we merge them
+        and decrement the counter.
+      </p>
+      <p>
+        The key insight: we only ever look at the cell to the left and the cell
+        above. So we only need to remember group IDs for the current row and the
+        previous row — that's O(min(R, C)) memory if we scan along the shorter
+        axis. Same O(R × C) time, but much less space.
+      </p>
+    </aside>
+    <UnionFind client:only="react" />
+  </section>
+
+  <!-- Slide 8: Union-Find Python code -->
+  <section id="uf-code" class="text-lg">
+    <aside class="notes">
+      <p>
+        Here's the code. We scan every cell. For each land cell, we check the
+        left and top neighbours.
+      </p>
+      <p>
+        If neither is land, it's a brand-new group. If one is land, we join that
+        group. If both are land but belong to different groups, we merge:
+        repaint the absorbed group and decrement the counter.
+      </p>
+      <p>
+        No recursion, no stack, no queue. Just a dictionary and a counter.
+        Memory: O(min(R, C)) because we only need two rows of group IDs.
+      </p>
+    </aside>
+    <RevealCode
+      client:only="react"
+      animation="fade"
+      code={`def count_islands(grid: list[str]) -> int:
+    rows, cols = len(grid), len(grid[0])
+    groups: dict[tuple, int] = {}
+    count = 0
+    next_id = 0
+    # STEP: Scan every cell row by row
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == "~":
+                continue
+            left = groups.get((r, c - 1))
+            top  = groups.get((r - 1, c))
+            # STEP: No land neighbours → new group
+            if left is None and top is None:
+                groups[(r, c)] = next_id
+                next_id += 1
+                count += 1
+            # STEP: One land neighbour → join that group
+            elif left is not None and top is None:
+                groups[(r, c)] = left
+            elif left is None and top is not None:
+                groups[(r, c)] = top
+            elif left == top:
+                groups[(r, c)] = left
+            # STEP: Two different groups → merge them
+            else:
+                groups[(r, c)] = left
+                for k, v in groups.items():
+                    if v == top:
+                        groups[k] = left
+                count -= 1
+    # STEP: Return total
+    return count`}
+    />
+  </section>
+
+  <!-- Slide 9: Interactive -->
   <section>
     <aside class="notes">
       <p>
