@@ -78,10 +78,10 @@ function pixelNoise(row: number, col: number): number {
 
 // ── Component ────────────────────────────────────────────────────────
 const LogoAnimation: React.FC<LogoAnimationProps> = ({
-  width = 1080,
-  height = 720,
-  pixelScale = 100,
-  duration = 3200,
+  width = 2080,
+  height = 600,
+  pixelScale = 8,
+  duration = 2700,
   loop = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
