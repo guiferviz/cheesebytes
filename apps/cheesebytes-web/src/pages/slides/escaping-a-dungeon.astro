@@ -20,9 +20,9 @@ import {
   <section>
     <aside class="notes">
       <p>
-        One dungeon. Two algorithms. Depth-first search. The algorithm that
-        commits to one path early. Breadth-first search. The algorithm that
-        explores nearby possibilities layer by layer before going deeper.
+        One dungeon. Two algorithms. Depth-first search goes deep early,
+        following one path. Breadth-first search moves step by step, exploring
+        all nearby paths before going deeper.
       </p>
       <p>
         If you were trapped in this dungeon, and all you cared about was
@@ -45,9 +45,9 @@ import {
   <section>
     <aside class="notes">
       <p>
-        DFS is a risk-taker. It chooses one direction and follows it. If it can
-        keep going, it does. If it reaches a dead end, it goes back to the last
-        place where another path was available, and tries that one next.
+        DFS is a risk-taker. It commits to one path and follows it as far as it
+        can. When that path leads nowhere, it backtracks to the last place with
+        another option, and continues from there.
       </p>
     </aside>
     <DFSLocal client:only="react" />
@@ -60,12 +60,16 @@ import {
         in a maze with loops, we could wander in circles forever.
       </p>
       <p>
+        And one more detail matters: the path DFS finds can change depending on
+        which direction it tries first.
+      </p>
+      <p>
         DFS hates hesitation. But that same strength can also be a weakness.
         Because it commits early, it may go deep into a bad branch before it
         even checks a better one nearby.
       </p>
       <p>
-        So DFS can absolutely find an exit. But it does not guarantee the
+        So DFS can absolutely find an exit. But it doesn't guarantee the
         shortest one.
       </p>
     </aside>
@@ -75,10 +79,10 @@ import {
   <section>
     <aside class="notes">
       <p>
-        Now look at BFS. Breadth-first search refuses to commit too early. It
-        explores the dungeon in layers. First, everything one step away. Then
-        everything two steps away. Then three. And so on, until it finds the
-        exit.
+        Now look at BFS. Breadth-first search avoids committing too early. It
+        explores the dungeon layer by layer. First, all positions one step away.
+        Then all positions two steps away. Then three. And so on, until it finds
+        the exit.
       </p>
       <p>
         Instead of diving into one corridor, it keeps a frontier. A whole edge
@@ -91,11 +95,9 @@ import {
   <section>
     <aside class="notes">
       <p>
-        This is why BFS wins if shortest path is the goal. It explores the maze
-        layer by layer, always checking the closest positions first. So when BFS
-        reaches the destination, it knows there is no shorter path. If there
-        were a shorter way, it would have found it earlier. That is the
-        guarantee.
+        This is why BFS wins when the goal is the shortest path. It expands
+        outward step by step from the start. That means the first path it finds
+        to the destination is guaranteed to be the shortest.
       </p>
     </aside>
     <BFSGlobal client:only="react" />
@@ -103,11 +105,6 @@ import {
 
   <section>
     <aside class="notes">
-      <p>
-        So does that mean BFS is simply better? Not quite. It is better if your
-        question is: which algorithm guarantees the shortest path in a dungeon
-        like this? In that case, BFS wins.
-      </p>
       <p>
         But it pays for that guarantee. It has to keep the whole frontier in
         memory. That usually means more memory usage.
@@ -125,18 +122,17 @@ import {
   <section>
     <aside class="notes">
       <p>
-        Of course, these are not the only ways to search. But breadth-first
-        search and depth-first search are two of the most classic starting
-        points and they already reveal an important trade-off between memory and
-        optimality.
+        These are not the only search strategies. But breadth-first search and
+        depth-first search are two of the most classic ones, and they already
+        show a key trade-off between memory and optimality.
       </p>
       <p>
         So, if you were trapped in this dungeon, and all you cared about was
         escaping through the shortest path... BFS is your best friend.
       </p>
       <p>
-        DFS may still find a way out. Sometimes even quickly. But it does not
-        promise the best route.
+        DFS also finds a way out. Sometimes even quickly. But it doesn't promies
+        the best route.
       </p>
     </aside>
     <table
