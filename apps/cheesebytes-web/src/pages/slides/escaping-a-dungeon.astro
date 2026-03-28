@@ -10,6 +10,7 @@ import {
   Comparison,
   MapEditor,
 } from "../../components/cave/dungeon-escape";
+import { LogoAnimation } from "../../components/cave/intro";
 ---
 
 <RevealLayout
@@ -244,5 +245,9 @@ import {
   <!-- Map Editor (helper slide for designing maps) -->
   <section data-visibility="hidden">
     <MapEditor client:only="react" />
+  </section>
+
+  <section>
+    <LogoAnimation client:load />
   </section>
 </RevealLayout>

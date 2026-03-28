@@ -5,12 +5,12 @@ import {
   ElementalNamesTree as ElementTree,
   ElementalNamesSingleChar as ArrayVisualizer,
   ElementalNamesAllPossibilities,
-  ComplexityBenchmark,
   ElementSlotMachine,
   EricaBacktrackVisualizer,
   ElementalNameChecker,
 } from "../../components/cave/nombres-elementales";
 import RevealCode from "../../components/RevealCode";
+import { LogoAnimation } from "../../components/cave/intro";
 ---
 
 <RevealLayout
@@ -92,7 +92,7 @@ import RevealCode from "../../components/RevealCode";
   </section>
 
   <section>
-    <!-- Cheese Bytes Intro -->
+    <LogoAnimation client:load />
   </section>
 
   <section>
