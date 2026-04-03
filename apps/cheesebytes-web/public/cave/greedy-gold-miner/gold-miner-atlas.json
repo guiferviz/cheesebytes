@@ -1,0 +1,1424 @@
+{
+  "meta": {
+    "image": "gold_miner.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 384,
+      "h": 288
+    },
+    "scale": 1,
+    "cell_size": {
+      "w": 48,
+      "h": 48
+    },
+    "padding": 0,
+    "columns": 8,
+    "rows": 6,
+    "frame_count": 48,
+    "generator": "pixellab_to_spritesheet.py"
+  },
+  "frames": {
+    "rotations/south": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/south.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "south",
+      "animation": null,
+      "direction": "south",
+      "frame_index": 0
+    },
+    "rotations/south-east": {
+      "frame": {
+        "x": 48,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 48,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/south-east.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "south-east",
+      "animation": null,
+      "direction": "south-east",
+      "frame_index": 0
+    },
+    "rotations/east": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 96,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/east.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "east",
+      "animation": null,
+      "direction": "east",
+      "frame_index": 0
+    },
+    "rotations/north-east": {
+      "frame": {
+        "x": 144,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 144,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/north-east.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "north-east",
+      "animation": null,
+      "direction": "north-east",
+      "frame_index": 0
+    },
+    "rotations/north": {
+      "frame": {
+        "x": 192,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 192,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/north.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "north",
+      "animation": null,
+      "direction": "north",
+      "frame_index": 0
+    },
+    "rotations/north-west": {
+      "frame": {
+        "x": 240,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 240,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/north-west.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "north-west",
+      "animation": null,
+      "direction": "north-west",
+      "frame_index": 0
+    },
+    "rotations/west": {
+      "frame": {
+        "x": 288,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 288,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/west.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "west",
+      "animation": null,
+      "direction": "west",
+      "frame_index": 0
+    },
+    "rotations/south-west": {
+      "frame": {
+        "x": 336,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 336,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "rotations/south-west.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "south-west",
+      "animation": null,
+      "direction": "south-west",
+      "frame_index": 0
+    },
+    "animations/breathing-idle/west/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 0,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/west/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "west",
+      "frame_index": 0
+    },
+    "animations/breathing-idle/west/frame_001": {
+      "frame": {
+        "x": 48,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 48,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/west/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "west",
+      "frame_index": 1
+    },
+    "animations/breathing-idle/west/frame_002": {
+      "frame": {
+        "x": 96,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 96,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/west/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "west",
+      "frame_index": 2
+    },
+    "animations/breathing-idle/west/frame_003": {
+      "frame": {
+        "x": 144,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 144,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/west/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "west",
+      "frame_index": 3
+    },
+    "animations/breathing-idle/south/frame_000": {
+      "frame": {
+        "x": 192,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 192,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/south/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "south",
+      "frame_index": 0
+    },
+    "animations/breathing-idle/south/frame_001": {
+      "frame": {
+        "x": 240,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 240,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/south/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "south",
+      "frame_index": 1
+    },
+    "animations/breathing-idle/south/frame_002": {
+      "frame": {
+        "x": 288,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 288,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/south/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "south",
+      "frame_index": 2
+    },
+    "animations/breathing-idle/south/frame_003": {
+      "frame": {
+        "x": 336,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 336,
+        "y": 48,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/south/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "south",
+      "frame_index": 3
+    },
+    "animations/breathing-idle/east/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 0,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/east/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "east",
+      "frame_index": 0
+    },
+    "animations/breathing-idle/east/frame_001": {
+      "frame": {
+        "x": 48,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 48,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/east/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "east",
+      "frame_index": 1
+    },
+    "animations/breathing-idle/east/frame_002": {
+      "frame": {
+        "x": 96,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 96,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/east/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "east",
+      "frame_index": 2
+    },
+    "animations/breathing-idle/east/frame_003": {
+      "frame": {
+        "x": 144,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 144,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/east/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "east",
+      "frame_index": 3
+    },
+    "animations/breathing-idle/north/frame_000": {
+      "frame": {
+        "x": 192,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 192,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/north/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "north",
+      "frame_index": 0
+    },
+    "animations/breathing-idle/north/frame_001": {
+      "frame": {
+        "x": 240,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 240,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/north/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "north",
+      "frame_index": 1
+    },
+    "animations/breathing-idle/north/frame_002": {
+      "frame": {
+        "x": 288,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 288,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/north/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "north",
+      "frame_index": 2
+    },
+    "animations/breathing-idle/north/frame_003": {
+      "frame": {
+        "x": 336,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 336,
+        "y": 96,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/breathing-idle/north/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "breathing-idle",
+      "direction": "north",
+      "frame_index": 3
+    },
+    "animations/walk/north/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 0,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/north/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "north",
+      "frame_index": 0
+    },
+    "animations/walk/north/frame_001": {
+      "frame": {
+        "x": 48,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 48,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/north/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "north",
+      "frame_index": 1
+    },
+    "animations/walk/north/frame_002": {
+      "frame": {
+        "x": 96,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 96,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/north/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "north",
+      "frame_index": 2
+    },
+    "animations/walk/north/frame_003": {
+      "frame": {
+        "x": 144,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 144,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/north/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "north",
+      "frame_index": 3
+    },
+    "animations/walk/north/frame_004": {
+      "frame": {
+        "x": 192,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 192,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/north/frame_004.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "north",
+      "frame_index": 4
+    },
+    "animations/walk/north/frame_005": {
+      "frame": {
+        "x": 240,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 240,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/north/frame_005.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "north",
+      "frame_index": 5
+    },
+    "animations/walk/east/frame_000": {
+      "frame": {
+        "x": 288,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 288,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/east/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "east",
+      "frame_index": 0
+    },
+    "animations/walk/east/frame_001": {
+      "frame": {
+        "x": 336,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 336,
+        "y": 144,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/east/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "east",
+      "frame_index": 1
+    },
+    "animations/walk/east/frame_002": {
+      "frame": {
+        "x": 0,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 0,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/east/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "east",
+      "frame_index": 2
+    },
+    "animations/walk/east/frame_003": {
+      "frame": {
+        "x": 48,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 48,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/east/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "east",
+      "frame_index": 3
+    },
+    "animations/walk/east/frame_004": {
+      "frame": {
+        "x": 96,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 96,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/east/frame_004.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "east",
+      "frame_index": 4
+    },
+    "animations/walk/east/frame_005": {
+      "frame": {
+        "x": 144,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 144,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/east/frame_005.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "east",
+      "frame_index": 5
+    },
+    "animations/walk/west/frame_000": {
+      "frame": {
+        "x": 192,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 192,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/west/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "west",
+      "frame_index": 0
+    },
+    "animations/walk/west/frame_001": {
+      "frame": {
+        "x": 240,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 240,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/west/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "west",
+      "frame_index": 1
+    },
+    "animations/walk/west/frame_002": {
+      "frame": {
+        "x": 288,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 288,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/west/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "west",
+      "frame_index": 2
+    },
+    "animations/walk/west/frame_003": {
+      "frame": {
+        "x": 336,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 336,
+        "y": 192,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/west/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "west",
+      "frame_index": 3
+    },
+    "animations/walk/west/frame_004": {
+      "frame": {
+        "x": 0,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 0,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/west/frame_004.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "west",
+      "frame_index": 4
+    },
+    "animations/walk/west/frame_005": {
+      "frame": {
+        "x": 48,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 48,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/west/frame_005.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "west",
+      "frame_index": 5
+    },
+    "animations/walk/south/frame_000": {
+      "frame": {
+        "x": 96,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 96,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/south/frame_000.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "south",
+      "frame_index": 0
+    },
+    "animations/walk/south/frame_001": {
+      "frame": {
+        "x": 144,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 144,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/south/frame_001.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "south",
+      "frame_index": 1
+    },
+    "animations/walk/south/frame_002": {
+      "frame": {
+        "x": 192,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 192,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/south/frame_002.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "south",
+      "frame_index": 2
+    },
+    "animations/walk/south/frame_003": {
+      "frame": {
+        "x": 240,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 240,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/south/frame_003.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "south",
+      "frame_index": 3
+    },
+    "animations/walk/south/frame_004": {
+      "frame": {
+        "x": 288,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 288,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/south/frame_004.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "south",
+      "frame_index": 4
+    },
+    "animations/walk/south/frame_005": {
+      "frame": {
+        "x": 336,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "sprite": {
+        "x": 336,
+        "y": 240,
+        "w": 48,
+        "h": 48
+      },
+      "source": {
+        "path": "animations/walk/south/frame_005.png",
+        "size": {
+          "w": 48,
+          "h": 48
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "walk",
+      "direction": "south",
+      "frame_index": 5
+    }
+  },
+  "clips": {
+    "rotations": {
+      "south": [
+        "rotations/south"
+      ],
+      "south-east": [
+        "rotations/south-east"
+      ],
+      "east": [
+        "rotations/east"
+      ],
+      "north-east": [
+        "rotations/north-east"
+      ],
+      "north": [
+        "rotations/north"
+      ],
+      "north-west": [
+        "rotations/north-west"
+      ],
+      "west": [
+        "rotations/west"
+      ],
+      "south-west": [
+        "rotations/south-west"
+      ]
+    },
+    "animations": {
+      "breathing-idle": {
+        "west": [
+          "animations/breathing-idle/west/frame_000",
+          "animations/breathing-idle/west/frame_001",
+          "animations/breathing-idle/west/frame_002",
+          "animations/breathing-idle/west/frame_003"
+        ],
+        "south": [
+          "animations/breathing-idle/south/frame_000",
+          "animations/breathing-idle/south/frame_001",
+          "animations/breathing-idle/south/frame_002",
+          "animations/breathing-idle/south/frame_003"
+        ],
+        "east": [
+          "animations/breathing-idle/east/frame_000",
+          "animations/breathing-idle/east/frame_001",
+          "animations/breathing-idle/east/frame_002",
+          "animations/breathing-idle/east/frame_003"
+        ],
+        "north": [
+          "animations/breathing-idle/north/frame_000",
+          "animations/breathing-idle/north/frame_001",
+          "animations/breathing-idle/north/frame_002",
+          "animations/breathing-idle/north/frame_003"
+        ]
+      },
+      "walk": {
+        "north": [
+          "animations/walk/north/frame_000",
+          "animations/walk/north/frame_001",
+          "animations/walk/north/frame_002",
+          "animations/walk/north/frame_003",
+          "animations/walk/north/frame_004",
+          "animations/walk/north/frame_005"
+        ],
+        "east": [
+          "animations/walk/east/frame_000",
+          "animations/walk/east/frame_001",
+          "animations/walk/east/frame_002",
+          "animations/walk/east/frame_003",
+          "animations/walk/east/frame_004",
+          "animations/walk/east/frame_005"
+        ],
+        "west": [
+          "animations/walk/west/frame_000",
+          "animations/walk/west/frame_001",
+          "animations/walk/west/frame_002",
+          "animations/walk/west/frame_003",
+          "animations/walk/west/frame_004",
+          "animations/walk/west/frame_005"
+        ],
+        "south": [
+          "animations/walk/south/frame_000",
+          "animations/walk/south/frame_001",
+          "animations/walk/south/frame_002",
+          "animations/walk/south/frame_003",
+          "animations/walk/south/frame_004",
+          "animations/walk/south/frame_005"
+        ]
+      }
+    }
+  },
+  "source": {
+    "character": {
+      "id": "11293cd0-5891-40f0-89ab-5bd5b3427a98",
+      "name": "Top-down pixel art gold miner character for a retro puzzle game, carrying a drill, a helmet with a glowing headlamp, and a small bag of gold. Cute but adventurous, clear silhouette, cave-themed color palette, no background. Make sure that the sack or backpack is consisten in color. Always same color in all photograms.",
+      "prompt": "Top-down pixel art gold miner character for a retro puzzle game, carrying a drill, a helmet with a glowing headlamp, and a small bag of gold. Cute but adventurous, clear silhouette, cave-themed color palette, no background. Make sure that the sack or backpack is consisten in color. Always same color in all photograms.",
+      "size": {
+        "width": 48,
+        "height": 48
+      },
+      "template_id": "mannequin",
+      "directions": 8,
+      "view": "high top-down",
+      "created_at": "2026-03-29T15:40:37.23019+00:00"
+    },
+    "metadata_file": "metadata.json"
+  }
+}

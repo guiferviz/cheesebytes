@@ -28,7 +28,10 @@ interface CellDecor {
 }
 
 const ATLAS_SRC = "/tiles/terrain_atlas.png";
-const SPRITE_SHEET = "/cave/greedy-gold-miner/gold-miner-walk.png";
+const SPRITE_ATLAS_SRC = "/cave/greedy-gold-miner/gold-miner-atlas.png";
+const SPRITE_META_SRC = "/cave/greedy-gold-miner/gold-miner-atlas.json";
+const SPRITE_FRAME_W = 48;
+const SPRITE_FRAME_H = 48;
 const TS = 32;
 const ATLAS_COLS = 32;
 const DISPLAY_W = 620;
@@ -46,12 +49,38 @@ const DIRECTION_DELTAS: Record<Direction, Pos> = {
   east: { r: 0, c: 1 },
   west: { r: 0, c: -1 },
 };
-const ANIMATION_ROWS: Record<Direction, number> = {
-  south: 0,
-  west: 1,
-  east: 2,
-  north: 3,
-};
+const IDLE_FRAME_RATE = 6;
+const WALK_FRAME_RATE = 10;
+
+interface SpriteManifestFrame {
+  frame: { x: number; y: number; w: number; h: number };
+  sprite: { x: number; y: number; w: number; h: number };
+  kind: "rotation" | "animation";
+  pose: string | null;
+  animation: string | null;
+  direction: string;
+  frame_index: number;
+}
+
+interface SpriteManifest {
+  meta: {
+    image: string;
+    format: string;
+    size: { w: number; h: number };
+    scale: number;
+    cell_size: { w: number; h: number };
+    padding: number;
+    columns: number;
+    rows: number;
+    frame_count: number;
+    generator: string;
+  };
+  frames: Record<string, SpriteManifestFrame>;
+  clips: {
+    rotations: Record<string, string[]>;
+    animations: Record<string, Record<string, string[]>>;
+  };
+}
 
 // ── 8-bit Audio Engine (Web Audio API) ──────────────────────────────
 
@@ -255,12 +284,29 @@ function roundToPixel(value: number): number {
   return Math.round(value);
 }
 
-function animationKey(direction: Direction): string {
-  return `gold-miner-${direction}`;
+function idleAnimationKey(direction: Direction): string {
+  return `gold-miner-idle-${direction}`;
 }
 
-function idleFrame(direction: Direction): number {
-  return ANIMATION_ROWS[direction] * 6;
+function walkAnimationKey(direction: Direction): string {
+  return `gold-miner-walk-${direction}`;
+}
+
+function clipDurationMs(frameCount: number, frameRate: number): number {
+  return Math.max(1, Math.round((frameCount / frameRate) * 1000));
+}
+
+function manifestFrameToIndex(
+  manifest: SpriteManifest,
+  frameId: string,
+): number {
+  const frame = manifest.frames[frameId]?.frame;
+  if (!frame) throw new Error(`Missing frame '${frameId}' in sprite manifest`);
+  const strideX = manifest.meta.cell_size.w + manifest.meta.padding;
+  const strideY = manifest.meta.cell_size.h + manifest.meta.padding;
+  const col = Math.floor(frame.x / strideX);
+  const row = Math.floor(frame.y / strideY);
+  return row * manifest.meta.columns + col;
 }
 
 function isWalkable(pos: Pos, collapsed: Set<string>): boolean {
@@ -400,12 +446,13 @@ export const GoldMineGame: React.FC = () => {
         floorTexture: any;
         miner: any;
         cameraTarget: any;
+        spriteManifest: SpriteManifest | null = null;
         collapsed = new Set<string>();
         currentPos: Pos = { ...START };
+        currentFacing: Direction = "south";
         moving = false;
         currentGold = 0;
         decor = new Map<string, CellDecor>();
-        idleTween: any = null;
         baseY = 0;
         status: GameStatus = "playing";
 
@@ -418,10 +465,11 @@ export const GoldMineGame: React.FC = () => {
             frameWidth: TS,
             frameHeight: TS,
           });
-          this.load.spritesheet("gold-miner", SPRITE_SHEET, {
-            frameWidth: 48,
-            frameHeight: 48,
+          this.load.spritesheet("gold-miner", SPRITE_ATLAS_SRC, {
+            frameWidth: SPRITE_FRAME_W,
+            frameHeight: SPRITE_FRAME_H,
           });
+          this.load.json("gold-miner-meta", SPRITE_META_SRC);
         }
 
         create() {
@@ -577,32 +625,135 @@ export const GoldMineGame: React.FC = () => {
         }
 
         createAnimations() {
-          (Object.keys(ANIMATION_ROWS) as Direction[]).forEach((direction) => {
-            const key = animationKey(direction);
-            if (this.anims.exists(key)) return;
-            const start = ANIMATION_ROWS[direction] * 6;
-            this.anims.create({
-              key,
-              frames: this.anims.generateFrameNumbers("gold-miner", {
-                start,
-                end: start + 5,
-              }),
-              frameRate: 12,
-              repeat: -1,
-            });
+          this.spriteManifest = this.cache.json.get(
+            "gold-miner-meta",
+          ) as SpriteManifest;
+
+          (Object.keys(DIRECTION_DELTAS) as Direction[]).forEach(
+            (direction) => {
+              this.createClipAnimation(
+                idleAnimationKey(direction),
+                this.spriteManifest?.clips.animations["breathing-idle"]?.[
+                  direction
+                ] ??
+                  this.spriteManifest?.clips.rotations[direction] ??
+                  [],
+                IDLE_FRAME_RATE,
+                -1,
+              );
+
+              this.createClipAnimation(
+                walkAnimationKey(direction),
+                this.spriteManifest?.clips.animations.walk?.[direction] ?? [],
+                WALK_FRAME_RATE,
+                0,
+              );
+            },
+          );
+        }
+
+        createClipAnimation(
+          key: string,
+          clipFrameIds: string[],
+          frameRate: number,
+          repeat: number,
+        ) {
+          if (
+            !this.spriteManifest ||
+            this.anims.exists(key) ||
+            clipFrameIds.length === 0
+          ) {
+            return;
+          }
+
+          this.anims.create({
+            key,
+            frames: clipFrameIds.map((frameId) => ({
+              key: "gold-miner",
+              frame: manifestFrameToIndex(this.spriteManifest!, frameId),
+            })),
+            frameRate,
+            repeat,
           });
+        }
+
+        getRotationFrame(direction: Direction): number {
+          const manifest = this.spriteManifest;
+          if (!manifest) return 0;
+
+          const rotationFrames = manifest.clips.rotations[direction];
+          if (rotationFrames?.length) {
+            return manifestFrameToIndex(manifest, rotationFrames[0]);
+          }
+
+          const idleFrames =
+            manifest.clips.animations["breathing-idle"]?.[direction];
+          if (idleFrames?.length) {
+            return manifestFrameToIndex(manifest, idleFrames[0]);
+          }
+
+          return 0;
+        }
+
+        playIdle(direction: Direction) {
+          this.currentFacing = direction;
+          const key = idleAnimationKey(direction);
+          if (this.anims.exists(key)) {
+            this.miner.play(key, true);
+            return;
+          }
+          this.miner.stop();
+          this.miner.setFrame(this.getRotationFrame(direction));
+        }
+
+        getMoveProfile(direction: Direction) {
+          const walkIds =
+            this.spriteManifest?.clips.animations.walk?.[direction] ?? [];
+          if (
+            walkIds.length > 0 &&
+            this.anims.exists(walkAnimationKey(direction))
+          ) {
+            return {
+              key: walkAnimationKey(direction),
+              durationMs: clipDurationMs(walkIds.length, WALK_FRAME_RATE),
+            };
+          }
+
+          const idleIds =
+            this.spriteManifest?.clips.animations["breathing-idle"]?.[
+              direction
+            ] ?? [];
+          if (
+            idleIds.length > 0 &&
+            this.anims.exists(idleAnimationKey(direction))
+          ) {
+            return {
+              key: idleAnimationKey(direction),
+              durationMs: clipDurationMs(idleIds.length, IDLE_FRAME_RATE),
+            };
+          }
+
+          return {
+            key: null,
+            durationMs: 420,
+          };
         }
 
         createMiner() {
           const x = cellCenterX(START.c);
           const y = cellCenterY(START.r);
           this.cameraTarget = this.add.zone(x, y, 1, 1);
-          this.miner = this.add.sprite(x, y, "gold-miner", idleFrame("south"));
+          this.miner = this.add.sprite(
+            x,
+            y,
+            "gold-miner",
+            this.getRotationFrame("south"),
+          );
           this.miner.setScale(1.25);
           this.miner.setDepth(10);
           this.baseY = y;
           this.setMinerPosition(x, y);
-          this.startIdleFloat();
+          this.playIdle("south");
         }
 
         setMinerPosition(x: number, y: number) {
@@ -614,31 +765,18 @@ export const GoldMineGame: React.FC = () => {
         }
 
         stopIdleFloat() {
-          if (this.idleTween) {
-            this.idleTween.stop();
-            this.idleTween = null;
-          }
+          this.miner.stop();
           this.setMinerPosition(this.miner.x, this.baseY);
         }
 
         startIdleFloat() {
-          this.stopIdleFloat();
-          const idleState = { y: this.baseY };
-          this.idleTween = this.tweens.add({
-            targets: idleState,
-            y: this.baseY - 2,
-            duration: 700,
-            yoyo: true,
-            repeat: -1,
-            ease: "Sine.InOut",
-            onUpdate: () => {
-              this.setMinerPosition(this.miner.x, idleState.y);
-            },
-          });
+          this.playIdle(this.currentFacing);
         }
 
         tryMove(direction: Direction) {
           if (this.moving || this.status !== "playing") return;
+
+          this.playIdle(direction);
 
           const delta = DIRECTION_DELTAS[direction];
           const next = {
@@ -653,7 +791,13 @@ export const GoldMineGame: React.FC = () => {
 
           this.moving = true;
           this.stopIdleFloat();
-          this.miner.play(animationKey(direction), true);
+          this.currentFacing = direction;
+          const moveProfile = this.getMoveProfile(direction);
+          if (moveProfile.key) {
+            this.miner.play(moveProfile.key, true);
+          } else {
+            this.miner.setFrame(this.getRotationFrame(direction));
+          }
           const previous = { ...this.currentPos };
           const targetX = cellCenterX(next.c);
           const targetY = cellCenterY(next.r);
@@ -663,15 +807,13 @@ export const GoldMineGame: React.FC = () => {
             targets: moveState,
             x: targetX,
             y: targetY,
-            duration: 160,
+            duration: moveProfile.durationMs,
             ease: "Quad.Out",
             onUpdate: () => {
               this.setMinerPosition(moveState.x, moveState.y);
               this.setCameraTargetPosition(moveState.x, moveState.y);
             },
             onComplete: () => {
-              this.miner.stop();
-              this.miner.setFrame(idleFrame(direction));
               this.currentPos = next;
               this.currentGold += 1;
               setGold(this.currentGold);
