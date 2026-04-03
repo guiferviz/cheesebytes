@@ -19,6 +19,7 @@ interface Pos {
 
 interface SceneController {
   move: (direction: Direction) => void;
+  setZoom: (zoom: number) => void;
 }
 
 interface CellDecor {
@@ -36,6 +37,9 @@ const TILE_COLS = MAP_COLS * 2;
 const TILE_ROWS = MAP_ROWS * 2;
 const WORLD_W = TILE_COLS * TS;
 const WORLD_H = TILE_ROWS * TS;
+const FIT_ZOOM = Math.min(DISPLAY_W / WORLD_W, DISPLAY_H / WORLD_H);
+const MAX_ZOOM = 2.2;
+const INITIAL_ZOOM = 1.8;
 const DIRECTION_DELTAS: Record<Direction, Pos> = {
   north: { r: -1, c: 0 },
   south: { r: 1, c: 0 },
@@ -49,52 +53,193 @@ const ANIMATION_ROWS: Record<Direction, number> = {
   north: 3,
 };
 
+// ── 8-bit Audio Engine (Web Audio API) ──────────────────────────────
+
+let sharedAudioCtx: AudioContext | null = null;
+
+function getAudioCtx(): AudioContext {
+  if (!sharedAudioCtx) {
+    sharedAudioCtx = new AudioContext();
+  }
+  return sharedAudioCtx;
+}
+
+function playTone(
+  freq: number,
+  duration: number,
+  type: OscillatorType = "square",
+  volume = 0.12,
+  detune = 0,
+) {
+  const ctx = getAudioCtx();
+  if (ctx.state === "suspended") ctx.resume();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  osc.detune.value = detune;
+  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration);
+}
+
+const sfx = {
+  step() {
+    playTone(220 + Math.random() * 60, 0.06, "square", 0.07);
+  },
+  collapse() {
+    playTone(80, 0.15, "sawtooth", 0.1);
+    playTone(55, 0.25, "triangle", 0.08);
+  },
+  gold() {
+    playTone(587, 0.08, "square", 0.09);
+    setTimeout(() => playTone(784, 0.1, "square", 0.09), 60);
+  },
+  bump() {
+    playTone(90, 0.12, "sawtooth", 0.1, -20);
+  },
+  win() {
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((f, i) =>
+      setTimeout(() => playTone(f, 0.18, "square", 0.1), i * 100),
+    );
+  },
+  lose() {
+    const notes = [311, 277, 233, 185];
+    notes.forEach((f, i) =>
+      setTimeout(() => playTone(f, 0.22, "sawtooth", 0.1), i * 120),
+    );
+  },
+};
+
+// Dark underground 8-bit melody
+const MELODY_NOTES = [
+  164.81,
+  196.0,
+  185.0,
+  164.81, // E3 G3 F#3 E3
+  146.83,
+  164.81,
+  130.81,
+  146.83, // D3 E3 C3 D3
+  123.47,
+  146.83,
+  130.81,
+  110.0, // B2 D3 C3 A2
+  123.47,
+  110.0,
+  98.0,
+  110.0, // B2 A2 G2 A2
+];
+const BASS_NOTES = [
+  82.41,
+  82.41,
+  73.42,
+  73.42, // E2 E2 D2 D2
+  65.41,
+  65.41,
+  55.0,
+  55.0, // C2 C2 A1 A1
+  61.74,
+  61.74,
+  55.0,
+  55.0, // B1 B1 A1 A1
+  61.74,
+  55.0,
+  49.0,
+  55.0, // B1 A1 G1 A1
+];
+const NOTE_DUR = 0.32;
+
+class MusicEngine {
+  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private step = 0;
+  playing = false;
+
+  start() {
+    if (this.playing) return;
+    this.playing = true;
+    const ctx = getAudioCtx();
+    if (ctx.state === "suspended") ctx.resume();
+    this.step = 0;
+    this.tick();
+    this.intervalId = setInterval(() => this.tick(), NOTE_DUR * 1000);
+  }
+
+  stop() {
+    this.playing = false;
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  private tick() {
+    const i = this.step % MELODY_NOTES.length;
+    playTone(MELODY_NOTES[i], NOTE_DUR * 0.8, "square", 0.05);
+    playTone(BASS_NOTES[i], NOTE_DUR * 0.9, "triangle", 0.06);
+    this.step++;
+  }
+}
+
+const musicEngine = new MusicEngine();
+
 function isWall(r: number, c: number): boolean {
   if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return true;
   return WALLS.has(posKey(r, c));
+}
+
+type BlockedFn = (r: number, c: number) => boolean;
+
+function isBlocked(r: number, c: number, collapsed: Set<string>): boolean {
+  if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return true;
+  const key = posKey(r, c);
+  return WALLS.has(key) || collapsed.has(key);
 }
 
 function tIdx(row: number, col: number): number {
   return row * ATLAS_COLS + col;
 }
 
-function tileTL(r: number, c: number): number {
-  const wN = isWall(r - 1, c);
-  const wW = isWall(r, c - 1);
+function tileTL(r: number, c: number, blocked: BlockedFn = isWall): number {
+  const wN = blocked(r - 1, c);
+  const wW = blocked(r, c - 1);
   if (wN && wW) return tIdx(2, 18);
   if (wN) return tIdx(2, 19);
   if (wW) return tIdx(3, 18);
-  if (isWall(r - 1, c - 1)) return tIdx(1, 20);
+  if (blocked(r - 1, c - 1)) return tIdx(1, 20);
   return tIdx(3, 19);
 }
 
-function tileTR(r: number, c: number): number {
-  const wN = isWall(r - 1, c);
-  const wE = isWall(r, c + 1);
+function tileTR(r: number, c: number, blocked: BlockedFn = isWall): number {
+  const wN = blocked(r - 1, c);
+  const wE = blocked(r, c + 1);
   if (wN && wE) return tIdx(2, 20);
   if (wN) return tIdx(2, 19);
   if (wE) return tIdx(3, 20);
-  if (isWall(r - 1, c + 1)) return tIdx(1, 19);
+  if (blocked(r - 1, c + 1)) return tIdx(1, 19);
   return tIdx(3, 19);
 }
 
-function tileBL(r: number, c: number): number {
-  const wS = isWall(r + 1, c);
-  const wW = isWall(r, c - 1);
+function tileBL(r: number, c: number, blocked: BlockedFn = isWall): number {
+  const wS = blocked(r + 1, c);
+  const wW = blocked(r, c - 1);
   if (wS && wW) return tIdx(4, 18);
   if (wS) return tIdx(4, 19);
   if (wW) return tIdx(3, 18);
-  if (isWall(r + 1, c - 1)) return tIdx(0, 20);
+  if (blocked(r + 1, c - 1)) return tIdx(0, 20);
   return tIdx(3, 19);
 }
 
-function tileBR(r: number, c: number): number {
-  const wS = isWall(r + 1, c);
-  const wE = isWall(r, c + 1);
+function tileBR(r: number, c: number, blocked: BlockedFn = isWall): number {
+  const wS = blocked(r + 1, c);
+  const wE = blocked(r, c + 1);
   if (wS && wE) return tIdx(4, 20);
   if (wS) return tIdx(4, 19);
   if (wE) return tIdx(3, 20);
-  if (isWall(r + 1, c + 1)) return tIdx(0, 19);
+  if (blocked(r + 1, c + 1)) return tIdx(0, 19);
   return tIdx(3, 19);
 }
 
@@ -127,6 +272,10 @@ function cellCenterY(r: number): number {
 
 function worldToTileCell(pos: Pos): { tx: number; ty: number } {
   return { tx: pos.c * 2, ty: pos.r * 2 };
+}
+
+function roundToPixel(value: number): number {
+  return Math.round(value);
 }
 
 function animationKey(direction: Direction): string {
@@ -180,20 +329,45 @@ export const GoldMineGame: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<any>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
+  const controlsArmedRef = useRef(false);
   const [runId, setRunId] = useState(0);
   const [gold, setGold] = useState(0);
   const [bestGold, setBestGold] = useState(0);
+  const [zoom, setZoom] = useState(INITIAL_ZOOM);
+  const [controlsArmed, setControlsArmed] = useState(false);
   const [status, setStatus] = useState<GameStatus>("playing");
   const [message, setMessage] = useState(
-    "Cada paso da 1 de oro. El suelo que abandonas colapsa y desaparece.",
+    "Every step gives you 1 gold. The tile you leave behind collapses and disappears.",
   );
+  const [musicOn, setMusicOn] = useState(false);
+  const [sfxOn, setSfxOn] = useState(true);
+  const sfxOnRef = useRef(true);
+
+  useEffect(() => {
+    sfxOnRef.current = sfxOn;
+  }, [sfxOn]);
+
+  useEffect(() => {
+    if (musicOn) musicEngine.start();
+    else musicEngine.stop();
+    return () => {
+      musicEngine.stop();
+    };
+  }, [musicOn]);
+
+  function setControlsCapture(nextValue: boolean) {
+    controlsArmedRef.current = nextValue;
+    setControlsArmed(nextValue);
+  }
 
   useEffect(() => {
     setGold(0);
     setStatus("playing");
     setMessage(
-      "Cada paso da 1 de oro. El suelo que abandonas colapsa y desaparece.",
+      "Every step gives you 1 gold. The tile you leave behind collapses and disappears.",
     );
+    setZoom(INITIAL_ZOOM);
+    setControlsCapture(false);
   }, [runId]);
 
   useEffect(() => {
@@ -202,17 +376,38 @@ export const GoldMineGame: React.FC = () => {
       if (!direction) return;
       if (isEditableTarget(event.target)) return;
       if (!isCurrentRevealSectionActive(rootRef.current)) return;
+      if (!controlsArmedRef.current) return;
 
       event.preventDefault();
       event.stopPropagation();
       sceneControllerRef.current?.move(direction);
     };
 
+    const handlePointerDownCapture = (event: PointerEvent) => {
+      const root = rootRef.current;
+      if (!root) return;
+      if (root.contains(event.target as Node)) {
+        setControlsCapture(true);
+        return;
+      }
+      setControlsCapture(false);
+    };
+
     document.addEventListener("keydown", handleKeyDownCapture, true);
+    document.addEventListener("pointerdown", handlePointerDownCapture, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDownCapture, true);
+      document.removeEventListener(
+        "pointerdown",
+        handlePointerDownCapture,
+        true,
+      );
     };
   }, []);
+
+  useEffect(() => {
+    sceneControllerRef.current?.setZoom(zoom);
+  }, [zoom]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -228,12 +423,14 @@ export const GoldMineGame: React.FC = () => {
       class GoldMineScene extends Phaser.Scene {
         floorLayer: any;
         miner: any;
+        cameraTarget: any;
         collapsed = new Set<string>();
         currentPos: Pos = { ...START };
         moving = false;
         currentGold = 0;
         decor = new Map<string, CellDecor>();
         idleTween: any = null;
+        baseY = 0;
         status: GameStatus = "playing";
 
         constructor() {
@@ -254,7 +451,6 @@ export const GoldMineGame: React.FC = () => {
         create() {
           this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
           this.cameras.main.setBackgroundColor("#05070a");
-          this.cameras.main.setZoom(1.8);
           this.cameras.main.roundPixels = true;
 
           const map = this.make.tilemap({
@@ -269,11 +465,23 @@ export const GoldMineGame: React.FC = () => {
           this.createMarkers();
           this.createAnimations();
           this.createMiner();
-          this.registerControls();
+          this.applyZoom(zoom);
 
           sceneControllerRef.current = {
             move: (direction: Direction) => this.tryMove(direction),
+            setZoom: (nextZoom: number) => this.applyZoom(nextZoom),
           };
+        }
+
+        applyZoom(nextZoom: number) {
+          const camera = this.cameras.main;
+          camera.setZoom(nextZoom);
+          if (nextZoom <= FIT_ZOOM + 0.001) {
+            camera.stopFollow();
+            camera.centerOn(WORLD_W / 2, WORLD_H / 2);
+            return;
+          }
+          camera.startFollow(this.cameraTarget, true, 0.12, 0.12);
         }
 
         drawGoldSpecks() {
@@ -364,31 +572,44 @@ export const GoldMineGame: React.FC = () => {
         createMiner() {
           const x = cellCenterX(START.c);
           const y = cellCenterY(START.r);
+          this.cameraTarget = this.add.zone(x, y, 1, 1);
           this.miner = this.add.sprite(x, y, "gold-miner", idleFrame("south"));
           this.miner.setScale(1.25);
           this.miner.setDepth(10);
-          this.cameras.main.startFollow(this.miner, true, 0.12, 0.12);
+          this.baseY = y;
+          this.setMinerPosition(x, y);
           this.startIdleFloat();
         }
 
+        setMinerPosition(x: number, y: number) {
+          this.miner.setPosition(roundToPixel(x), roundToPixel(y));
+        }
+
+        setCameraTargetPosition(x: number, y: number) {
+          this.cameraTarget.setPosition(roundToPixel(x), roundToPixel(y));
+        }
+
+        stopIdleFloat() {
+          if (this.idleTween) {
+            this.idleTween.stop();
+            this.idleTween = null;
+          }
+          this.setMinerPosition(this.miner.x, this.baseY);
+        }
+
         startIdleFloat() {
-          this.idleTween?.stop();
+          this.stopIdleFloat();
+          const idleState = { y: this.baseY };
           this.idleTween = this.tweens.add({
-            targets: this.miner,
-            y: this.miner.y - 2,
+            targets: idleState,
+            y: this.baseY - 2,
             duration: 700,
             yoyo: true,
             repeat: -1,
-          });
-        }
-
-        registerControls() {
-          this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
-            const direction = directionFromKey(event.code);
-            if (!direction) return;
-            event.preventDefault();
-            event.stopPropagation();
-            this.tryMove(direction);
+            ease: "Sine.InOut",
+            onUpdate: () => {
+              this.setMinerPosition(this.miner.x, idleState.y);
+            },
           });
         }
 
@@ -402,30 +623,43 @@ export const GoldMineGame: React.FC = () => {
           };
           if (!isWalkable(next, this.collapsed)) {
             this.cameras.main.shake(70, 0.002);
+            if (sfxOnRef.current) sfx.bump();
             return;
           }
 
           this.moving = true;
-          this.idleTween?.stop();
+          this.stopIdleFloat();
           this.miner.play(animationKey(direction), true);
           const previous = { ...this.currentPos };
           const targetX = cellCenterX(next.c);
           const targetY = cellCenterY(next.r);
+          const moveState = { x: this.miner.x, y: this.baseY };
 
           this.tweens.add({
-            targets: this.miner,
+            targets: moveState,
             x: targetX,
             y: targetY,
             duration: 160,
             ease: "Quad.Out",
+            onUpdate: () => {
+              this.setMinerPosition(moveState.x, moveState.y);
+              this.setCameraTargetPosition(moveState.x, moveState.y);
+            },
             onComplete: () => {
               this.miner.stop();
               this.miner.setFrame(idleFrame(direction));
               this.currentPos = next;
               this.currentGold += 1;
               setGold(this.currentGold);
+              if (sfxOnRef.current) {
+                sfx.step();
+                sfx.gold();
+              }
               this.collapseCell(previous);
               this.showGoldGain(targetX, targetY - 22);
+              this.baseY = targetY;
+              this.setMinerPosition(targetX, targetY);
+              this.setCameraTargetPosition(targetX, targetY);
               this.startIdleFloat();
               this.moving = false;
               this.evaluateState();
@@ -446,6 +680,40 @@ export const GoldMineGame: React.FC = () => {
           const decor = this.decor.get(key);
           decor?.specks.forEach((speck) => speck.setVisible(false));
           decor?.collapsedOverlay.setVisible(true);
+          if (sfxOnRef.current) sfx.collapse();
+
+          this.refreshNeighborTiles(pos);
+        }
+
+        refreshNeighborTiles(pos: Pos) {
+          const blocked: BlockedFn = (r, c) => isBlocked(r, c, this.collapsed);
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = pos.r + dr;
+              const nc = pos.c + dc;
+              if (nr < 0 || nr >= MAP_ROWS || nc < 0 || nc >= MAP_COLS)
+                continue;
+              const nk = posKey(nr, nc);
+              if (WALLS.has(nk) || this.collapsed.has(nk)) continue;
+              const tc = worldToTileCell({ r: nr, c: nc });
+              this.floorLayer.putTileAt(tileTL(nr, nc, blocked), tc.tx, tc.ty);
+              this.floorLayer.putTileAt(
+                tileTR(nr, nc, blocked),
+                tc.tx + 1,
+                tc.ty,
+              );
+              this.floorLayer.putTileAt(
+                tileBL(nr, nc, blocked),
+                tc.tx,
+                tc.ty + 1,
+              );
+              this.floorLayer.putTileAt(
+                tileBR(nr, nc, blocked),
+                tc.tx + 1,
+                tc.ty + 1,
+              );
+            }
+          }
         }
 
         showGoldGain(x: number, y: number) {
@@ -471,9 +739,10 @@ export const GoldMineGame: React.FC = () => {
             setStatus("won");
             setBestGold((current) => Math.max(current, this.currentGold));
             setMessage(
-              `Has escapado con ${this.currentGold} de oro. Puedes reiniciar para buscar una ruta mejor.`,
+              `You escaped with ${this.currentGold} gold. Restart and try to find a richer route.`,
             );
             this.cameras.main.flash(220, 255, 215, 64, false);
+            if (sfxOnRef.current) sfx.win();
             return;
           }
 
@@ -481,29 +750,31 @@ export const GoldMineGame: React.FC = () => {
             this.status = "lost";
             setStatus("lost");
             setMessage(
-              `Te has quedado atrapado con ${this.currentGold} de oro. La salida seguía viva, pero tu ruta no.`,
+              `You got trapped with ${this.currentGold} gold. The exit still existed, but your route did not.`,
             );
             this.cameras.main.shake(180, 0.0035);
+            if (sfxOnRef.current) sfx.lose();
             return;
           }
 
           setMessage(
-            `Oro actual: ${this.currentGold}. Cada celda que dejas atrás desaparece para siempre.`,
+            `Current gold: ${this.currentGold}. Every tile you leave behind disappears forever.`,
           );
         }
       }
 
       gameRef.current?.destroy(true);
       gameRef.current = new Phaser.Game({
-        type: Phaser.AUTO,
+        type: Phaser.CANVAS,
         parent: containerRef.current,
         width: DISPLAY_W,
         height: DISPLAY_H,
-        transparent: true,
+        backgroundColor: "#05070a",
         scene: GoldMineScene,
         render: {
           pixelArt: true,
           antialias: false,
+          roundPixels: true,
         },
       });
     });
@@ -535,58 +806,100 @@ export const GoldMineGame: React.FC = () => {
       >
         <div
           style={{
-            padding: 22,
-            borderRadius: 20,
+            padding: 14,
+            borderRadius: 16,
             background: "linear-gradient(180deg, #171312 0%, #0d0f14 100%)",
             border: "1px solid rgba(255,255,255,0.08)",
             color: "#fff7e6",
           }}
         >
-          <div
+          <h3 style={{ margin: "0 0 6px", fontSize: 22, lineHeight: 1.1 }}>
+            Play the Greedy Route
+          </h3>
+          <p
             style={{
-              fontSize: 12,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              color: "#f6bd60",
-              marginBottom: 10,
+              margin: "0 0 10px",
+              color: "#e9d8b4",
+              fontSize: 13,
+              lineHeight: 1.4,
             }}
           >
-            Nuevo visual
-          </div>
-          <h3 style={{ margin: "0 0 14px", fontSize: 28, lineHeight: 1.05 }}>
-            Juega la ruta codiciosa
-          </h3>
-          <p style={{ margin: "0 0 18px", color: "#e9d8b4", lineHeight: 1.5 }}>
-            Mismo dungeon, mismo tileset, pero ahora lo recorres tú. Cada paso
-            vale oro y cada paso destruye el camino detrás del minero.
+            Each step earns gold and destroys the tile behind you.
           </p>
 
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 10,
-              marginBottom: 16,
+              gap: 8,
+              marginBottom: 10,
             }}
           >
-            <InfoCard label="Oro" value={String(gold)} accent="#ffd166" />
-            <InfoCard label="Mejor" value={String(bestGold)} accent="#80ed99" />
+            <InfoCard label="Gold" value={String(gold)} accent="#ffd166" />
+            <InfoCard label="Best" value={String(bestGold)} accent="#80ed99" />
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 10,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "#f6bd60",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Zoom
+            </span>
+            <input
+              type="range"
+              min={FIT_ZOOM}
+              max={MAX_ZOOM}
+              step={0.05}
+              value={zoom}
+              onChange={(event) => setZoom(Number(event.target.value))}
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              onClick={() => setZoom(FIT_ZOOM)}
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "4px 10px",
+                background: "rgba(255,255,255,0.06)",
+                color: "#fff7e6",
+                cursor: "pointer",
+                fontSize: 12,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Fit
+            </button>
           </div>
 
           <div
             style={{
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 14,
-              padding: 14,
-              marginBottom: 18,
+              borderRadius: 10,
+              padding: 10,
+              marginBottom: 10,
+              fontSize: 13,
               color:
                 status === "won"
                   ? "#80ed99"
                   : status === "lost"
                     ? "#ff9aa2"
                     : "#fff7e6",
-              lineHeight: 1.45,
+              lineHeight: 1.35,
             }}
           >
             {message}
@@ -594,23 +907,57 @@ export const GoldMineGame: React.FC = () => {
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 60px)",
-              gap: 8,
-              justifyContent: "start",
-              marginBottom: 16,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 10,
             }}
           >
-            <div />
-            <MoveButton label="↑" onClick={() => move("north")} />
-            <div />
-            <MoveButton label="←" onClick={() => move("west")} />
-            <MoveButton label="↓" onClick={() => move("south")} />
-            <MoveButton label="→" onClick={() => move("east")} />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 44px)",
+                gap: 4,
+              }}
+            >
+              <div />
+              <MoveButton label="↑" onClick={() => move("north")} />
+              <div />
+              <MoveButton label="←" onClick={() => move("west")} />
+              <MoveButton label="↓" onClick={() => move("south")} />
+              <MoveButton label="→" onClick={() => move("east")} />
+            </div>
+
+            <div
+              style={{
+                fontSize: 12,
+                color: controlsArmed ? "#80ed99" : "#c9b48f",
+                lineHeight: 1.35,
+              }}
+            >
+              {controlsArmed
+                ? "Keys active. WASD or arrows."
+                : "Click here to capture keys."}
+            </div>
           </div>
 
-          <div style={{ color: "#bca98c", marginBottom: 14 }}>
-            También puedes usar flechas o WASD.
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              marginBottom: 10,
+            }}
+          >
+            <ToggleButton
+              label={musicOn ? "♫ Music ON" : "♫ Music OFF"}
+              active={musicOn}
+              onClick={() => setMusicOn((v) => !v)}
+            />
+            <ToggleButton
+              label={sfxOn ? "♪ SFX ON" : "♪ SFX OFF"}
+              active={sfxOn}
+              onClick={() => setSfxOn((v) => !v)}
+            />
           </div>
 
           <button
@@ -619,14 +966,15 @@ export const GoldMineGame: React.FC = () => {
             style={{
               border: "none",
               borderRadius: 999,
-              padding: "12px 18px",
+              padding: "8px 16px",
               background: "#f6bd60",
               color: "#2b1d0e",
               fontWeight: 800,
               cursor: "pointer",
+              fontSize: 13,
             }}
           >
-            Reiniciar partida
+            Restart
           </button>
         </div>
 
@@ -658,25 +1006,51 @@ const InfoCard: React.FC<{ label: string; value: string; accent: string }> = ({
   return (
     <div
       style={{
-        padding: 12,
-        borderRadius: 14,
+        padding: 8,
+        borderRadius: 10,
         background: "rgba(255,255,255,0.05)",
         border: `1px solid ${accent}33`,
       }}
     >
       <div
         style={{
-          fontSize: 12,
+          fontSize: 11,
           textTransform: "uppercase",
-          letterSpacing: "0.12em",
+          letterSpacing: "0.1em",
           color: accent,
-          marginBottom: 6,
+          marginBottom: 2,
         }}
       >
         {label}
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800 }}>{value}</div>
+      <div style={{ fontSize: 22, fontWeight: 800 }}>{value}</div>
     </div>
+  );
+};
+
+const ToggleButton: React.FC<{
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}> = ({ label, active, onClick }) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        flex: 1,
+        padding: "6px 0",
+        borderRadius: 10,
+        border: `1px solid ${active ? "rgba(128,237,153,0.3)" : "rgba(255,255,255,0.08)"}`,
+        background: active ? "rgba(128,237,153,0.1)" : "rgba(255,255,255,0.04)",
+        color: active ? "#80ed99" : "#c9b48f",
+        fontSize: 12,
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
   );
 };
 
@@ -689,13 +1063,13 @@ const MoveButton: React.FC<{ label: string; onClick: () => void }> = ({
       type="button"
       onClick={onClick}
       style={{
-        width: 60,
-        height: 60,
-        borderRadius: 16,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         border: "1px solid rgba(255,255,255,0.08)",
         background: "linear-gradient(180deg, #342417 0%, #20150e 100%)",
         color: "#fff7e6",
-        fontSize: 24,
+        fontSize: 18,
         fontWeight: 800,
         cursor: "pointer",
       }}
