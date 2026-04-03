@@ -35,5 +35,35 @@ const { title, description } = Astro.props;
 
     <!-- Modal de búsqueda -->
     <SearchModal />
+
+    <!-- VimMode -->
+    <script>
+      import { createVimMode } from "../utils/vim-mode";
+
+      if (!(window as any).__vimMode) {
+        const vm = createVimMode();
+        (window as any).__vimMode = vm;
+        (window as any).vimMode = vm;
+
+        // Default commands
+        vm.register("t", {
+          label: "Toggle theme",
+          category: "General",
+          run: () => (window as any).toggleTheme?.(),
+        });
+
+        vm.register("s", {
+          label: "Toggle sidebar",
+          category: "General",
+          run: () => (window as any).toggleSidebar?.(),
+        });
+
+        vm.register("f", {
+          label: "Open search",
+          category: "General",
+          run: () => (window as any).openSearchModal?.(),
+        });
+      }
+    </script>
   </body>
 </html>

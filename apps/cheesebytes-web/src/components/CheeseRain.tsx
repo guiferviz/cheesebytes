@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 
 // Lista de imágenes de quesos (puedes añadir/quitar según tus necesidades)
 const CHEESE_IMAGES = [
@@ -41,29 +41,52 @@ const CheeseRain: React.FC<CheeseRainProps> = ({
   const [active, setActive] = useState(false);
   const finishedCount = useRef(0);
 
+  const triggerRain = useCallback(() => {
+    setActive(true);
+    finishedCount.current = 0;
+    setCheeses(
+      Array.from({ length: count }, (_, i) => ({
+        id: i + "-" + Date.now(),
+        left: randomBetween(0, 95) + "vw",
+        delay: randomBetween(minDelay, maxDelay) + "s",
+        duration: randomBetween(minDuration, maxDuration) + "s",
+        rotate: randomBetween(-180, 180),
+        size: randomBetween(minSize, maxSize),
+        img: CHEESE_IMAGES[Math.floor(Math.random() * CHEESE_IMAGES.length)],
+      })),
+    );
+  }, [count, minDelay, maxDelay, minDuration, maxDuration, minSize, maxSize]);
+
+  const triggerRef = useRef(triggerRain);
+  triggerRef.current = triggerRain;
+
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vm = (window as any).vimMode;
+    if (vm?.registerSequence) {
+      // Register via VimMode — prevents H/S/etc. from firing mid-sequence
+      vm.registerSequence("cheese", {
+        run: () => triggerRef.current(),
+        hidden: true,
+        insertMode: true,
+        timeout: 500,
+      });
+      return () => vm.unregister("c");
+    }
+
+    // Fallback: own listener (if VimMode is not available)
     let buffer = "";
     const onKeyDown = (e: KeyboardEvent) => {
       buffer += e.key.toLowerCase();
       if (buffer.length > 6) buffer = buffer.slice(-6);
       if (buffer === "cheese") {
-        setActive(true);
-        finishedCount.current = 0;
-        setCheeses(Array.from({ length: count }, (_, i) => ({
-          id: i + "-" + Date.now(),
-          left: randomBetween(0, 95) + "vw",
-          delay: randomBetween(minDelay, maxDelay) + "s",
-          duration: randomBetween(minDuration, maxDuration) + "s",
-          rotate: randomBetween(-180, 180),
-          size: randomBetween(minSize, maxSize),
-          img: CHEESE_IMAGES[Math.floor(Math.random() * CHEESE_IMAGES.length)],
-        })));
+        triggerRef.current();
         buffer = "";
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [count, minDelay, maxDelay, minDuration, maxDuration, minSize, maxSize]);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
 
   // Cuando todas las imágenes terminan su animación, desactiva el efecto
   const handleAnimationEnd = () => {
@@ -76,13 +99,15 @@ const CheeseRain: React.FC<CheeseRainProps> = ({
 
   if (!active) return null;
   return (
-    <div style={{
-      pointerEvents: "none",
-      position: "fixed",
-      inset: 0,
-      zIndex: 9999,
-    }}>
-      {cheeses.map(c => (
+    <div
+      style={{
+        pointerEvents: "none",
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+      }}
+    >
+      {cheeses.map((c) => (
         <img
           key={c.id}
           src={c.img}

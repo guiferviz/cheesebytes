@@ -232,6 +232,11 @@ const sfx = {
       setTimeout(() => tone(f, 0.22, "sawtooth", 0.1), i * 120),
     );
   },
+  rewind() {
+    [880, 698, 587, 494, 392].forEach((f, i) =>
+      setTimeout(() => tone(f, 0.06, "square", 0.07), i * 40),
+    );
+  },
 };
 
 const MELODY = [
@@ -399,10 +404,16 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const gameRef = useRef<any>(null);
   const moveRef = useRef<((d: Dir) => void) | null>(null);
+  const zoomRef = useRef<(() => void) | null>(null);
+  const undoRef = useRef<(() => void) | null>(null);
   const armedRef = useRef(false);
   const sfxRef = useRef(true);
   const heldDirRef = useRef<Dir | null>(null);
   const musicRef = useRef<MusicEngine | null>(null);
+  // Stable refs for vim commands
+  const toggleMusicRef = useRef<() => void>(() => {});
+  const toggleSfxRef = useRef<() => void>(() => {});
+  const restartRef = useRef<() => void>(() => {});
 
   const [runId, setRunId] = useState(0);
   const [gold, setGold] = useState(0);
@@ -415,6 +426,11 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   useEffect(() => {
     sfxRef.current = sfxOn;
   }, [sfxOn]);
+
+  // Keep toggler refs in sync
+  toggleMusicRef.current = () => setMusicOn((v) => !v);
+  toggleSfxRef.current = () => setSfxOn((v) => !v);
+  restartRef.current = () => setRunId((id) => id + 1);
 
   // Music lifecycle
   useEffect(() => {
@@ -456,20 +472,104 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       const d = dirFromKey(e.code);
       if (d && d === heldDirRef.current) heldDirRef.current = null;
     };
-    const onPointer = (e: PointerEvent) => {
-      const root = rootRef.current;
-      if (!root) return;
-      const inside = root.contains(e.target as Node);
+    const root = rootRef.current;
+    if (!root) return;
+
+    const focusRoot = () => {
+      root.focus({ preventScroll: true });
+    };
+
+    const syncArmed = () => {
+      const inside = root.contains(document.activeElement);
       armedRef.current = inside;
       setArmed(inside);
+      const vm = (window as any).vimMode;
+      if (!vm) return;
+      if (inside) {
+        vm.pushScope("gold-mine-demo", [
+          // Movement keys — passthrough so the game's own listener handles them,
+          // but they shadow global bindings (e.g. S for sidebar) and show in help.
+          {
+            key: "w",
+            label: "Move north",
+            category: "Game",
+            run: () => {},
+            passthrough: true,
+            altKeys: ["\u2191"],
+          },
+          {
+            key: "a",
+            label: "Move west",
+            category: "Game",
+            run: () => {},
+            passthrough: true,
+            altKeys: ["\u2190"],
+          },
+          {
+            key: "s",
+            label: "Move south",
+            category: "Game",
+            run: () => {},
+            passthrough: true,
+            altKeys: ["\u2193"],
+          },
+          {
+            key: "d",
+            label: "Move east",
+            category: "Game",
+            run: () => {},
+            passthrough: true,
+            altKeys: ["\u2192"],
+          },
+          // Actions
+          {
+            key: "z",
+            label: "Zoom on player",
+            category: "Game",
+            run: () => zoomRef.current?.(),
+          },
+          {
+            key: "m",
+            label: "Toggle music",
+            category: "Game",
+            run: () => toggleMusicRef.current(),
+          },
+          {
+            key: "x",
+            label: "Toggle sound effects",
+            category: "Game",
+            run: () => toggleSfxRef.current(),
+          },
+          {
+            key: "u",
+            label: "Undo last move",
+            category: "Game",
+            run: () => undoRef.current?.(),
+          },
+          {
+            key: "r",
+            label: "Restart game",
+            category: "Game",
+            run: () => restartRef.current(),
+          },
+        ]);
+      } else {
+        vm.popScope("gold-mine-demo");
+      }
     };
+
     document.addEventListener("keydown", onKey, true);
     document.addEventListener("keyup", onKeyUp, true);
-    document.addEventListener("pointerdown", onPointer, true);
+    root.addEventListener("pointerdown", focusRoot, true);
+    root.addEventListener("focusin", syncArmed);
+    root.addEventListener("focusout", syncArmed);
     return () => {
       document.removeEventListener("keydown", onKey, true);
       document.removeEventListener("keyup", onKeyUp, true);
-      document.removeEventListener("pointerdown", onPointer, true);
+      root.removeEventListener("pointerdown", focusRoot, true);
+      root.removeEventListener("focusin", syncArmed);
+      root.removeEventListener("focusout", syncArmed);
+      (window as any).vimMode?.popScope("gold-mine-demo");
     };
   }, []);
 
@@ -521,6 +621,12 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         miner: any;
         manifest: Manifest | null = null;
         collapsed = new Set<string>();
+        history: Array<{
+          pos: Pos;
+          collapsed: Set<string>;
+          g: number;
+          facing: Dir;
+        }> = [];
         pos: Pos = { ...START };
         facing: Dir = "south";
         moving = false;
@@ -531,6 +637,8 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         decor = new Map<string, { specks: any[]; overlay: any }>();
         baseY = 0;
+
+        zoomed = false;
 
         constructor() {
           super({ key: `GoldMineDemo-${runId}` });
@@ -566,6 +674,39 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
           this.createMiner();
 
           moveRef.current = (d: Dir) => this.tryMove(d);
+          zoomRef.current = () => this.toggleZoom();
+          undoRef.current = () => this.tryUndo();
+        }
+
+        toggleZoom() {
+          const cam = this.cameras.main;
+          this.zoomed = !this.zoomed;
+          if (this.zoomed) {
+            const zoomLevel = 2.5;
+            const z = { v: cam.zoom };
+            this.tweens.add({
+              targets: z,
+              v: zoomLevel,
+              duration: 350,
+              ease: "Quad.Out",
+              onUpdate: () => {
+                cam.setZoom(z.v);
+                cam.centerOn(this.miner.x, this.miner.y);
+              },
+            });
+          } else {
+            const z = { v: cam.zoom };
+            this.tweens.add({
+              targets: z,
+              v: 1,
+              duration: 350,
+              ease: "Quad.Out",
+              onUpdate: () => {
+                cam.setZoom(z.v);
+                cam.centerOn(WW / 2, WH / 2);
+              },
+            });
+          }
         }
 
         renderFloor() {
@@ -758,6 +899,13 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
             this.consecMoves = 0;
             return;
           }
+          // Save state for undo before moving
+          this.history.push({
+            pos: { ...this.pos },
+            collapsed: new Set(this.collapsed),
+            g: this.g,
+            facing: d,
+          });
           this.moving = true;
           this.miner.stop();
           this.facing = d;
@@ -784,6 +932,10 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
             ease: "Quad.Out",
             onUpdate: () => {
               this.miner.setPosition(rp(state.x), rp(state.y));
+              if (this.zoomed) {
+                const cam = this.cameras.main;
+                cam.centerOn(rp(state.x), rp(state.y));
+              }
             },
             onComplete: () => {
               this.pos = next;
@@ -805,6 +957,82 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
               if (heldDirRef.current === d && this.stat === "playing") {
                 this.tryMove(d);
               }
+            },
+          });
+        }
+
+        tryUndo() {
+          if (this.moving || this.history.length === 0) return;
+          if (this.stat !== "playing" && this.stat !== "lost") return;
+          const snap = this.history.pop()!;
+          this.moving = true;
+
+          // Restore game state
+          this.g = snap.g;
+          setGold(this.g);
+
+          // Reset status if was lost
+          if (this.stat === "lost") {
+            this.stat = "playing";
+            setStatus("playing");
+          }
+
+          // Find tiles that were collapsed but shouldn't be anymore
+          const restored = new Set<string>();
+          for (const k of this.collapsed) {
+            if (!snap.collapsed.has(k)) restored.add(k);
+          }
+          this.collapsed = snap.collapsed;
+
+          // Re-render restored tiles and their neighbors
+          const b: Blocked = (r, c) => blockedWith(this.collapsed, r, c);
+          for (const k of restored) {
+            const [rs, cs] = k.split(",").map(Number);
+            this.renderCell(rs, cs, b);
+            const dec = this.decor.get(k);
+            dec?.specks.forEach((s: { setVisible: (v: boolean) => void }) =>
+              s.setVisible(true),
+            );
+            dec?.overlay.setVisible(false);
+            for (let dr = -1; dr <= 1; dr++)
+              for (let dc = -1; dc <= 1; dc++) {
+                const nr = rs + dr,
+                  nc = cs + dc;
+                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS)
+                  this.renderCell(nr, nc, b);
+              }
+          }
+
+          // Face toward the cell we're leaving (the direction of the original move)
+          this.facing = snap.facing;
+          this.miner.setFrame(this.rotFrame(snap.facing));
+
+          // Animate backward to previous position
+          const tx = cellX(snap.pos.c),
+            ty = cellY(snap.pos.r);
+          const state = { x: this.miner.x, y: this.baseY };
+          if (sfxRef.current) sfx.rewind();
+          this.tweens.add({
+            targets: state,
+            x: tx,
+            y: ty,
+            duration: 180,
+            ease: "Quad.In",
+            onUpdate: () => {
+              this.miner.setPosition(rp(state.x), rp(state.y));
+              if (this.zoomed) {
+                this.cameras.main.centerOn(rp(state.x), rp(state.y));
+              }
+            },
+            onComplete: () => {
+              this.pos = snap.pos;
+              this.baseY = ty;
+              this.miner.setPosition(rp(tx), rp(ty));
+              this.idle(this.facing);
+              this.moving = false;
+              // Reset acceleration
+              this.consecMoves = 0;
+              this.lastMoveDir = null;
             },
           });
         }
@@ -893,6 +1121,8 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
     return () => {
       alive = false;
       moveRef.current = null;
+      zoomRef.current = null;
+      undoRef.current = null;
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };
@@ -907,7 +1137,11 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         : "[ WASD OR ARROWS TO MOVE ]";
 
   return (
-    <div ref={rootRef} style={{ margin: "2rem 0" }}>
+    <div
+      ref={rootRef}
+      tabIndex={0}
+      style={{ margin: "2rem 0", outline: "none" }}
+    >
       <style>{`
         @keyframes gmd-pulse { 0%,100%{opacity:1} 50%{opacity:0.15} }
         .gmd-blink { animation: gmd-pulse 1.2s ease-in-out infinite; }
@@ -958,28 +1192,52 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
           }}
         >
           <HudBtn
-            onClick={() => {
-              setSfxOn((v) => !v);
-              setMusicOn((v) => !v);
-            }}
-            active={sfxOn || musicOn}
+            onClick={() => setMusicOn((v) => !v)}
+            active={musicOn}
+            th={th}
+            title={musicOn ? "Mute music [M]" : "Enable music [M]"}
+          >
+            <MusicIcon
+              muted={!musicOn}
+              color={musicOn ? th.hudBtnActiveText : th.hudText}
+            />
+          </HudBtn>
+          <HudBtn
+            onClick={() => setSfxOn((v) => !v)}
+            active={sfxOn}
             th={th}
             title={
-              sfxOn || musicOn ? "Mute sound & music" : "Enable sound & music"
+              sfxOn ? "Mute sound effects [X]" : "Enable sound effects [X]"
             }
           >
             <SpeakerIcon
-              muted={!(sfxOn || musicOn)}
-              color={sfxOn || musicOn ? th.hudBtnActiveText : th.hudText}
+              muted={!sfxOn}
+              color={sfxOn ? th.hudBtnActiveText : th.hudText}
             />
-            {sfxOn || musicOn ? " ON" : " OFF"}
+          </HudBtn>
+          <HudBtn
+            onClick={() => undoRef.current?.()}
+            th={th}
+            title="Undo last move [U]"
+          >
+            <span style={{ display: "inline-flex", alignItems: "baseline" }}>
+              <span style={{ fontWeight: 800, textDecoration: "underline" }}>
+                U
+              </span>
+              <span style={{ marginLeft: "-0.04em" }}>ndo</span>
+            </span>
           </HudBtn>
           <HudBtn
             onClick={() => setRunId((id) => id + 1)}
             th={th}
-            title="Restart the game"
+            title="Restart the game [R]"
           >
-            <RestartIcon color={th.hudText} /> Restart
+            <span style={{ display: "inline-flex", alignItems: "baseline" }}>
+              <span style={{ fontWeight: 800, textDecoration: "underline" }}>
+                R
+              </span>
+              <span style={{ marginLeft: "-0.04em" }}>estart</span>
+            </span>
           </HudBtn>
         </div>
 
@@ -1056,6 +1314,33 @@ const iconStyle = {
   lineHeight: 0,
 } as const;
 
+const MusicIcon: React.FC<{ muted: boolean; color: string }> = ({
+  muted,
+  color,
+}) => (
+  <span style={iconStyle}>
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+      <path d="M12 2v8.5" stroke={color} strokeWidth="1.5" />
+      <path d="M6 4v8.5" stroke={color} strokeWidth="1.5" />
+      <path d="M6 4l6-2" stroke={color} strokeWidth="1.5" />
+      <circle cx="4" cy="12" r="2" fill={color} />
+      <circle cx="10" cy="10.5" r="2" fill={color} />
+      {muted && (
+        <>
+          <line
+            x1="1"
+            y1="1"
+            x2="15"
+            y2="15"
+            stroke={color}
+            strokeWidth="1.8"
+          />
+        </>
+      )}
+    </svg>
+  </span>
+);
+
 const SpeakerIcon: React.FC<{ muted: boolean; color: string }> = ({
   muted,
   color,
@@ -1098,20 +1383,6 @@ const SpeakerIcon: React.FC<{ muted: boolean; color: string }> = ({
           />
         </>
       )}
-    </svg>
-  </span>
-);
-
-const RestartIcon: React.FC<{ color: string }> = ({ color }) => (
-  <span style={iconStyle}>
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M2 8a6 6 0 1111.5-2.5"
-        stroke={color}
-        strokeWidth="1.8"
-        fill="none"
-      />
-      <path d="M14 2v4h-4" stroke={color} strokeWidth="1.8" fill="none" />
     </svg>
   </span>
 );

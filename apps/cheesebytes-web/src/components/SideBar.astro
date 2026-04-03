@@ -413,6 +413,12 @@ import SearchButton from "./SearchButton.astro";
       }
     }
 
+    // Expose globally for VimMode from the same scope that owns the state.
+    window.toggleSidebar = function (open) {
+      const next = open !== undefined ? open : !isOpen;
+      toggleSidebar(next, true);
+    };
+
     // Resizer sin animación
     let isResizing = false;
 
@@ -545,6 +551,8 @@ import SearchButton from "./SearchButton.astro";
         }),
       );
     }
+
+    window.toggleTheme = toggleTheme;
 
     // Agregar event listeners a ambos botones
     if (sidebarThemeToggle) {
