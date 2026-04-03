@@ -401,6 +401,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   const moveRef = useRef<((d: Dir) => void) | null>(null);
   const armedRef = useRef(false);
   const sfxRef = useRef(true);
+  const heldDirRef = useRef<Dir | null>(null);
   const musicRef = useRef<MusicEngine | null>(null);
 
   const [runId, setRunId] = useState(0);
@@ -448,7 +449,12 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       if (!d || isEditable(e.target) || !armedRef.current) return;
       e.preventDefault();
       e.stopPropagation();
+      heldDirRef.current = d;
       moveRef.current?.(d);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      const d = dirFromKey(e.code);
+      if (d && d === heldDirRef.current) heldDirRef.current = null;
     };
     const onPointer = (e: PointerEvent) => {
       const root = rootRef.current;
@@ -458,9 +464,11 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       setArmed(inside);
     };
     document.addEventListener("keydown", onKey, true);
+    document.addEventListener("keyup", onKeyUp, true);
     document.addEventListener("pointerdown", onPointer, true);
     return () => {
       document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("keyup", onKeyUp, true);
       document.removeEventListener("pointerdown", onPointer, true);
     };
   }, []);
@@ -518,6 +526,8 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         moving = false;
         g = 0;
         stat: GameStatus = "playing";
+        consecMoves = 0;
+        lastMoveDir: Dir | null = null;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         decor = new Map<string, { specks: any[]; overlay: any }>();
         baseY = 0;
@@ -698,12 +708,26 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         moveProfile(d: Dir) {
           const wk = this.manifest?.clips.animations.walk?.[d] ?? [];
           if (wk.length && this.anims.exists(walkKey(d)))
-            return { key: walkKey(d), ms: clipMs(wk.length, WALK_FR) };
+            return {
+              key: walkKey(d),
+              ms: Math.min(320, clipMs(wk.length, WALK_FR)),
+            };
           const ik =
             this.manifest?.clips.animations["breathing-idle"]?.[d] ?? [];
           if (ik.length && this.anims.exists(idleKey(d)))
-            return { key: idleKey(d), ms: clipMs(ik.length, IDLE_FR) };
-          return { key: null as string | null, ms: 420 };
+            return {
+              key: idleKey(d),
+              ms: Math.min(320, clipMs(ik.length, IDLE_FR)),
+            };
+          return { key: null as string | null, ms: 320 };
+        }
+
+        // Acceleration: consecutive moves in the same direction get faster
+        accelMs(baseMs: number): number {
+          // 1st move: 100%, 2nd: 70%, 3rd: 50%, 4th+: 35%
+          const factors = [1, 0.7, 0.5, 0.35];
+          const f = factors[Math.min(this.consecMoves, factors.length - 1)];
+          return Math.max(80, Math.round(baseMs * f));
         }
 
         createMiner() {
@@ -718,20 +742,36 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
 
         tryMove(d: Dir) {
           if (this.moving || this.stat !== "playing") return;
+          // Track consecutive moves for acceleration
+          if (d === this.lastMoveDir) this.consecMoves++;
+          else {
+            this.consecMoves = 0;
+            this.lastMoveDir = d;
+          }
+
           this.idle(d);
           const delta = DELTAS[d];
           const next = { r: this.pos.r + delta.r, c: this.pos.c + delta.c };
           if (!canWalk(next, this.collapsed)) {
             this.cameras.main.shake(70, 0.002);
             if (sfxRef.current) sfx.bump();
+            this.consecMoves = 0;
             return;
           }
           this.moving = true;
           this.miner.stop();
           this.facing = d;
           const mp = this.moveProfile(d);
-          if (mp.key) this.miner.play(mp.key, true);
-          else this.miner.setFrame(this.rotFrame(d));
+          const ms = this.accelMs(mp.ms);
+          const animRate = mp.ms > 0 ? mp.ms / ms : 1;
+          if (mp.key) {
+            this.miner.play(mp.key, true);
+            if (this.miner.anims.currentAnim) {
+              this.miner.anims.timeScale = animRate;
+            }
+          } else {
+            this.miner.setFrame(this.rotFrame(d));
+          }
           const prev = { ...this.pos };
           const tx = cellX(next.c),
             ty = cellY(next.r);
@@ -740,7 +780,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
             targets: state,
             x: tx,
             y: ty,
-            duration: mp.ms,
+            duration: ms,
             ease: "Quad.Out",
             onUpdate: () => {
               this.miner.setPosition(rp(state.x), rp(state.y));
@@ -757,9 +797,14 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
               this.showGain(tx, ty - 22);
               this.baseY = ty;
               this.miner.setPosition(rp(tx), rp(ty));
+              this.miner.anims.timeScale = 1;
               this.idle(this.facing);
               this.moving = false;
               this.checkEnd();
+              // Auto-chain next move if key still held
+              if (heldDirRef.current === d && this.stat === "playing") {
+                this.tryMove(d);
+              }
             },
           });
         }
