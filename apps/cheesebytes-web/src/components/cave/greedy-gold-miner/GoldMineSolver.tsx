@@ -12,16 +12,14 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import PyodideCodeRunner from "../../PyodideCodeRunner";
 import type { Pos } from "../dungeon-escape/types";
-import {
-  posKey,
-  WALLS,
-  START,
-  EXIT,
-  MAP_ROWS,
-  MAP_COLS,
-} from "../dungeon-escape/types";
+import { posKey, MAP_ROWS, MAP_COLS } from "../dungeon-escape/types";
 import pyodideContext from "../../../utils/pyodideContext";
 import { CheeseSlideContainer } from "../shared";
+import {
+  buildGridFromGreedyMap,
+  type GreedyMineMapState,
+  useGreedyMineMap,
+} from "./map-state";
 
 const ATLAS_SRC = "/tiles/terrain_atlas.png";
 const TS = 32;
@@ -34,67 +32,67 @@ const TILE_ROWS = MAP_ROWS * 2;
 const WORLD_W = TILE_COLS * TS;
 const WORLD_H = TILE_ROWS * TS;
 
-function isWall(r: number, c: number): boolean {
+function isWall(walls: Set<string>, r: number, c: number): boolean {
   if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return true;
-  return WALLS.has(posKey(r, c));
+  return walls.has(posKey(r, c));
 }
 
 function tIdx(row: number, col: number): number {
   return row * ATLAS_COLS + col;
 }
 
-function tileTL(r: number, c: number): number {
-  const wN = isWall(r - 1, c);
-  const wW = isWall(r, c - 1);
+function tileTL(walls: Set<string>, r: number, c: number): number {
+  const wN = isWall(walls, r - 1, c);
+  const wW = isWall(walls, r, c - 1);
   if (wN && wW) return tIdx(2, 18);
   if (wN) return tIdx(2, 19);
   if (wW) return tIdx(3, 18);
-  if (isWall(r - 1, c - 1)) return tIdx(1, 20);
+  if (isWall(walls, r - 1, c - 1)) return tIdx(1, 20);
   return tIdx(3, 19);
 }
 
-function tileTR(r: number, c: number): number {
-  const wN = isWall(r - 1, c);
-  const wE = isWall(r, c + 1);
+function tileTR(walls: Set<string>, r: number, c: number): number {
+  const wN = isWall(walls, r - 1, c);
+  const wE = isWall(walls, r, c + 1);
   if (wN && wE) return tIdx(2, 20);
   if (wN) return tIdx(2, 19);
   if (wE) return tIdx(3, 20);
-  if (isWall(r - 1, c + 1)) return tIdx(1, 19);
+  if (isWall(walls, r - 1, c + 1)) return tIdx(1, 19);
   return tIdx(3, 19);
 }
 
-function tileBL(r: number, c: number): number {
-  const wS = isWall(r + 1, c);
-  const wW = isWall(r, c - 1);
+function tileBL(walls: Set<string>, r: number, c: number): number {
+  const wS = isWall(walls, r + 1, c);
+  const wW = isWall(walls, r, c - 1);
   if (wS && wW) return tIdx(4, 18);
   if (wS) return tIdx(4, 19);
   if (wW) return tIdx(3, 18);
-  if (isWall(r + 1, c - 1)) return tIdx(0, 20);
+  if (isWall(walls, r + 1, c - 1)) return tIdx(0, 20);
   return tIdx(3, 19);
 }
 
-function tileBR(r: number, c: number): number {
-  const wS = isWall(r + 1, c);
-  const wE = isWall(r, c + 1);
+function tileBR(walls: Set<string>, r: number, c: number): number {
+  const wS = isWall(walls, r + 1, c);
+  const wE = isWall(walls, r, c + 1);
   if (wS && wE) return tIdx(4, 20);
   if (wS) return tIdx(4, 19);
   if (wE) return tIdx(3, 20);
-  if (isWall(r + 1, c + 1)) return tIdx(0, 19);
+  if (isWall(walls, r + 1, c + 1)) return tIdx(0, 19);
   return tIdx(3, 19);
 }
 
-function buildTilemapData(): number[][] {
+function buildTilemapData(walls: Set<string>): number[][] {
   const data: number[][] = [];
   for (let r = 0; r < MAP_ROWS; r++) {
     const topRow: number[] = [];
     const botRow: number[] = [];
     for (let c = 0; c < MAP_COLS; c++) {
-      if (WALLS.has(posKey(r, c))) {
+      if (walls.has(posKey(r, c))) {
         topRow.push(-1, -1);
         botRow.push(-1, -1);
       } else {
-        topRow.push(tileTL(r, c), tileTR(r, c));
-        botRow.push(tileBL(r, c), tileBR(r, c));
+        topRow.push(tileTL(walls, r, c), tileTR(walls, r, c));
+        botRow.push(tileBL(walls, r, c), tileBR(walls, r, c));
       }
     }
     data.push(topRow);
@@ -102,23 +100,6 @@ function buildTilemapData(): number[][] {
   }
   return data;
 }
-
-function buildGrid(): string[] {
-  const grid: string[] = [];
-  for (let r = 0; r < MAP_ROWS; r++) {
-    let row = "";
-    for (let c = 0; c < MAP_COLS; c++) {
-      if (r === START.r && c === START.c) row += "S";
-      else if (r === EXIT.r && c === EXIT.c) row += "E";
-      else if (WALLS.has(posKey(r, c))) row += "#";
-      else row += ".";
-    }
-    grid.push(row);
-  }
-  return grid;
-}
-
-const GRID = buildGrid();
 
 const INITIAL_CODE = `from collections import deque
 
@@ -172,6 +153,7 @@ function cellCenterY(r: number): number {
 }
 
 export const GoldMineSolver: React.FC = () => {
+  const mapState = useGreedyMineMap();
   const [pathCells, setPathCells] = useState<Pos[]>([]);
   const [pathError, setPathError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,7 +162,9 @@ export const GoldMineSolver: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const gameRef = useRef<any>(null);
   const sceneDataRef = useRef<SceneData | null>(null);
+  const mapStateRef = useRef(mapState);
   const pathCellsRef = useRef<Pos[]>([]);
+  mapStateRef.current = mapState;
   pathCellsRef.current = pathCells;
 
   useEffect(() => {
@@ -188,11 +172,21 @@ export const GoldMineSolver: React.FC = () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     import("phaser").then((Phaser: any) => {
-      const tileData = buildTilemapData();
-
       class DungeonScene extends Phaser.Scene {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pathGraphics: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        floorLayer: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        floorMap: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        startGraphics: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        startLabel: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        exitGraphics: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        exitLabel: any = null;
 
         constructor() {
           super({ key: "DungeonScene" });
@@ -206,14 +200,6 @@ export const GoldMineSolver: React.FC = () => {
         }
 
         create() {
-          const map = this.make.tilemap({
-            data: tileData,
-            tileWidth: TS,
-            tileHeight: TS,
-          });
-          const tileset = map.addTilesetImage("terrain")!;
-          map.createLayer(0, tileset, 0, 0);
-
           const cam = this.cameras.main;
           cam.setBounds(0, 0, WORLD_W, WORLD_H);
           cam.setRoundPixels(true);
@@ -221,34 +207,9 @@ export const GoldMineSolver: React.FC = () => {
           cam.centerOn(WORLD_W / 2, WORLD_H / 2);
 
           this.pathGraphics = this.add.graphics();
+          this.pathGraphics.setDepth(20);
 
-          const sx = cellCenterX(START.c);
-          const sy = cellCenterY(START.r);
-          const startG = this.add.graphics();
-          startG.fillStyle(0x4caf50, 1);
-          startG.fillCircle(sx, sy, TS * 0.55);
-          this.add
-            .text(sx, sy, "S", {
-              fontFamily: "monospace",
-              fontSize: `${TS * 0.8}px`,
-              color: "#ffffff",
-              fontStyle: "bold",
-            })
-            .setOrigin(0.5, 0.5);
-
-          const ex = cellCenterX(EXIT.c);
-          const ey = cellCenterY(EXIT.r);
-          const exitG = this.add.graphics();
-          exitG.fillStyle(0xf44336, 1);
-          exitG.fillCircle(ex, ey, TS * 0.55);
-          this.add
-            .text(ex, ey, "E", {
-              fontFamily: "monospace",
-              fontSize: `${TS * 0.8}px`,
-              color: "#ffffff",
-              fontStyle: "bold",
-            })
-            .setOrigin(0.5, 0.5);
+          this.renderMap(mapStateRef.current);
 
           sceneDataRef.current = {
             scene: this,
@@ -256,6 +217,57 @@ export const GoldMineSolver: React.FC = () => {
           };
 
           this.drawPath(pathCellsRef.current);
+        }
+
+        renderMap(mapState: GreedyMineMapState) {
+          this.floorLayer?.destroy();
+          this.floorMap?.destroy();
+          this.startGraphics?.destroy();
+          this.startLabel?.destroy();
+          this.exitGraphics?.destroy();
+          this.exitLabel?.destroy();
+
+          const tileData = buildTilemapData(mapState.walls);
+          this.floorMap = this.make.tilemap({
+            data: tileData,
+            tileWidth: TS,
+            tileHeight: TS,
+          });
+          const tileset = this.floorMap.addTilesetImage("terrain")!;
+          this.floorLayer = this.floorMap.createLayer(0, tileset, 0, 0);
+          this.floorLayer.setDepth(0);
+
+          const sx = cellCenterX(mapState.start.c);
+          const sy = cellCenterY(mapState.start.r);
+          this.startGraphics = this.add.graphics();
+          this.startGraphics.setDepth(10);
+          this.startGraphics.fillStyle(0x4caf50, 1);
+          this.startGraphics.fillCircle(sx, sy, TS * 0.55);
+          this.startLabel = this.add
+            .text(sx, sy, "S", {
+              fontFamily: "monospace",
+              fontSize: `${TS * 0.8}px`,
+              color: "#ffffff",
+              fontStyle: "bold",
+            })
+            .setOrigin(0.5, 0.5)
+            .setDepth(11);
+
+          const ex = cellCenterX(mapState.exit.c);
+          const ey = cellCenterY(mapState.exit.r);
+          this.exitGraphics = this.add.graphics();
+          this.exitGraphics.setDepth(10);
+          this.exitGraphics.fillStyle(0xf44336, 1);
+          this.exitGraphics.fillCircle(ex, ey, TS * 0.55);
+          this.exitLabel = this.add
+            .text(ex, ey, "E", {
+              fontFamily: "monospace",
+              fontSize: `${TS * 0.8}px`,
+              color: "#ffffff",
+              fontStyle: "bold",
+            })
+            .setOrigin(0.5, 0.5)
+            .setDepth(11);
         }
 
         drawPath(cells: Pos[]) {
@@ -294,8 +306,23 @@ export const GoldMineSolver: React.FC = () => {
       gameRef.current?.destroy(true);
       gameRef.current = null;
       sceneDataRef.current = null;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
     };
   }, []);
+
+  useEffect(() => {
+    setPathCells([]);
+    setPathError(null);
+  }, [mapState.version]);
+
+  useEffect(() => {
+    const data = sceneDataRef.current;
+    if (!data?.scene) return;
+    data.scene.renderMap(mapState);
+    data.scene.drawPath([]);
+  }, [mapState]);
 
   useEffect(() => {
     const data = sceneDataRef.current;
@@ -306,9 +333,10 @@ export const GoldMineSolver: React.FC = () => {
   const handleAfterRun = useCallback(async () => {
     setPathError(null);
     try {
-      await pyodideContext.set("_grid", GRID);
-      await pyodideContext.set("_start", [START.r, START.c]);
-      await pyodideContext.set("_end", [EXIT.r, EXIT.c]);
+      const grid = buildGridFromGreedyMap(mapState);
+      await pyodideContext.set("_grid", grid);
+      await pyodideContext.set("_start", [mapState.start.r, mapState.start.c]);
+      await pyodideContext.set("_end", [mapState.exit.r, mapState.exit.c]);
 
       await pyodideContext.run(
         "_path_result = solve(_grid, tuple(_start), tuple(_end))",
@@ -332,7 +360,7 @@ export const GoldMineSolver: React.FC = () => {
       setPathCells([]);
       setPathError(String(err));
     }
-  }, []);
+  }, [mapState]);
 
   return (
     <CheeseSlideContainer>

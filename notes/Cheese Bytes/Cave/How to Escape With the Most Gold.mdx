@@ -1,0 +1,48 @@
+import { GoldMineDemo } from "../../../apps/cheesebytes-web/src/components/cave/greedy-gold-miner";
+
+export const simpleMap = [
+  "#########",
+  "#.......#",
+  "#.#####.#",
+  "#.#####.#",
+  "#S.....E#",
+  "#########",
+];
+
+export const mediumMap = [
+  "##################",
+  "#......##........#",
+  "#.####....###.##.#",
+  "#....S.##........#",
+  "####.#.#####.###.#",
+  "#....#.....#.#...#",
+  "#.########.#.#.#.#",
+  "#........#.#.....#",
+  "#.######.#.#####.#",
+  "#.#......#.....#.#",
+  "#.#.#.#.#####.##.#",
+  "#...#.#.........E#",
+  "##################",
+];
+
+You enter a gold mine with one goal: to become filthy rich. But there's a catch.
+Every step you take collects gold and collapses the tunnel behind you. There's
+no going back. Luckily, there's another way out. So which route leaves you the
+richest by the time you escape?
+
+<GoldMineDemo client:only="react" rawMap={mediumMap} bestPossible={12} />
+
+# Draft
+
+TODO: explain the rules of the mine and why the objective is not the shortest
+path.
+
+TODO: show a first brute-force / DFS style solution.
+
+TODO: explain pruning ideas and memoization opportunities.
+
+TODO: compare simple correctness-first code with optimized code.
+
+# References
+
+- [Presentation Version](/slides/greedy-gold-miner)

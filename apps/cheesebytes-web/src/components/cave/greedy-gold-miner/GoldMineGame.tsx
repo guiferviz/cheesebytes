@@ -1,13 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  posKey,
-  WALLS,
-  START,
-  EXIT,
-  MAP_ROWS,
-  MAP_COLS,
-} from "../dungeon-escape/types";
+import { posKey, MAP_ROWS, MAP_COLS } from "../dungeon-escape/types";
 import { CheeseSlideContainer } from "../shared";
+import { useGreedyMineMap } from "./map-state";
 
 type Direction = "north" | "south" | "east" | "west";
 type GameStatus = "playing" | "won" | "lost";
@@ -215,24 +209,29 @@ class MusicEngine {
 
 const musicEngine = new MusicEngine();
 
-function isWall(r: number, c: number): boolean {
+function isWall(walls: Set<string>, r: number, c: number): boolean {
   if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return true;
-  return WALLS.has(posKey(r, c));
+  return walls.has(posKey(r, c));
 }
 
 type BlockedFn = (r: number, c: number) => boolean;
 
-function isBlocked(r: number, c: number, collapsed: Set<string>): boolean {
+function isBlocked(
+  walls: Set<string>,
+  r: number,
+  c: number,
+  collapsed: Set<string>,
+): boolean {
   if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return true;
   const key = posKey(r, c);
-  return WALLS.has(key) || collapsed.has(key);
+  return walls.has(key) || collapsed.has(key);
 }
 
 function tIdx(row: number, col: number): number {
   return row * ATLAS_COLS + col;
 }
 
-function tileTL(r: number, c: number, blocked: BlockedFn = isWall): number {
+function tileTL(r: number, c: number, blocked: BlockedFn): number {
   const wN = blocked(r - 1, c);
   const wW = blocked(r, c - 1);
   if (wN && wW) return tIdx(2, 18);
@@ -242,7 +241,7 @@ function tileTL(r: number, c: number, blocked: BlockedFn = isWall): number {
   return tIdx(3, 19);
 }
 
-function tileTR(r: number, c: number, blocked: BlockedFn = isWall): number {
+function tileTR(r: number, c: number, blocked: BlockedFn): number {
   const wN = blocked(r - 1, c);
   const wE = blocked(r, c + 1);
   if (wN && wE) return tIdx(2, 20);
@@ -252,7 +251,7 @@ function tileTR(r: number, c: number, blocked: BlockedFn = isWall): number {
   return tIdx(3, 19);
 }
 
-function tileBL(r: number, c: number, blocked: BlockedFn = isWall): number {
+function tileBL(r: number, c: number, blocked: BlockedFn): number {
   const wS = blocked(r + 1, c);
   const wW = blocked(r, c - 1);
   if (wS && wW) return tIdx(4, 18);
@@ -262,7 +261,7 @@ function tileBL(r: number, c: number, blocked: BlockedFn = isWall): number {
   return tIdx(3, 19);
 }
 
-function tileBR(r: number, c: number, blocked: BlockedFn = isWall): number {
+function tileBR(r: number, c: number, blocked: BlockedFn): number {
   const wS = blocked(r + 1, c);
   const wE = blocked(r, c + 1);
   if (wS && wE) return tIdx(4, 20);
@@ -309,17 +308,29 @@ function manifestFrameToIndex(
   return row * manifest.meta.columns + col;
 }
 
-function isWalkable(pos: Pos, collapsed: Set<string>): boolean {
+function isWalkable(
+  pos: Pos,
+  walls: Set<string>,
+  collapsed: Set<string>,
+): boolean {
   if (pos.r < 0 || pos.r >= MAP_ROWS || pos.c < 0 || pos.c >= MAP_COLS)
     return false;
-  if (WALLS.has(posKey(pos.r, pos.c))) return false;
+  if (walls.has(posKey(pos.r, pos.c))) return false;
   return !collapsed.has(posKey(pos.r, pos.c));
 }
 
-function availableMoves(pos: Pos, collapsed: Set<string>): Direction[] {
+function availableMoves(
+  pos: Pos,
+  walls: Set<string>,
+  collapsed: Set<string>,
+): Direction[] {
   return (Object.keys(DIRECTION_DELTAS) as Direction[]).filter((direction) => {
     const delta = DIRECTION_DELTAS[direction];
-    return isWalkable({ r: pos.r + delta.r, c: pos.c + delta.c }, collapsed);
+    return isWalkable(
+      { r: pos.r + delta.r, c: pos.c + delta.c },
+      walls,
+      collapsed,
+    );
   });
 }
 
@@ -348,6 +359,7 @@ function isCurrentRevealSectionActive(element: HTMLElement | null): boolean {
 }
 
 export const GoldMineGame: React.FC = () => {
+  const mapState = useGreedyMineMap();
   const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<any>(null);
@@ -378,6 +390,30 @@ export const GoldMineGame: React.FC = () => {
     };
   }, [musicOn]);
 
+  useEffect(() => {
+    const syncMusicPlayback = () => {
+      const active =
+        !document.hidden && isCurrentRevealSectionActive(rootRef.current);
+      if (musicOn && active) musicEngine.start();
+      else musicEngine.stop();
+    };
+
+    syncMusicPlayback();
+    document.addEventListener("visibilitychange", syncMusicPlayback);
+
+    const reveal = (window as { Reveal?: { on?: Function; off?: Function } })
+      .Reveal;
+    reveal?.on?.("slidechanged", syncMusicPlayback);
+    reveal?.on?.("ready", syncMusicPlayback);
+
+    return () => {
+      document.removeEventListener("visibilitychange", syncMusicPlayback);
+      reveal?.off?.("slidechanged", syncMusicPlayback);
+      reveal?.off?.("ready", syncMusicPlayback);
+      musicEngine.stop();
+    };
+  }, [musicOn]);
+
   function setControlsCapture(nextValue: boolean) {
     controlsArmedRef.current = nextValue;
     setControlsArmed(nextValue);
@@ -391,7 +427,7 @@ export const GoldMineGame: React.FC = () => {
     );
     setZoom(INITIAL_ZOOM);
     setControlsCapture(false);
-  }, [runId]);
+  }, [runId, mapState.version]);
 
   useEffect(() => {
     const handleKeyDownCapture = (event: KeyboardEvent) => {
@@ -441,6 +477,10 @@ export const GoldMineGame: React.FC = () => {
       if (!mounted || !containerRef.current) return;
 
       const Phaser = PhaserModule.default ?? PhaserModule;
+      const walls = mapState.walls;
+      const start = mapState.start;
+      const exit = mapState.exit;
+      const staticBlocked: BlockedFn = (r, c) => isWall(walls, r, c);
 
       class GoldMineScene extends Phaser.Scene {
         floorTexture: any;
@@ -448,7 +488,7 @@ export const GoldMineGame: React.FC = () => {
         cameraTarget: any;
         spriteManifest: SpriteManifest | null = null;
         collapsed = new Set<string>();
-        currentPos: Pos = { ...START };
+        currentPos: Pos = { ...start };
         currentFacing: Direction = "south";
         moving = false;
         currentGold = 0;
@@ -510,8 +550,8 @@ export const GoldMineGame: React.FC = () => {
           this.floorTexture.clear();
           for (let r = 0; r < MAP_ROWS; r += 1) {
             for (let c = 0; c < MAP_COLS; c += 1) {
-              if (WALLS.has(posKey(r, c))) continue;
-              this.renderFloorCell(r, c, isWall);
+              if (walls.has(posKey(r, c))) continue;
+              this.renderFloorCell(r, c, staticBlocked);
             }
           }
         }
@@ -533,7 +573,7 @@ export const GoldMineGame: React.FC = () => {
           const y = r * 2 * TS;
 
           this.clearFloorCell(r, c);
-          if (WALLS.has(key) || this.collapsed.has(key)) return;
+          if (walls.has(key) || this.collapsed.has(key)) return;
 
           this.floorTexture.drawFrame("terrain", tileTL(r, c, blocked), x, y);
           this.floorTexture.drawFrame(
@@ -560,7 +600,7 @@ export const GoldMineGame: React.FC = () => {
           for (let r = 0; r < MAP_ROWS; r += 1) {
             for (let c = 0; c < MAP_COLS; c += 1) {
               const key = posKey(r, c);
-              if (WALLS.has(key)) continue;
+              if (walls.has(key)) continue;
 
               const x = cellCenterX(c);
               const y = cellCenterY(r);
@@ -588,8 +628,8 @@ export const GoldMineGame: React.FC = () => {
         }
 
         createMarkers() {
-          const sx = cellCenterX(START.c);
-          const sy = cellCenterY(START.r);
+          const sx = cellCenterX(start.c);
+          const sy = cellCenterY(start.r);
           this.add.circle(sx, sy, TS * 0.55, 0x4caf50, 1).setDepth(5);
           this.add
             .text(sx, sy, "S", {
@@ -601,8 +641,8 @@ export const GoldMineGame: React.FC = () => {
             .setOrigin(0.5)
             .setDepth(6);
 
-          const ex = cellCenterX(EXIT.c);
-          const ey = cellCenterY(EXIT.r);
+          const ex = cellCenterX(exit.c);
+          const ey = cellCenterY(exit.r);
           const exitCircle = this.add.circle(ex, ey, TS * 0.55, 0xf44336, 1);
           exitCircle.setDepth(5);
           this.tweens.add({
@@ -740,8 +780,8 @@ export const GoldMineGame: React.FC = () => {
         }
 
         createMiner() {
-          const x = cellCenterX(START.c);
-          const y = cellCenterY(START.r);
+          const x = cellCenterX(start.c);
+          const y = cellCenterY(start.r);
           this.cameraTarget = this.add.zone(x, y, 1, 1);
           this.miner = this.add.sprite(
             x,
@@ -783,7 +823,7 @@ export const GoldMineGame: React.FC = () => {
             r: this.currentPos.r + delta.r,
             c: this.currentPos.c + delta.c,
           };
-          if (!isWalkable(next, this.collapsed)) {
+          if (!isWalkable(next, walls, this.collapsed)) {
             this.cameras.main.shake(70, 0.002);
             if (sfxOnRef.current) sfx.bump();
             return;
@@ -848,7 +888,8 @@ export const GoldMineGame: React.FC = () => {
         }
 
         refreshNeighborTiles(pos: Pos) {
-          const blocked: BlockedFn = (r, c) => isBlocked(r, c, this.collapsed);
+          const blocked: BlockedFn = (r, c) =>
+            isBlocked(walls, r, c, this.collapsed);
           for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
               const nr = pos.r + dr;
@@ -878,7 +919,7 @@ export const GoldMineGame: React.FC = () => {
         }
 
         evaluateState() {
-          if (this.currentPos.r === EXIT.r && this.currentPos.c === EXIT.c) {
+          if (this.currentPos.r === exit.r && this.currentPos.c === exit.c) {
             this.status = "won";
             setStatus("won");
             setBestGold((current) => Math.max(current, this.currentGold));
@@ -890,7 +931,9 @@ export const GoldMineGame: React.FC = () => {
             return;
           }
 
-          if (availableMoves(this.currentPos, this.collapsed).length === 0) {
+          if (
+            availableMoves(this.currentPos, walls, this.collapsed).length === 0
+          ) {
             this.status = "lost";
             setStatus("lost");
             setMessage(
@@ -929,7 +972,7 @@ export const GoldMineGame: React.FC = () => {
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };
-  }, [runId]);
+  }, [runId, mapState.version]);
 
   function move(direction: Direction) {
     sceneControllerRef.current?.move(direction);

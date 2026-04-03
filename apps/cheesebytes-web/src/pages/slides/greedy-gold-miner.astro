@@ -4,6 +4,7 @@ import { LogoAnimation } from "../../components/cave/intro";
 import {
   GoldMineSolver,
   GoldMineGame,
+  GreedyGoldMineMapEditor,
 } from "../../components/cave/greedy-gold-miner";
 ---
 
@@ -23,6 +24,7 @@ import {
         escape?
       </p>
     </aside>
+    <GoldMineGame client:only="react" />
   </section>
 
   <!-- Slide 2: Interactive solver -->
@@ -37,20 +39,17 @@ import {
     <GoldMineSolver client:only="react" />
   </section>
 
-  <!-- Slide 3: Playable visual -->
   <section>
     <aside class="notes">
       <p>
-        This new visual reuses the same dungeon and the same tileset, but turns
-        it into a game. The miner earns one unit of gold per step, and the floor
-        behind them disappears. That lets the audience feel the problem before
-        returning to the algorithm.
+        This editor modifies the mine for the whole deck. After changing it, go
+        back to the playable slide or the solver slide and they will use the
+        updated map.
       </p>
     </aside>
-    <GoldMineGame client:only="react" />
+    <GreedyGoldMineMapEditor client:only="react" />
   </section>
 
-  <!-- Slide 4: Logo -->
   <section id="intro">
     <LogoAnimation client:load />
   </section>
