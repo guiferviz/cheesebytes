@@ -145,17 +145,25 @@ const PyodideCodeRunner = forwardRef(
       initialCode = "",
       autoRun = false,
       runDelay = 300,
+      onAfterRun,
+      initialEditorHeight = 300,
     }: {
       initialCode?: string;
       autoRun?: boolean;
       runDelay?: number;
+      /** Called after a successful run with the result value. */
+      onAfterRun?: (result: any) => void | Promise<void>;
+      /** Starting height for the code editor in pixels. */
+      initialEditorHeight?: number;
     },
     ref,
   ) => {
     const [code, setCode] = useState(initialCode);
     const [output, setOutput] = useState("");
     const [status, setStatus] = useState<RunStatus>("idle");
-    const [editorHeight, setEditorHeight] = useState(300);
+    const [editorHeight, setEditorHeight] = useState(initialEditorHeight);
+    const onAfterRunRef = useRef(onAfterRun);
+    onAfterRunRef.current = onAfterRun;
     const isDragging = useRef(false);
     const dragStartY = useRef(0);
     const dragStartH = useRef(0);
@@ -199,11 +207,42 @@ const PyodideCodeRunner = forwardRef(
         setStatus("running");
         setOutput("");
         try {
+          // Redirect stdout/stderr so print() output is captured
+          await pyodideContext.run(
+            "import sys as _sys, io as _io\n" +
+              "_captured_out = _io.StringIO()\n" +
+              "_old_stdout, _old_stderr = _sys.stdout, _sys.stderr\n" +
+              "_sys.stdout = _sys.stderr = _captured_out",
+          );
           const result = await pyodideContext.run(src);
-          setOutput(result == null ? "" : String(result));
+          // Restore and collect captured output
+          await pyodideContext.run(
+            "_sys.stdout, _sys.stderr = _old_stdout, _old_stderr",
+          );
+          const captured = await pyodideContext.get("_captured_out");
+          const stdout =
+            typeof captured?.getvalue === "function" ? captured.getvalue() : "";
+
+          const parts: string[] = [];
+          if (stdout) parts.push(stdout);
+          if (result != null && String(result)) parts.push(String(result));
+          setOutput(parts.join(""));
           setStatus("idle");
+          try {
+            await onAfterRunRef.current?.(result);
+          } catch {
+            /* callback errors don't affect status */
+          }
           return result;
         } catch (err) {
+          // Restore stdout on error too
+          try {
+            await pyodideContext.run(
+              "_sys.stdout, _sys.stderr = _old_stdout, _old_stderr",
+            );
+          } catch {
+            /* ignore */
+          }
           setOutput(String(err));
           setStatus("error");
           throw err;
@@ -325,17 +364,17 @@ const PyodideCodeRunner = forwardRef(
         <div
           onMouseDown={onResizeMouseDown}
           style={{
-            height: 5,
+            height: 3,
             cursor: "ns-resize",
-            background: toolbarBorder,
-            opacity: 0.6,
+            background: isDark ? "rgba(255,255,255,0.12)" : toolbarBorder,
+            opacity: 0.5,
             transition: "opacity 0.15s",
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLDivElement).style.opacity = "1";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLDivElement).style.opacity = "0.6";
+            (e.currentTarget as HTMLDivElement).style.opacity = "0.5";
           }}
         />
 

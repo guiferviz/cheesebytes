@@ -1,0 +1,30 @@
+{
+  "image": "gold-miner-walk.png",
+  "frameWidth": 48,
+  "frameHeight": 48,
+  "rows": [
+    "south",
+    "west",
+    "east",
+    "north"
+  ],
+  "framesPerRow": 6,
+  "animations": {
+    "walk-south": {
+      "start": 0,
+      "end": 5
+    },
+    "walk-west": {
+      "start": 6,
+      "end": 11
+    },
+    "walk-east": {
+      "start": 12,
+      "end": 17
+    },
+    "walk-north": {
+      "start": 18,
+      "end": 23
+    }
+  }
+}

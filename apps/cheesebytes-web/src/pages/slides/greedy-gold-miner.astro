@@ -1,0 +1,57 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+import { LogoAnimation } from "../../components/cave/intro";
+import {
+  GoldMineSolver,
+  GoldMineGame,
+} from "../../components/cave/greedy-gold-miner";
+---
+
+<RevealLayout
+  title="How to Escape With the Most Gold"
+  description="Find the richest escape route: the path that collects the most gold before reaching the exit"
+  theme="dark"
+>
+  <!-- Slide 1: Intro text -->
+  <section>
+    <aside class="notes">
+      <p>
+        You enter a gold mine with one goal: to become filthy rich and make it
+        out alive. But there's a catch. Every step you take collects gold — and
+        collapses the tunnel behind you. There's no going back. Luckily, there's
+        another way out. So which route leaves you the richest by the time you
+        escape?
+      </p>
+    </aside>
+  </section>
+
+  <!-- Slide 2: Interactive solver -->
+  <section>
+    <aside class="notes">
+      <p>
+        Write a Python function that finds a path from start to exit. The
+        default code uses BFS — it finds the shortest path. Can you modify it to
+        find the longest one instead?
+      </p>
+    </aside>
+    <GoldMineSolver client:only="react" />
+  </section>
+
+  <!-- Slide 3: Playable visual -->
+  <section>
+    <aside class="notes">
+      <p>
+        Este visual nuevo reutiliza el mismo dungeon y el mismo tileset, pero lo
+        convierte en un juego. El minero recoge una unidad de oro por cada paso,
+        y el suelo que deja atrás desaparece. Así la audiencia puede sentir el
+        problema antes de volver al algoritmo.
+      </p>
+    </aside>
+    <GoldMineGame client:only="react" />
+  </section>
+
+  <!-- Slide 4: Logo -->
+  <section id="intro">
+    <LogoAnimation client:load />
+  </section>
+</RevealLayout>
