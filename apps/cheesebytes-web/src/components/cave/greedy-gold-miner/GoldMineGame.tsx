@@ -243,35 +243,12 @@ function tileBR(r: number, c: number, blocked: BlockedFn = isWall): number {
   return tIdx(3, 19);
 }
 
-function buildTilemapData(): number[][] {
-  const data: number[][] = [];
-  for (let r = 0; r < MAP_ROWS; r += 1) {
-    const topRow: number[] = [];
-    const bottomRow: number[] = [];
-    for (let c = 0; c < MAP_COLS; c += 1) {
-      if (WALLS.has(posKey(r, c))) {
-        topRow.push(-1, -1);
-        bottomRow.push(-1, -1);
-      } else {
-        topRow.push(tileTL(r, c), tileTR(r, c));
-        bottomRow.push(tileBL(r, c), tileBR(r, c));
-      }
-    }
-    data.push(topRow, bottomRow);
-  }
-  return data;
-}
-
 function cellCenterX(c: number): number {
   return c * 2 * TS + TS;
 }
 
 function cellCenterY(r: number): number {
   return r * 2 * TS + TS;
-}
-
-function worldToTileCell(pos: Pos): { tx: number; ty: number } {
-  return { tx: pos.c * 2, ty: pos.r * 2 };
 }
 
 function roundToPixel(value: number): number {
@@ -418,10 +395,9 @@ export const GoldMineGame: React.FC = () => {
       if (!mounted || !containerRef.current) return;
 
       const Phaser = PhaserModule.default ?? PhaserModule;
-      const tileData = buildTilemapData();
 
       class GoldMineScene extends Phaser.Scene {
-        floorLayer: any;
+        floorTexture: any;
         miner: any;
         cameraTarget: any;
         collapsed = new Set<string>();
@@ -451,15 +427,13 @@ export const GoldMineGame: React.FC = () => {
         create() {
           this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
           this.cameras.main.setBackgroundColor("#05070a");
-          this.cameras.main.roundPixels = true;
+          this.cameras.main.roundPixels = false;
 
-          const map = this.make.tilemap({
-            data: tileData,
-            tileWidth: TS,
-            tileHeight: TS,
-          });
-          const tileset = map.addTilesetImage("terrain")!;
-          this.floorLayer = map.createLayer(0, tileset, 0, 0);
+          this.floorTexture = this.add
+            .renderTexture(0, 0, WORLD_W, WORLD_H)
+            .setOrigin(0, 0)
+            .setDepth(1);
+          this.renderFullFloor();
 
           this.drawGoldSpecks();
           this.createMarkers();
@@ -482,6 +456,56 @@ export const GoldMineGame: React.FC = () => {
             return;
           }
           camera.startFollow(this.cameraTarget, true, 0.12, 0.12);
+        }
+
+        renderFullFloor() {
+          this.floorTexture.clear();
+          for (let r = 0; r < MAP_ROWS; r += 1) {
+            for (let c = 0; c < MAP_COLS; c += 1) {
+              if (WALLS.has(posKey(r, c))) continue;
+              this.renderFloorCell(r, c, isWall);
+            }
+          }
+        }
+
+        clearFloorCell(r: number, c: number) {
+          this.floorTexture.fill(
+            0x05070a,
+            1,
+            c * 2 * TS,
+            r * 2 * TS,
+            TS * 2,
+            TS * 2,
+          );
+        }
+
+        renderFloorCell(r: number, c: number, blocked: BlockedFn) {
+          const key = posKey(r, c);
+          const x = c * 2 * TS;
+          const y = r * 2 * TS;
+
+          this.clearFloorCell(r, c);
+          if (WALLS.has(key) || this.collapsed.has(key)) return;
+
+          this.floorTexture.drawFrame("terrain", tileTL(r, c, blocked), x, y);
+          this.floorTexture.drawFrame(
+            "terrain",
+            tileTR(r, c, blocked),
+            x + TS,
+            y,
+          );
+          this.floorTexture.drawFrame(
+            "terrain",
+            tileBL(r, c, blocked),
+            x,
+            y + TS,
+          );
+          this.floorTexture.drawFrame(
+            "terrain",
+            tileBR(r, c, blocked),
+            x + TS,
+            y + TS,
+          );
         }
 
         drawGoldSpecks() {
@@ -671,11 +695,7 @@ export const GoldMineGame: React.FC = () => {
           const key = posKey(pos.r, pos.c);
           this.collapsed.add(key);
 
-          const cell = worldToTileCell(pos);
-          this.floorLayer.putTileAt(-1, cell.tx, cell.ty);
-          this.floorLayer.putTileAt(-1, cell.tx + 1, cell.ty);
-          this.floorLayer.putTileAt(-1, cell.tx, cell.ty + 1);
-          this.floorLayer.putTileAt(-1, cell.tx + 1, cell.ty + 1);
+          this.clearFloorCell(pos.r, pos.c);
 
           const decor = this.decor.get(key);
           decor?.specks.forEach((speck) => speck.setVisible(false));
@@ -693,25 +713,7 @@ export const GoldMineGame: React.FC = () => {
               const nc = pos.c + dc;
               if (nr < 0 || nr >= MAP_ROWS || nc < 0 || nc >= MAP_COLS)
                 continue;
-              const nk = posKey(nr, nc);
-              if (WALLS.has(nk) || this.collapsed.has(nk)) continue;
-              const tc = worldToTileCell({ r: nr, c: nc });
-              this.floorLayer.putTileAt(tileTL(nr, nc, blocked), tc.tx, tc.ty);
-              this.floorLayer.putTileAt(
-                tileTR(nr, nc, blocked),
-                tc.tx + 1,
-                tc.ty,
-              );
-              this.floorLayer.putTileAt(
-                tileBL(nr, nc, blocked),
-                tc.tx,
-                tc.ty + 1,
-              );
-              this.floorLayer.putTileAt(
-                tileBR(nr, nc, blocked),
-                tc.tx + 1,
-                tc.ty + 1,
-              );
+              this.renderFloorCell(nr, nc, blocked);
             }
           }
         }
@@ -765,7 +767,7 @@ export const GoldMineGame: React.FC = () => {
 
       gameRef.current?.destroy(true);
       gameRef.current = new Phaser.Game({
-        type: Phaser.CANVAS,
+        type: Phaser.AUTO,
         parent: containerRef.current,
         width: DISPLAY_W,
         height: DISPLAY_H,
@@ -773,8 +775,8 @@ export const GoldMineGame: React.FC = () => {
         scene: GoldMineScene,
         render: {
           pixelArt: true,
-          antialias: false,
-          roundPixels: true,
+          antialias: true,
+          roundPixels: false,
         },
       });
     });
