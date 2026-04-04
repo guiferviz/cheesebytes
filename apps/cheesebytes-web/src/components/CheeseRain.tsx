@@ -63,29 +63,21 @@ const CheeseRain: React.FC<CheeseRainProps> = ({
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const vm = (window as any).vimMode;
-    if (vm?.registerSequence) {
-      // Register via VimMode — prevents H/S/etc. from firing mid-sequence
-      vm.registerSequence("cheese", {
-        run: () => triggerRef.current(),
-        hidden: true,
-        insertMode: true,
-        timeout: 500,
-      });
-      return () => vm.unregister("c");
-    }
+    if (!vm?.registerSequence) return;
 
-    // Fallback: own listener (if VimMode is not available)
-    let buffer = "";
-    const onKeyDown = (e: KeyboardEvent) => {
-      buffer += e.key.toLowerCase();
-      if (buffer.length > 6) buffer = buffer.slice(-6);
-      if (buffer === "cheese") {
-        triggerRef.current();
-        buffer = "";
-      }
+    // Register via VimMode only. The starter key lives in both normal and insert,
+    // while the pending sequence itself stays hidden from the palette.
+    vm.registerSequence("cheese", {
+      run: () => triggerRef.current(),
+      hidden: true,
+      insertMode: true,
+      modes: ["normal", "insert"],
+    });
+
+    return () => {
+      vm.unregister("c", "normal");
+      vm.unregister("c", "insert");
     };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, []);
 
   // Cuando todas las imágenes terminan su animación, desactiva el efecto

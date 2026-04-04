@@ -475,87 +475,91 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
     const root = rootRef.current;
     if (!root) return;
 
-    const focusRoot = () => {
-      root.focus({ preventScroll: true });
-    };
-
-    const syncArmed = () => {
-      const inside = root.contains(document.activeElement);
+    const setGameMode = (inside: boolean) => {
       armedRef.current = inside;
       setArmed(inside);
       const vm = (window as any).vimMode;
       if (!vm) return;
       if (inside) {
-        vm.pushScope("gold-mine-demo", [
-          // Movement keys — passthrough so the game's own listener handles them,
-          // but they shadow global bindings (e.g. S for sidebar) and show in help.
-          {
-            key: "w",
-            label: "Move north",
-            category: "Game",
-            run: () => {},
-            passthrough: true,
-            altKeys: ["\u2191"],
-          },
-          {
-            key: "a",
-            label: "Move west",
-            category: "Game",
-            run: () => {},
-            passthrough: true,
-            altKeys: ["\u2190"],
-          },
-          {
-            key: "s",
-            label: "Move south",
-            category: "Game",
-            run: () => {},
-            passthrough: true,
-            altKeys: ["\u2193"],
-          },
-          {
-            key: "d",
-            label: "Move east",
-            category: "Game",
-            run: () => {},
-            passthrough: true,
-            altKeys: ["\u2192"],
-          },
-          // Actions
-          {
-            key: "z",
-            label: "Zoom on player",
-            category: "Game",
-            run: () => zoomRef.current?.(),
-          },
-          {
-            key: "m",
-            label: "Toggle music",
-            category: "Game",
-            run: () => toggleMusicRef.current(),
-          },
-          {
-            key: "x",
-            label: "Toggle sound effects",
-            category: "Game",
-            run: () => toggleSfxRef.current(),
-          },
-          {
-            key: "u",
-            label: "Undo last move",
-            category: "Game",
-            run: () => undoRef.current?.(),
-          },
-          {
-            key: "r",
-            label: "Restart game",
-            category: "Game",
-            run: () => restartRef.current(),
-          },
-        ]);
+        vm.pushMode("game", {
+          label: "Game",
+          extends: "normal",
+          commands: [
+            // Movement keys — passthrough so the game's own listener handles them,
+            // but they shadow global bindings (e.g. S for sidebar) and show in help.
+            {
+              key: "w",
+              label: "Move north",
+              run: () => {},
+              passthrough: true,
+              altKeys: ["\u2191"],
+            },
+            {
+              key: "a",
+              label: "Move west",
+              run: () => {},
+              passthrough: true,
+              altKeys: ["\u2190"],
+            },
+            {
+              key: "s",
+              label: "Move south",
+              run: () => {},
+              passthrough: true,
+              altKeys: ["\u2193"],
+            },
+            {
+              key: "d",
+              label: "Move east",
+              run: () => {},
+              passthrough: true,
+              altKeys: ["\u2192"],
+            },
+            // Actions
+            {
+              key: "z",
+              label: "Zoom on player",
+              run: () => zoomRef.current?.(),
+            },
+            {
+              key: "m",
+              label: "Toggle music",
+              run: () => toggleMusicRef.current(),
+            },
+            {
+              key: "x",
+              label: "Toggle sound effects",
+              run: () => toggleSfxRef.current(),
+            },
+            {
+              key: "u",
+              label: "Undo last move",
+              run: () => undoRef.current?.(),
+            },
+            {
+              key: "r",
+              label: "Restart game",
+              run: () => restartRef.current(),
+            },
+          ],
+        });
       } else {
-        vm.popScope("gold-mine-demo");
+        vm.popMode("game");
       }
+    };
+
+    const focusRoot = () => {
+      root.focus({ preventScroll: true });
+      setGameMode(true);
+    };
+
+    const syncArmed = () => {
+      // Focus events around canvas interactions can fire before activeElement settles.
+      // Defer one frame so the final focused element is visible here.
+      requestAnimationFrame(() => {
+        const inside = root.contains(document.activeElement);
+        setGameMode(inside);
+      });
     };
 
     document.addEventListener("keydown", onKey, true);
@@ -569,7 +573,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       root.removeEventListener("pointerdown", focusRoot, true);
       root.removeEventListener("focusin", syncArmed);
       root.removeEventListener("focusout", syncArmed);
-      (window as any).vimMode?.popScope("gold-mine-demo");
+      (window as any).vimMode?.popMode("game");
     };
   }, []);
 
@@ -963,7 +967,12 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
 
         tryUndo() {
           if (this.moving || this.history.length === 0) return;
-          if (this.stat !== "playing" && this.stat !== "lost") return;
+          if (
+            this.stat !== "playing" &&
+            this.stat !== "lost" &&
+            this.stat !== "won"
+          )
+            return;
           const snap = this.history.pop()!;
           this.moving = true;
 
@@ -971,8 +980,8 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
           this.g = snap.g;
           setGold(this.g);
 
-          // Reset status if was lost
-          if (this.stat === "lost") {
+          // Undoing from a terminal state re-opens the run.
+          if (this.stat === "lost" || this.stat === "won") {
             this.stat = "playing";
             setStatus("playing");
           }
@@ -1129,12 +1138,12 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   }, [runId, ROWS, COLS, WALLS, START, EXIT, WW, WH]);
 
   const statusText = !armed
-    ? "[ CLICK HERE TO PLAY ]"
+    ? "CLICK ANYWHERE IN THE GAME TO PLAY"
     : status === "won"
-      ? `[ ESCAPED WITH ${gold} GOLD! ]`
+      ? `ESCAPED WITH ${gold} GOLD!`
       : status === "lost"
-        ? "[ TRAPPED! NO MOVES LEFT ]"
-        : "[ WASD OR ARROWS TO MOVE ]";
+        ? "TRAPPED! NO MOVES LEFT"
+        : "WASD OR ARROWS TO MOVE";
 
   return (
     <div

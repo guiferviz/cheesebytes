@@ -1,23 +1,25 @@
 /**
- * VimMode — a global keyboard command system for Cheese Bytes.
+ * VimMode — a modal keyboard command system for Cheese Bytes.
  *
  * Architecture:
- *  - Two modes: NORMAL (keys trigger commands) and INSERT (keys type normally).
- *  - Insert mode is auto-detected when an editable element is focused.
- *  - Commands are registered in scoped layers. The global scope is the base;
- *    components can push/pop scopes to add or override commands contextually.
- *  - Pressing `h` opens a command palette listing all active commands.
- *  - Future: modifier keys, key sequences (e.g. `gg`), operator-motion combos.
+ *  - Named modes: "normal" (default), "insert" (auto), "iframe" (auto), custom (manual).
+ *  - Modes form an inheritance chain: e.g. "game" extends "normal".
+ *  - Auto-detected passive modes: insert (editable focused), iframe (iframe focused).
+ *  - Manual modes are pushed/popped by components (e.g. game mode on focus).
+ *  - Pressing `?` opens a multi-column palette showing the mode chain.
+ *  - Pending key sequences (e.g. "cheese") show trail in the indicator.
  *
  * Usage (vanilla JS / Astro <script>):
  *   window.vimMode.register("t", { label: "Toggle theme", run: () => toggleTheme() });
  *
  * Usage (React component on focus):
- *   const scope = window.vimMode.pushScope("gold-mine", [
- *     { key: "z", label: "Zoom player", run: () => toggleZoom() },
- *   ]);
+ *   window.vimMode.pushMode("game", {
+ *     label: "Game",
+ *     extends: "normal",
+ *     commands: [{ key: "z", label: "Zoom player", run: () => toggleZoom() }],
+ *   });
  *   // on blur:
- *   window.vimMode.popScope(scope);
+ *   window.vimMode.popMode("game");
  */
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -26,64 +28,62 @@ export interface VimCommand {
   key: string;
   label: string;
   run: () => void;
-  /** Optional category for palette grouping */
+  /** Optional category (legacy, not used for palette grouping). */
   category?: string;
   /**
    * If true, the command is shown in the palette but VimMode does NOT
    * intercept the keypress — it lets the event propagate to native handlers.
-   * Use this for keys owned by a component's own listener (e.g. WASD in a game)
-   * that should still shadow global bindings and appear in the help overlay.
    */
   passthrough?: boolean;
   /** Alternative keys shown as extra badges (display only, not registered). */
   altKeys?: string[];
-  /** If true, this command is hidden from the help palette (e.g. easter eggs). */
+  /** If true, hidden from the help palette (e.g. easter eggs). */
   hidden?: boolean;
-  /** If true, this command is checked even in insert mode (without preventDefault). */
+  /** If true, checked even in passive modes (without preventDefault). */
   insertMode?: boolean;
 }
 
-export interface VimScope {
-  id: string;
-  commands: Map<string, VimCommand>;
+export interface VimModeConfig {
+  /** Display label for palette column header and indicator. */
+  label: string;
+  /** Parent mode to inherit commands from (e.g. "normal"). */
+  extends?: string;
+  /** Commands defined in this mode. */
+  commands: VimCommand[];
+  /** If true, keys pass through without interception (like insert mode). */
+  passive?: boolean;
 }
-
-export type VimModeType = "normal" | "insert";
 
 /**
  * A transient scope that auto-clears after a matching key, Escape, or timeout.
- * Used for key sequences (e.g. "cheese") and operator-pending modes (e.g. brush size).
  */
 export interface PendingConfig {
   id: string;
   commands: VimCommand[];
-  /** Whether parent scope commands remain active (default: true). */
+  /** Whether parent commands remain active (default: true). */
   inherit?: boolean;
-  /** Auto-cancel after this many ms of no matching key (0/undefined = no timeout). */
+  /** Auto-cancel after this many ms (0/undefined = no timeout). */
   timeout?: number;
-  /** Called when the pending scope is cancelled. */
+  /** Called when cancelled. */
   onCancel?: () => void;
-  /** If true, the pending scope tracks keys even in insert mode (without preventDefault). */
+  /** If true, tracks keys even in passive modes (without preventDefault). */
   insertMode?: boolean;
-  /** Label shown in mode indicator while this pending scope is active. */
+  /** Label shown in indicator while active. */
   label?: string;
 }
 
 export interface VimModeAPI {
-  /** Register a command in the global scope. */
-  register(key: string, cmd: Omit<VimCommand, "key">): void;
-  /** Unregister a command from the global scope. */
-  unregister(key: string): void;
-  /** Push a new scope (returns scope id for removal). */
-  pushScope(
-    id: string,
-    commands: Omit<VimCommand, "key">[] & { key: string }[],
-  ): string;
-  /** Pop a scope by id. */
-  popScope(id: string): void;
-  /** Push a transient pending scope (auto-clears on match, Escape, or timeout). */
+  /** Register a command in the normal mode. */
+  register(key: string, cmd: Omit<VimCommand, "key">, modeId?: string): void;
+  /** Unregister a command from the normal mode. */
+  unregister(key: string, modeId?: string): void;
+  /** Register + activate a named mode. */
+  pushMode(id: string, config: VimModeConfig): void;
+  /** Deactivate a named mode. */
+  popMode(id: string): void;
+  /** Push a transient pending scope (auto-clears on match/Escape/timeout). */
   pushPending(config: PendingConfig): void;
-  /** Register a key sequence (e.g. "cheese") that triggers a callback when fully typed. */
+  /** Register a key sequence (e.g. "cheese") that triggers a callback. */
   registerSequence(
     word: string,
     config: {
@@ -93,12 +93,13 @@ export interface VimModeAPI {
       timeout?: number;
       label?: string;
       category?: string;
+      modes?: string[];
     },
   ): void;
-  /** Get all active commands (last scope wins for a given key). */
+  /** All active (non-hidden) commands across the mode chain. */
   activeCommands(): VimCommand[];
-  /** Get current mode. */
-  mode(): VimModeType;
+  /** Current effective mode id. */
+  mode(): string;
   /** Show/hide the command palette. */
   togglePalette(): void;
   /** Programmatically close the palette. */
@@ -107,7 +108,7 @@ export interface VimModeAPI {
   destroy(): void;
 }
 
-// ── Editable element detection ───────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────
 
 function isEditable(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
@@ -116,20 +117,63 @@ function isEditable(el: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
-function isInsertFrame(el: Element | null): boolean {
-  if (!(el instanceof HTMLIFrameElement)) return false;
-  return (
-    el.classList.contains("giscus-frame") ||
-    el.hasAttribute("data-vim-insert-frame")
-  );
+function isIframe(el: Element | null): boolean {
+  return el instanceof HTMLIFrameElement;
 }
 
-// ── Palette DOM ──────────────────────────────────────────────────────
+// ── Palette (multi-column) ───────────────────────────────────────────
+
+interface PaletteColumn {
+  label: string;
+  commands: VimCommand[];
+  /** Keys in this column that are overridden by a child mode. */
+  overriddenKeys?: Set<string>;
+}
+
+function keyboardEventInitFor(key: string): KeyboardEventInit | null {
+  const lower = key.toLowerCase();
+  if (/^[a-z]$/.test(lower)) {
+    const upper = lower.toUpperCase();
+    const code = `Key${upper}`;
+    const keyCode = upper.charCodeAt(0);
+    return {
+      key: lower,
+      code,
+      keyCode,
+      which: keyCode,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    };
+  }
+  if (
+    lower === "arrowup" ||
+    lower === "arrowdown" ||
+    lower === "arrowleft" ||
+    lower === "arrowright"
+  ) {
+    const keyCodeMap: Record<string, number> = {
+      arrowup: 38,
+      arrowdown: 40,
+      arrowleft: 37,
+      arrowright: 39,
+    };
+    return {
+      key: lower.replace(/^arrow/, "Arrow"),
+      code: lower.replace(/^arrow/, "Arrow"),
+      keyCode: keyCodeMap[lower],
+      which: keyCodeMap[lower],
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    };
+  }
+  return null;
+}
 
 function createPalette(): {
   root: HTMLElement;
-  list: HTMLElement;
-  show: (cmds: VimCommand[]) => void;
+  show: (columns: PaletteColumn[]) => void;
   hide: () => void;
   visible: () => boolean;
 } {
@@ -138,12 +182,12 @@ function createPalette(): {
   root.setAttribute("role", "dialog");
   root.setAttribute("aria-label", "Command palette");
   root.style.cssText = `
-    position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+    position: fixed; inset: 0;
     z-index: 99999;
     display: none;
     align-items: flex-start;
     justify-content: center;
-    padding-top: min(20vh, 120px);
+    padding-top: min(18vh, 110px);
     background: rgba(0,0,0,0.45);
     backdrop-filter: blur(4px);
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
@@ -155,46 +199,17 @@ function createPalette(): {
     color: var(--vim-palette-fg, #e0e0e0);
     border: 1px solid var(--vim-palette-border, #333);
     border-radius: 12px;
-    padding: 16px 0;
-    min-width: 320px;
-    max-width: 480px;
-    width: 90vw;
+    padding: 14px;
     max-height: 60vh;
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   `;
 
-  const title = document.createElement("div");
-  title.style.cssText = `
-    padding: 0 20px 12px;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    opacity: 0.5;
-    border-bottom: 1px solid var(--vim-palette-border, #333);
-    margin-bottom: 8px;
-  `;
-  title.textContent = "Commands";
-
-  const list = document.createElement("div");
-  list.style.cssText = `padding: 0;`;
-
-  panel.appendChild(title);
-  panel.appendChild(list);
   root.appendChild(panel);
 
-  // Prevent palette clicks from interfering with other pointer capture systems
-  root.addEventListener(
-    "pointerdown",
-    (e) => {
-      e.stopPropagation();
-    },
-    true,
-  );
-
-  // Click backdrop to close
+  root.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
   root.addEventListener("mousedown", (e) => {
+    e.preventDefault();
     if (e.target === root) hide();
   });
 
@@ -202,116 +217,137 @@ function createPalette(): {
 
   let savedFocus: Element | null = null;
 
-  function show(cmds: VimCommand[]) {
+  const badgeCSS = `
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 4px;
+    border-radius: 4px; font-size: 11px; font-weight: 700;
+    background: var(--vim-key-bg, rgba(255,255,255,0.1));
+    border: 1px solid var(--vim-key-border, rgba(255,255,255,0.15));
+    color: var(--vim-key-fg, #f6bd60);
+  `;
+
+  function renderRow(
+    cmd: VimCommand,
+    overridden: boolean,
+    savedFocusRef: { value: Element | null },
+  ): HTMLElement {
+    const isPass = !!cmd.passthrough;
+    const keyEventInit = isPass ? keyboardEventInitFor(cmd.key) : null;
+    const canSimulate = !!keyEventInit;
+    const dimmed = overridden && !isPass;
+    const row = document.createElement("div");
+    row.style.cssText = `
+      display: flex; align-items: center; gap: 8px;
+      padding: 3px 6px; border-radius: 4px;
+      cursor: ${!isPass || canSimulate ? "pointer" : "default"};
+      transition: background 0.1s;
+      ${dimmed ? "opacity: 0.55;" : ""}
+    `;
+    row.addEventListener("mouseenter", () => {
+      row.style.background = "var(--vim-palette-hover, rgba(255,255,255,0.06))";
+    });
+    row.addEventListener("mouseleave", () => {
+      row.style.background = "transparent";
+    });
+    row.addEventListener("click", () => {
+      hide();
+      if (isPass) {
+        if (!keyEventInit) return;
+        if (
+          savedFocusRef.value instanceof HTMLElement &&
+          document.contains(savedFocusRef.value)
+        ) {
+          savedFocusRef.value.focus({ preventScroll: true });
+        }
+        // Dispatch on document because the game listens there in capture mode.
+        document.dispatchEvent(new KeyboardEvent("keydown", keyEventInit));
+        document.dispatchEvent(new KeyboardEvent("keyup", keyEventInit));
+      } else {
+        cmd.run();
+      }
+    });
+
+    const badges = document.createElement("span");
+    badges.style.cssText =
+      "display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;";
+
+    const kbd = document.createElement("kbd");
+    kbd.textContent = cmd.key.toUpperCase();
+    kbd.style.cssText = badgeCSS;
+    badges.appendChild(kbd);
+
+    if (cmd.altKeys?.length) {
+      for (const alt of cmd.altKeys) {
+        const sep = document.createElement("span");
+        sep.textContent = "/";
+        sep.style.cssText = "font-size: 9px; opacity: 0.35;";
+        badges.appendChild(sep);
+        const ak = document.createElement("kbd");
+        ak.textContent = alt;
+        ak.style.cssText = badgeCSS;
+        badges.appendChild(ak);
+      }
+    }
+
+    const lbl = document.createElement("span");
+    lbl.textContent = cmd.label;
+    lbl.style.cssText = `font-size: 11px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;${
+      overridden && !isPass ? " opacity: 0.6;" : ""
+    }`;
+
+    row.appendChild(badges);
+    row.appendChild(lbl);
+    return row;
+  }
+
+  function show(columns: PaletteColumn[]) {
     savedFocus = document.activeElement;
-    list.innerHTML = "";
-    // Group by category
-    const grouped = new Map<string, VimCommand[]>();
-    for (const cmd of cmds) {
-      const cat = cmd.category || "General";
-      if (!grouped.has(cat)) grouped.set(cat, []);
-      grouped.get(cat)!.push(cmd);
-    }
+    const savedFocusRef = { value: savedFocus };
+    panel.innerHTML = "";
 
-    for (const [cat, items] of grouped) {
-      if (grouped.size > 1) {
-        const catEl = document.createElement("div");
-        catEl.style.cssText = `
-          padding: 8px 20px 4px;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          opacity: 0.4;
-        `;
-        catEl.textContent = cat;
-        list.appendChild(catEl);
+    // Auto-size panel width based on column count
+    const colCount = columns.length;
+    panel.style.maxWidth = `min(90vw, ${Math.max(280, colCount * 260)}px)`;
+    panel.style.minWidth = `${Math.min(280, colCount * 260)}px`;
+
+    const grid = document.createElement("div");
+    grid.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(${colCount}, 1fr);
+      gap: 14px;
+    `;
+
+    for (const col of columns) {
+      const colEl = document.createElement("div");
+
+      const header = document.createElement("div");
+      header.textContent = col.label.toUpperCase();
+      header.style.cssText = `
+        font-size: 10px; font-weight: 800;
+        letter-spacing: 0.1em;
+        opacity: 0.4;
+        padding: 0 6px 5px;
+        border-bottom: 1px solid var(--vim-palette-border, #333);
+        margin-bottom: 4px;
+      `;
+      colEl.appendChild(header);
+
+      for (const cmd of col.commands) {
+        const isOverridden =
+          col.overriddenKeys?.has(cmd.key.toLowerCase()) ?? false;
+        colEl.appendChild(renderRow(cmd, isOverridden, savedFocusRef));
       }
 
-      for (const cmd of items) {
-        const isPassthrough = !!cmd.passthrough;
-        const row = document.createElement("div");
-        row.style.cssText = `
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 8px 20px;
-          cursor: ${isPassthrough ? "default" : "pointer"};
-          transition: background 0.1s;
-          ${isPassthrough ? "opacity: 0.6;" : ""}
-        `;
-        if (!isPassthrough) {
-          row.addEventListener("mouseenter", () => {
-            row.style.background =
-              "var(--vim-palette-hover, rgba(255,255,255,0.06))";
-          });
-          row.addEventListener("mouseleave", () => {
-            row.style.background = "transparent";
-          });
-          row.addEventListener("click", () => {
-            hide();
-            cmd.run();
-          });
-        }
-
-        const keysContainer = document.createElement("span");
-        keysContainer.style.cssText = `display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;`;
-
-        const badgeStyle = `
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 24px;
-          height: 24px;
-          padding: 0 6px;
-          border-radius: 5px;
-          font-size: 12px;
-          font-weight: 700;
-          font-family: inherit;
-          background: var(--vim-key-bg, rgba(255,255,255,0.1));
-          border: 1px solid var(--vim-key-border, rgba(255,255,255,0.15));
-          color: var(--vim-key-fg, #f6bd60);
-        `;
-
-        const keyBadge = document.createElement("kbd");
-        keyBadge.textContent = cmd.key.toUpperCase();
-        keyBadge.style.cssText = badgeStyle;
-        keysContainer.appendChild(keyBadge);
-
-        if (cmd.altKeys?.length) {
-          for (const alt of cmd.altKeys) {
-            const sep = document.createElement("span");
-            sep.textContent = "/";
-            sep.style.cssText = `font-size: 10px; opacity: 0.4;`;
-            keysContainer.appendChild(sep);
-
-            const altBadge = document.createElement("kbd");
-            altBadge.textContent = alt;
-            altBadge.style.cssText = badgeStyle;
-            keysContainer.appendChild(altBadge);
-          }
-        }
-
-        const label = document.createElement("span");
-        label.textContent = cmd.label;
-        label.style.cssText = `font-size: 13px; flex: 1;`;
-
-        row.appendChild(keysContainer);
-        row.appendChild(label);
-        list.appendChild(row);
-      }
+      grid.appendChild(colEl);
     }
 
+    panel.appendChild(grid);
     root.style.display = "flex";
   }
 
   function hide() {
     root.style.display = "none";
-    if (
-      savedFocus &&
-      savedFocus instanceof HTMLElement &&
-      document.contains(savedFocus)
-    ) {
+    if (savedFocus instanceof HTMLElement && document.contains(savedFocus)) {
       savedFocus.focus({ preventScroll: true });
     }
     savedFocus = null;
@@ -321,54 +357,89 @@ function createPalette(): {
     return root.style.display !== "none";
   }
 
-  return { root, list, show, hide, visible };
+  return { root, show, hide, visible };
 }
 
 // ── Mode indicator ───────────────────────────────────────────────────
 
-function createIndicator(): {
+function createIndicator(onClickFn: () => void): {
   el: HTMLElement;
-  update: (mode: VimModeType) => void;
+  update: (
+    label: string,
+    pending: string,
+    passive: boolean,
+    modeId: string,
+  ) => void;
   destroy: () => void;
 } {
   const el = document.createElement("div");
   el.id = "vim-mode-indicator";
   el.style.cssText = `
-    position: fixed;
-    bottom: 8px;
-    right: 8px;
+    position: fixed; bottom: 8px; right: 8px;
     z-index: 99998;
     padding: 2px 8px;
     border-radius: 4px;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 10px; font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: pointer;
     transition: opacity 0.2s, background 0.2s, color 0.2s;
     opacity: 0.7;
   `;
+  el.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClickFn();
+  });
   document.body.appendChild(el);
 
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function update(mode: VimModeType) {
+  function update(
+    label: string,
+    pending: string,
+    passive: boolean,
+    modeId: string,
+  ) {
     if (hideTimer) clearTimeout(hideTimer);
     el.style.opacity = "0.85";
-    if (mode === "normal") {
-      el.textContent = "NORMAL";
-      el.style.background = "var(--vim-ind-normal-bg, #2d6a4f)";
-      el.style.color = "var(--vim-ind-normal-fg, #b7e4c7)";
+
+    if (pending) {
+      el.innerHTML =
+        label +
+        ' <span style="opacity:0.45">\u00b7</span> ' +
+        '<span style="opacity:0.7;letter-spacing:0.12em">' +
+        pending +
+        "</span>";
     } else {
-      el.textContent = "INSERT";
+      el.textContent = label;
+    }
+
+    if (passive) {
       el.style.background = "var(--vim-ind-insert-bg, #7b2d26)";
       el.style.color = "var(--vim-ind-insert-fg, #f4a3a0)";
+    } else {
+      el.style.background = "var(--vim-ind-normal-bg, #2d6a4f)";
+      el.style.color = "var(--vim-ind-normal-fg, #b7e4c7)";
     }
-    // Fade out after a bit
-    hideTimer = setTimeout(() => {
-      el.style.opacity = "0.3";
-    }, 1500);
+
+    // Tooltip
+    if (modeId === "insert") {
+      el.title = `Keyboard mode: ${label}.\nPress Escape to return to normal mode.`;
+    } else if (modeId === "iframe") {
+      el.title = `Keyboard mode: ${label}.\nClick here or anywhere else on the page to switch to normal mode.`;
+    } else {
+      el.title = `Keyboard mode: ${label}.\nPress ? or click here to see the command list.`;
+    }
+
+    hideTimer = setTimeout(
+      () => {
+        el.style.opacity = pending ? "0.65" : "0.3";
+      },
+      pending ? 2000 : 1000,
+    );
   }
 
   function destroy() {
@@ -382,186 +453,299 @@ function createIndicator(): {
 // ── VimMode singleton ────────────────────────────────────────────────
 
 export function createVimMode(): VimModeAPI {
-  const globalScope: VimScope = { id: "__global__", commands: new Map() };
-  const scopes: VimScope[] = [globalScope];
+  // ── Mode registry ────────────────────────────────────────────────
+
+  interface ModeEntry {
+    id: string;
+    label: string;
+    extends?: string;
+    commands: Map<string, VimCommand>;
+    passive: boolean;
+  }
+
+  const modes = new Map<string, ModeEntry>();
+
+  // Built-in modes
+  modes.set("normal", {
+    id: "normal",
+    label: "Normal",
+    commands: new Map(),
+    passive: false,
+  });
+  modes.set("insert", {
+    id: "insert",
+    label: "Insert",
+    commands: new Map(),
+    passive: true,
+  });
+  modes.set("iframe", {
+    id: "iframe",
+    label: "Iframe",
+    commands: new Map(),
+    passive: true,
+  });
+
+  // Manually activated mode stack
+  const modeStack: string[] = [];
 
   const palette = createPalette();
-  const indicator = createIndicator();
-  let currentMode: VimModeType = "normal";
+  const indicator = createIndicator(() => {
+    const entry = getEntry(effectiveMode());
+    if (!entry.passive) api.togglePalette();
+  });
 
-  // ── Pending scope state ────────────────────────────────────────
+  // ── Pending state ────────────────────────────────────────────────
 
   let activePending: {
     config: PendingConfig;
-    scope: VimScope;
+    scope: Map<string, VimCommand>;
     timer: ReturnType<typeof setTimeout> | null;
   } | null = null;
+
+  let pendingTrail = "";
 
   function cancelPending() {
     if (!activePending) return;
     if (activePending.timer) clearTimeout(activePending.timer);
     const onCancel = activePending.config.onCancel;
     activePending = null;
+    pendingTrail = "";
     onCancel?.();
   }
 
   function doPushPending(config: PendingConfig) {
-    cancelPending();
-    const scope: VimScope = {
-      id: `__pending_${config.id}__`,
-      commands: new Map(
-        config.commands.map((c) => [
-          c.key.toLowerCase(),
-          { ...c, key: c.key.toLowerCase() },
-        ]),
-      ),
-    };
+    // Clear previous timer but preserve trail (we might be chaining steps)
+    if (activePending?.timer) clearTimeout(activePending.timer);
+
+    const scope = new Map(
+      config.commands.map((c) => [
+        c.key.toLowerCase(),
+        { ...c, key: c.key.toLowerCase() },
+      ]),
+    );
     let timer: ReturnType<typeof setTimeout> | null = null;
     if (config.timeout && config.timeout > 0) {
-      timer = setTimeout(() => cancelPending(), config.timeout);
+      timer = setTimeout(() => {
+        cancelPending();
+        syncIndicator();
+      }, config.timeout);
     }
     activePending = { config, scope, timer };
   }
 
-  // ── Helpers ────────────────────────────────────────────────────
+  // ── Mode helpers ─────────────────────────────────────────────────
 
-  function getMode(): VimModeType {
+  function autoMode(): string {
     const active = document.activeElement;
-    return isEditable(active) || isInsertFrame(active) ? "insert" : "normal";
+    if (isEditable(active)) return "insert";
+    if (isIframe(active)) return "iframe";
+    return "normal";
   }
 
-  function syncMode() {
-    const m = getMode();
-    if (m !== currentMode) {
-      currentMode = m;
-      indicator.update(m);
-    }
+  function effectiveMode(): string {
+    const auto = autoMode();
+    // Passive auto-modes always win
+    if (auto === "insert" || auto === "iframe") return auto;
+    // Manual mode stack
+    if (modeStack.length > 0) return modeStack[modeStack.length - 1];
+    return "normal";
   }
 
-  /** Resolve from regular scopes only – used for insert-mode commands. */
-  function resolveInsertMode(key: string): VimCommand | undefined {
-    for (let i = scopes.length - 1; i >= 0; i--) {
-      const cmd = scopes[i].commands.get(key);
-      if (cmd?.insertMode) return cmd;
-    }
-    return undefined;
+  function getEntry(id: string): ModeEntry {
+    return modes.get(id) || modes.get("normal")!;
   }
 
-  // Resolve commands: later scopes override earlier ones.
-  function activeCommands(): VimCommand[] {
-    const merged = new Map<string, VimCommand>();
-    // Include normal scopes (unless non-inherit pending replaces them)
-    if (!activePending || activePending.config.inherit !== false) {
-      for (const scope of scopes) {
-        for (const [key, cmd] of scope.commands) {
-          merged.set(key, cmd);
-        }
-      }
+  /** Walk extends chain → [root, ..., leaf] */
+  function modeChain(modeId: string): ModeEntry[] {
+    const chain: ModeEntry[] = [];
+    const visited = new Set<string>();
+    let cur: string | undefined = modeId;
+    while (cur && !visited.has(cur)) {
+      visited.add(cur);
+      const m = modes.get(cur);
+      if (!m) break;
+      chain.unshift(m);
+      cur = m.extends;
     }
-    // Include pending scope if active
-    if (activePending) {
-      for (const [key, cmd] of activePending.scope.commands) {
-        merged.set(key, cmd);
-      }
-    }
-    merged.set("h", {
-      key: "h",
-      label: "Show / hide this help",
-      category: "General",
-      run: () => {
-        if (palette.visible()) palette.hide();
-        else palette.show(activeCommands());
-      },
-    });
-    // Filter out hidden commands from palette display
-    return Array.from(merged.values()).filter((c) => !c.hidden);
+    return chain;
   }
 
-  function resolve(key: string): VimCommand | undefined {
-    // Walk scopes in reverse to find the highest-priority binding
-    for (let i = scopes.length - 1; i >= 0; i--) {
-      const cmd = scopes[i].commands.get(key);
+  /** Resolve a key through the mode chain (leaf wins). */
+  function resolveKey(key: string): VimCommand | undefined {
+    const chain = modeChain(effectiveMode());
+    // Walk from leaf to root (last entry = leaf)
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const cmd = chain[i].commands.get(key);
       if (cmd) return cmd;
     }
     return undefined;
   }
 
+  /** Resolve insert-mode commands (checked in passive modes). */
+  function resolveInsert(key: string): VimCommand | undefined {
+    const chain = modeChain(effectiveMode());
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const cmd = chain[i].commands.get(key);
+      if (cmd?.insertMode) return cmd;
+    }
+    return undefined;
+  }
+
+  /** Build palette columns for current mode. */
+  function paletteColumns(): PaletteColumn[] {
+    const mode = effectiveMode();
+    const entry = modes.get(mode);
+    if (!entry || entry.passive) return [];
+
+    const chain = modeChain(mode);
+    const nonPassive = chain.filter((m) => !m.passive);
+
+    // Collect all keys defined in child modes to mark parent overrides
+    const childKeys = new Map<string, Set<string>>();
+    for (let i = 0; i < nonPassive.length; i++) {
+      const overridden = new Set<string>();
+      for (let j = i + 1; j < nonPassive.length; j++) {
+        for (const k of nonPassive[j].commands.keys()) {
+          overridden.add(k);
+        }
+      }
+      childKeys.set(nonPassive[i].id, overridden);
+    }
+
+    return nonPassive.map((m) => {
+      const cmds = Array.from(m.commands.values()).filter((c) => !c.hidden);
+      // Always show ? in the normal column
+      if (m.id === "normal" && !m.commands.has("?")) {
+        cmds.push({
+          key: "?",
+          label: "Show / hide this help",
+          run: () => api.togglePalette(),
+        });
+      }
+      return {
+        label: m.label,
+        commands: cmds,
+        overriddenKeys: childKeys.get(m.id),
+      };
+    });
+  }
+
+  // ── Sync ─────────────────────────────────────────────────────────
+
+  function syncIndicator() {
+    const mode = effectiveMode();
+    const entry = getEntry(mode);
+    indicator.update(
+      entry.label.toUpperCase(),
+      pendingTrail,
+      entry.passive,
+      mode,
+    );
+  }
+
+  let lastMode = "";
+  function syncMode() {
+    const mode = effectiveMode();
+    if (mode !== lastMode) {
+      lastMode = mode;
+      syncIndicator();
+    }
+  }
+
   // ── Key handler ──────────────────────────────────────────────────
 
   function onKeyDown(e: KeyboardEvent) {
-    // Never intercept with modifiers (Ctrl, Meta, Alt) — those are browser/OS shortcuts
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     syncMode();
     const key = e.key.toLowerCase();
+    const entry = getEntry(effectiveMode());
+    const passive = entry.passive;
 
-    // ── Active pending scope (checked before mode / palette) ──────
+    // ── Active pending scope ───────────────────────────────────────
     if (activePending) {
       const pending = activePending;
 
-      // In insert mode but pending doesn't support it → cancel, fall through
-      if (currentMode === "insert" && !pending.config.insertMode) {
+      if (passive && !pending.config.insertMode) {
         cancelPending();
+        syncIndicator();
       } else {
-        const cmd = pending.scope.commands.get(key);
+        const cmd = pending.scope.get(key);
         if (cmd) {
-          // Match – execute pending command
           if (pending.timer) clearTimeout(pending.timer);
-          if (currentMode !== "insert") {
+          pendingTrail += key;
+          activePending = null; // clear before run (run may push new pending)
+          if (!passive) {
             e.preventDefault();
             e.stopPropagation();
           }
-          activePending = null; // clear before run (run may push new pending)
           cmd.run();
+          if (!activePending) pendingTrail = ""; // sequence done
+          syncIndicator();
           return;
         }
 
-        // Escape always cancels
         if (key === "escape") {
           cancelPending();
-          if (currentMode !== "insert") e.preventDefault();
+          syncIndicator();
+          if (!passive) e.preventDefault();
           return;
         }
 
-        // Non-matching key
         if (pending.config.inherit === false) {
           cancelPending();
-          // Fall through so the key is still processed normally
+          syncIndicator();
+          // Fall through — key is still processed normally
         }
-        // inherit (default): pending stays active, fall through
       }
     }
 
-    // ── Insert mode ──────────────────────────────────────────────
-    if (currentMode === "insert") {
-      // Only process commands marked for insert mode (e.g. sequence starters)
-      const cmd = resolveInsertMode(key);
-      if (cmd) cmd.run();
+    // ── Passive mode ──────────────────────────────────────────────
+    if (passive) {
+      if (key === "escape") {
+        const active = document.activeElement;
+        if (isEditable(active) && active instanceof HTMLElement) {
+          active.blur();
+          syncMode();
+        }
+        return;
+      }
+
+      const cmd = resolveInsert(key);
+      if (cmd) {
+        pendingTrail = key;
+        cmd.run();
+        if (!activePending) pendingTrail = "";
+        syncIndicator();
+      }
       return;
     }
 
-    // ── Palette toggle ───────────────────────────────────────────
-    if (key === "h") {
+    // ── Palette toggle ────────────────────────────────────────────
+    if (key === "?") {
       e.preventDefault();
       e.stopPropagation();
-      if (palette.visible()) {
-        palette.hide();
-      } else {
-        palette.show(activeCommands());
-      }
+      if (palette.visible()) palette.hide();
+      else palette.show(paletteColumns());
       return;
     }
 
-    // Escape closes palette
     if (key === "escape" && palette.visible()) {
       e.preventDefault();
       palette.hide();
       return;
     }
 
-    // If palette is open, pressing a command key fires it and closes
+    // ── Escape in manual modes (game, etc.) → blur & return to normal
+    if (key === "escape" && modeStack.length > 0) {
+      e.preventDefault();
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) active.blur();
+      return;
+    }
+
     if (palette.visible()) {
-      const cmd = resolve(key);
+      const cmd = resolveKey(key);
       if (cmd) {
         e.preventDefault();
         e.stopPropagation();
@@ -571,18 +755,20 @@ export function createVimMode(): VimModeAPI {
       }
     }
 
-    // Normal command dispatch
-    const cmd = resolve(key);
+    // ── Normal command dispatch ────────────────────────────────────
+    const cmd = resolveKey(key);
     if (cmd) {
-      // Passthrough: shadow global bindings but let native handlers fire
       if (cmd.passthrough) return;
       e.preventDefault();
       e.stopPropagation();
+      pendingTrail = key; // start trail (in case cmd pushes pending)
       cmd.run();
+      if (!activePending) pendingTrail = ""; // cmd didn't push pending
+      syncIndicator();
     }
   }
 
-  // ── Focus tracking for mode changes ──────────────────────────────
+  // ── Focus tracking ───────────────────────────────────────────────
 
   function onFocusChange() {
     syncMode();
@@ -592,7 +778,7 @@ export function createVimMode(): VimModeAPI {
     syncMode();
   }
 
-  // ── Theme-aware palette vars ─────────────────────────────────────
+  // ── Theme ────────────────────────────────────────────────────────
 
   function syncThemeVars() {
     const isDark = document.documentElement.classList.contains("dark");
@@ -633,7 +819,6 @@ export function createVimMode(): VimModeAPI {
   window.addEventListener("focus", onWindowFocusChange, true);
   window.addEventListener("blur", onWindowFocusChange, true);
 
-  // Observe class changes on <html> for theme
   const themeObs = new MutationObserver(syncThemeVars);
   themeObs.observe(document.documentElement, {
     attributes: true,
@@ -642,67 +827,66 @@ export function createVimMode(): VimModeAPI {
 
   syncThemeVars();
   syncMode();
-  indicator.update(currentMode);
+  syncIndicator();
 
   // ── Public API ───────────────────────────────────────────────────
 
   const api: VimModeAPI = {
-    register(key: string, cmd: Omit<VimCommand, "key">) {
-      globalScope.commands.set(key.toLowerCase(), {
-        ...cmd,
-        key: key.toLowerCase(),
-      });
+    register(key, cmd, modeId = "normal") {
+      const k = key.toLowerCase();
+      const target = modes.get(modeId);
+      if (!target) return;
+      target.commands.set(k, { ...cmd, key: k });
     },
 
-    unregister(key: string) {
-      globalScope.commands.delete(key.toLowerCase());
+    unregister(key, modeId = "normal") {
+      modes.get(modeId)?.commands.delete(key.toLowerCase());
     },
 
-    pushScope(id: string, commands: VimCommand[]) {
-      // Remove existing scope with same id if any (idempotent)
-      const existingIdx = scopes.findIndex((s) => s.id === id);
-      if (existingIdx > 0) scopes.splice(existingIdx, 1);
-
-      const scope: VimScope = {
+    pushMode(id, config) {
+      const entry: ModeEntry = {
         id,
+        label: config.label,
+        extends: config.extends,
         commands: new Map(
-          commands.map((c) => [
+          config.commands.map((c) => [
             c.key.toLowerCase(),
             { ...c, key: c.key.toLowerCase() },
           ]),
         ),
+        passive: config.passive ?? false,
       };
-      scopes.push(scope);
-      return id;
+      modes.set(id, entry);
+
+      // Activate: push to stack (deduplicate first)
+      const idx = modeStack.indexOf(id);
+      if (idx >= 0) modeStack.splice(idx, 1);
+      modeStack.push(id);
+      syncMode();
+      syncIndicator();
     },
 
-    popScope(id: string) {
-      const idx = scopes.findIndex((s) => s.id === id);
-      if (idx > 0) scopes.splice(idx, 1); // Never remove global (idx 0)
+    popMode(id) {
+      const idx = modeStack.indexOf(id);
+      if (idx >= 0) modeStack.splice(idx, 1);
+      syncMode();
+      syncIndicator();
     },
 
-    pushPending(config: PendingConfig) {
+    pushPending(config) {
       doPushPending(config);
+      syncIndicator();
     },
 
-    registerSequence(
-      word: string,
-      config: {
-        run: () => void;
-        hidden?: boolean;
-        insertMode?: boolean;
-        timeout?: number;
-        label?: string;
-        category?: string;
-      },
-    ) {
+    registerSequence(word, config) {
       const keys = word.toLowerCase().split("");
       const timeout = config.timeout ?? 400;
+      const targetModes = config.modes?.length ? config.modes : ["normal"];
 
-      // Build a chain: each key pushes a pending scope for the next key.
       const buildStep = (step: number): (() => void) => {
         if (step === keys.length - 1) return config.run;
         return () => {
+          const live = getEntry(effectiveMode()).passive ? 0 : timeout;
           doPushPending({
             id: `seq-${word}-${step + 1}`,
             commands: [
@@ -715,29 +899,43 @@ export function createVimMode(): VimModeAPI {
               },
             ],
             inherit: false,
-            timeout,
+            timeout: live,
             insertMode: config.insertMode,
           });
         };
       };
 
-      // Register the first letter as a (hidden) command
-      api.register(keys[0], {
-        label: config.label || `${word} sequence`,
-        category: config.category,
-        hidden: config.hidden ?? true,
-        insertMode: config.insertMode,
-        run: buildStep(0),
-      });
+      for (const modeId of targetModes) {
+        api.register(
+          keys[0],
+          {
+            label: config.label || `${word} sequence`,
+            category: config.category,
+            hidden: config.hidden ?? true,
+            insertMode: config.insertMode,
+            run: buildStep(0),
+          },
+          modeId,
+        );
+      }
     },
 
-    activeCommands,
+    activeCommands() {
+      const chain = modeChain(effectiveMode());
+      const merged = new Map<string, VimCommand>();
+      for (const m of chain) {
+        for (const [k, cmd] of m.commands) {
+          merged.set(k, cmd);
+        }
+      }
+      return Array.from(merged.values()).filter((c) => !c.hidden);
+    },
 
-    mode: () => currentMode,
+    mode: () => effectiveMode(),
 
     togglePalette() {
       if (palette.visible()) palette.hide();
-      else palette.show(activeCommands());
+      else palette.show(paletteColumns());
     },
 
     closePalette() {
