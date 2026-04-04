@@ -307,8 +307,151 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     setMenuMode("normal");
     setIsActive(false);
     // Pop mode synchronously so VimMode sees updated stack immediately
+    (window as any).vimMode?.cancelPending?.();
     (window as any).vimMode?.popMode("paint");
   }, []);
+
+  const openColorMenu = useCallback(() => {
+    const vm = (window as any).vimMode;
+    setMousePos(mousePosRef.current);
+    setMenuMode("color");
+    vm?.pushPending({
+      id: "paint-color",
+      label: "Color",
+      trail: "c",
+      inherit: false,
+      onCancel: () => setMenuMode("normal"),
+      commands: [
+        ...COLOR_OPTIONS.map((opt) => ({
+          key: opt.key,
+          label: `Pick ${opt.name}`,
+          run: () => {
+            setStrokeColor(opt.color);
+            setMenuMode("normal");
+          },
+        })),
+        {
+          key: "escape",
+          label: "Cancel color menu",
+          run: () => setMenuMode("normal"),
+        },
+      ],
+    });
+  }, []);
+
+  const openToolMenu = useCallback(() => {
+    const vm = (window as any).vimMode;
+    setMousePos(mousePosRef.current);
+    setMenuMode("tool");
+    vm?.pushPending({
+      id: "paint-tool",
+      label: "Tool",
+      trail: "t",
+      inherit: false,
+      onCancel: () => setMenuMode("normal"),
+      commands: [
+        ...TOOL_OPTIONS.map((opt) => ({
+          key: opt.key,
+          label: `Select ${opt.name}`,
+          run: () => {
+            setCurrentTool(opt.tool);
+            setMenuMode("normal");
+          },
+        })),
+        {
+          key: "escape",
+          label: "Cancel tool menu",
+          run: () => setMenuMode("normal"),
+        },
+      ],
+    });
+  }, []);
+
+  const openSizeMenu = useCallback(() => {
+    const vm = (window as any).vimMode;
+    setMousePos(mousePosRef.current);
+    setMenuMode("size");
+    vm?.pushPending({
+      id: "paint-size",
+      label: "Size",
+      trail: "s",
+      inherit: false,
+      onCancel: () => setMenuMode("normal"),
+      commands: [
+        ...SIZE_OPTIONS.map((opt) => ({
+          key: opt.key,
+          label: `Set size ${opt.name}`,
+          hidden: opt.hidden,
+          run: () => {
+            setStrokeWidth(opt.size);
+            setMenuMode("normal");
+          },
+        })),
+        {
+          key: "escape",
+          label: "Cancel size menu",
+          run: () => setMenuMode("normal"),
+        },
+      ],
+    });
+  }, []);
+
+  const openHelpMenu = useCallback(() => {
+    const vm = (window as any).vimMode;
+    setMousePos(mousePosRef.current);
+    setMenuMode("help");
+    vm?.pushPending({
+      id: "paint-help",
+      label: "Paint Help",
+      trail: "h",
+      inherit: false,
+      onCancel: () => setMenuMode("normal"),
+      commands: [
+        { key: "c", label: "Open color menu", run: openColorMenu },
+        { key: "t", label: "Open tool menu", run: openToolMenu },
+        { key: "s", label: "Open size menu", run: openSizeMenu },
+        {
+          key: "d",
+          label: "Delete all",
+          run: () => {
+            clearCanvas();
+            setMenuMode("normal");
+          },
+        },
+        {
+          key: "u",
+          label: "Undo",
+          run: () => {
+            undo();
+            setMenuMode("normal");
+          },
+        },
+        {
+          key: "r",
+          label: "Redo",
+          run: () => {
+            redo();
+            setMenuMode("normal");
+          },
+        },
+        { key: "p", label: "Exit paint", run: deactivateOverlay },
+        { key: "h", label: "Close help", run: () => setMenuMode("normal") },
+        {
+          key: "escape",
+          label: "Close help",
+          run: () => setMenuMode("normal"),
+        },
+      ],
+    });
+  }, [
+    clearCanvas,
+    deactivateOverlay,
+    openColorMenu,
+    openSizeMenu,
+    openToolMenu,
+    redo,
+    undo,
+  ]);
 
   useEffect(() => {
     const vm = (window as any).vimMode;
@@ -326,34 +469,22 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
         {
           key: "c",
           label: "Color menu",
-          run: () => {
-            setMousePos(mousePosRef.current);
-            setMenuMode("color");
-          },
+          run: openColorMenu,
         },
         {
           key: "t",
           label: "Tool menu",
-          run: () => {
-            setMousePos(mousePosRef.current);
-            setMenuMode("tool");
-          },
+          run: openToolMenu,
         },
         {
           key: "s",
           label: "Size menu",
-          run: () => {
-            setMousePos(mousePosRef.current);
-            setMenuMode("size");
-          },
+          run: openSizeMenu,
         },
         {
           key: "h",
           label: "Paint help",
-          run: () => {
-            setMousePos(mousePosRef.current);
-            setMenuMode("help");
-          },
+          run: openHelpMenu,
         },
         { key: "d", label: "Delete all", run: clearCanvas },
         { key: "u", label: "Undo", run: undo },
@@ -366,121 +497,22 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     return () => {
       vm.popMode("paint");
     };
-  }, [isActive, clearCanvas, deactivateOverlay, redo, undo]);
+  }, [
+    isActive,
+    clearCanvas,
+    deactivateOverlay,
+    openColorMenu,
+    openHelpMenu,
+    openSizeMenu,
+    openToolMenu,
+    redo,
+    undo,
+  ]);
 
   // Initialize canvas and event listeners
   useEffect(() => {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-
-    // Handler for paint sub-menus (color/tool/size/help radial menus).
-    // In "normal" paint mode, VimMode handles all keys (including inherited game arrows).
-    const handleDrawingKeys = (e: KeyboardEvent) => {
-      if (!isActive) return;
-
-      const key = e.key.toLowerCase();
-
-      // Let VimMode handle palette/help while paint mode is active.
-      if (key === "?") return;
-
-      // Text input mode: only intercept Escape to exit text entry
-      if (textInput) {
-        if (key === "escape") {
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          e.preventDefault();
-          setTextInput(null);
-        }
-        return;
-      }
-
-      // In "normal" paint mode, let VimMode handle everything
-      // (including inherited commands like game arrows)
-      if (menuMode === "normal") return;
-
-      // Sub-menu handling: only intercept keys that are meaningful
-      let handled = false;
-      switch (menuMode) {
-        case "color":
-          if (key === "escape") {
-            setMenuMode("normal");
-            handled = true;
-          } else {
-            const colorOption = COLOR_OPTIONS.find((opt) => opt.key === key);
-            if (colorOption) {
-              setStrokeColor(colorOption.color);
-              setMenuMode("normal");
-              handled = true;
-            }
-          }
-          break;
-
-        case "tool":
-          if (key === "escape") {
-            setMenuMode("normal");
-            handled = true;
-          } else {
-            const toolOption = TOOL_OPTIONS.find((opt) => opt.key === key);
-            if (toolOption) {
-              setCurrentTool(toolOption.tool);
-              setMenuMode("normal");
-              handled = true;
-            }
-          }
-          break;
-
-        case "size":
-          if (key === "escape") {
-            setMenuMode("normal");
-            handled = true;
-          } else {
-            const sizeOption = SIZE_OPTIONS.find((opt) => opt.key === key);
-            if (sizeOption) {
-              setStrokeWidth(sizeOption.size);
-              setMenuMode("normal");
-              handled = true;
-            }
-          }
-          break;
-
-        case "help":
-          if (key === "escape" || key === "h") {
-            setMenuMode("normal");
-            handled = true;
-          } else if (key === "c") {
-            setMenuMode("color");
-            handled = true;
-          } else if (key === "t") {
-            setMenuMode("tool");
-            handled = true;
-          } else if (key === "s") {
-            setMenuMode("size");
-            handled = true;
-          } else if (key === "d") {
-            clearCanvas();
-            setMenuMode("normal");
-            handled = true;
-          } else if (key === "u") {
-            undo();
-            setMenuMode("normal");
-            handled = true;
-          } else if (key === "r") {
-            redo();
-            setMenuMode("normal");
-            handled = true;
-          } else if (key === "p") {
-            deactivateOverlay();
-            handled = true;
-          }
-          break;
-      }
-
-      if (handled) {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        e.preventDefault();
-      }
-    };
 
     // Handler for activation key (only if enableKeyboardShortcut is true)
     const handleActivationKey = (e: KeyboardEvent) => {
@@ -498,9 +530,6 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       else activateOverlay();
     };
 
-    // ALWAYS register drawing keys handler when component mounts (capture phase)
-    window.addEventListener("keydown", handleDrawingKeys, { capture: true });
-
     // Only register activation key if enabled
     if (enableKeyboardShortcut) {
       window.addEventListener("keydown", handleActivationKey, {
@@ -511,9 +540,6 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
     return () => {
       window.removeEventListener("resize", resizeCanvas);
-      window.removeEventListener("keydown", handleDrawingKeys, {
-        capture: true,
-      });
       if (enableKeyboardShortcut) {
         window.removeEventListener("keydown", handleActivationKey, {
           capture: true,
@@ -523,12 +549,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     };
   }, [
     isActive,
-    menuMode,
-    textInput,
     resizeCanvas,
-    clearCanvas,
-    undo,
-    redo,
     activateOverlay,
     deactivateOverlay,
     enableKeyboardShortcut,

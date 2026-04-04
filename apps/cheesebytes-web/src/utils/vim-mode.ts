@@ -70,6 +70,8 @@ export interface PendingConfig {
   insertMode?: boolean;
   /** Label shown in indicator while active. */
   label?: string;
+  /** Optional trail shown in the indicator instead of appending to the prior trail. */
+  trail?: string;
 }
 
 export interface VimModeAPI {
@@ -83,6 +85,8 @@ export interface VimModeAPI {
   popMode(id: string): void;
   /** Push a transient pending scope (auto-clears on match/Escape/timeout). */
   pushPending(config: PendingConfig): void;
+  /** Cancel any active pending scope. */
+  cancelPending(): void;
   /** Register a key sequence (e.g. "cheese") that triggers a callback. */
   registerSequence(
     word: string,
@@ -121,6 +125,16 @@ function isIframe(el: Element | null): boolean {
   return el instanceof HTMLIFrameElement;
 }
 
+function isModifierOnlyKey(key: string): boolean {
+  return (
+    key === "shift" ||
+    key === "control" ||
+    key === "alt" ||
+    key === "meta" ||
+    key === "capslock"
+  );
+}
+
 // ── Palette (multi-column) ───────────────────────────────────────────
 
 interface PaletteColumn {
@@ -128,6 +142,8 @@ interface PaletteColumn {
   commands: VimCommand[];
   /** Keys in this column that are overridden by a child mode. */
   overriddenKeys?: Set<string>;
+  /** Pending columns are temporary follow-up input, not real modes. */
+  kind?: "mode" | "pending";
 }
 
 function keyboardEventInitFor(key: string): KeyboardEventInit | null {
@@ -335,17 +351,43 @@ function createPalette(): {
 
     for (const col of columns) {
       const colEl = document.createElement("div");
+      if (col.kind === "pending") {
+        colEl.style.cssText = `
+          padding: 8px;
+          border-radius: 10px;
+          border: 1px dashed var(--vim-pending-border, rgba(246,189,96,0.45));
+          background: var(--vim-pending-bg, rgba(246,189,96,0.08));
+          box-shadow: inset 0 0 0 1px rgba(246,189,96,0.06);
+        `;
+      }
 
       const header = document.createElement("div");
       header.textContent = col.label.toUpperCase();
       header.style.cssText = `
         font-size: 10px; font-weight: 800;
         letter-spacing: 0.1em;
-        opacity: 0.4;
+        opacity: ${col.kind === "pending" ? "0.9" : "0.4"};
         padding: 0 6px 5px;
-        border-bottom: 1px solid var(--vim-palette-border, #333);
+        border-bottom: 1px ${col.kind === "pending" ? "dashed var(--vim-pending-border, rgba(246,189,96,0.45))" : "solid var(--vim-palette-border, #333)"};
         margin-bottom: 4px;
+        color: ${col.kind === "pending" ? "var(--vim-pending-fg, #f6bd60)" : "inherit"};
       `;
+      if (col.kind === "pending") {
+        const badge = document.createElement("span");
+        badge.textContent = "TEMP";
+        badge.style.cssText = `
+          margin-left: 6px;
+          padding: 1px 5px;
+          border-radius: 999px;
+          border: 1px solid var(--vim-pending-border, rgba(246,189,96,0.45));
+          background: rgba(246,189,96,0.14);
+          color: var(--vim-pending-fg, #f6bd60);
+          font-size: 9px;
+          letter-spacing: 0.08em;
+          vertical-align: middle;
+        `;
+        header.appendChild(badge);
+      }
       colEl.appendChild(header);
 
       for (const cmd of col.commands) {
@@ -537,6 +579,9 @@ export function createVimMode(): VimModeAPI {
   function doPushPending(config: PendingConfig) {
     // Clear previous timer but preserve trail (we might be chaining steps)
     if (activePending?.timer) clearTimeout(activePending.timer);
+    if (typeof config.trail === "string") {
+      pendingTrail = config.trail;
+    }
 
     const scope = new Map(
       config.commands.map((c) => [
@@ -633,7 +678,8 @@ export function createVimMode(): VimModeAPI {
       childKeys.set(nonPassive[i].id, overridden);
     }
 
-    return nonPassive.map((m) => {
+    const columns: PaletteColumn[] = [];
+    for (const m of nonPassive) {
       const cmds = Array.from(m.commands.values()).filter((c) => !c.hidden);
       // Always show ? in the normal column
       if (m.id === "normal" && !m.commands.has("?")) {
@@ -643,12 +689,31 @@ export function createVimMode(): VimModeAPI {
           run: () => api.togglePalette(),
         });
       }
-      return {
+      const column: PaletteColumn = {
         label: m.label,
         commands: cmds,
         overriddenKeys: childKeys.get(m.id),
+        kind: "mode",
       };
-    });
+      columns.push(column);
+    }
+
+    if (activePending) {
+      const pendingCommands = Array.from(activePending.scope.values()).filter(
+        (c) => !c.hidden,
+      );
+      if (pendingCommands.length > 0) {
+        const pendingColumn: PaletteColumn = {
+          label: activePending.config.label || "Awaiting input",
+          commands: pendingCommands,
+          overriddenKeys: undefined,
+          kind: "pending",
+        };
+        columns.push(pendingColumn);
+      }
+    }
+
+    return columns;
   }
 
   // ── Sync ─────────────────────────────────────────────────────────
@@ -703,20 +768,32 @@ export function createVimMode(): VimModeAPI {
           cmd.run();
           if (!activePending) pendingTrail = ""; // sequence done
           syncIndicator();
+          if (palette.visible()) palette.show(paletteColumns());
           return;
         }
 
         if (key === "escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
           cancelPending();
           syncIndicator();
-          if (!passive) e.preventDefault();
+          if (palette.visible()) palette.show(paletteColumns());
           return;
         }
 
-        if (pending.config.inherit === false) {
-          cancelPending();
-          syncIndicator();
-          // Fall through — key is still processed normally
+        if (isModifierOnlyKey(key)) {
+          return;
+        }
+
+        // `?` should NOT cancel pending — let it fall through to the
+        // palette toggle below so it gets preventDefault + stopPropagation.
+        if (key !== "?") {
+          if (pending.config.inherit === false) {
+            cancelPending();
+            syncIndicator();
+            // Fall through — key is still processed normally
+          }
         }
       }
     }
@@ -741,6 +818,7 @@ export function createVimMode(): VimModeAPI {
         cmd.run();
         if (!activePending) pendingTrail = "";
         syncIndicator();
+        if (palette.visible()) palette.show(paletteColumns());
       }
       return;
     }
@@ -918,6 +996,13 @@ export function createVimMode(): VimModeAPI {
     pushPending(config) {
       doPushPending(config);
       syncIndicator();
+      if (palette.visible()) palette.show(paletteColumns());
+    },
+
+    cancelPending() {
+      cancelPending();
+      syncIndicator();
+      if (palette.visible()) palette.show(paletteColumns());
     },
 
     registerSequence(word, config) {
