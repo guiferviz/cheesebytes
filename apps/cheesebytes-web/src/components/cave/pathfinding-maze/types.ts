@@ -1,6 +1,6 @@
 export type CellType = "empty" | "wall" | "start" | "end";
 
-export type AlgorithmType = "bfs" | "dfs" | "astar" | "idastar";
+export type AlgorithmType = "bfs" | "dfs" | "iddfs" | "astar" | "idastar";
 
 export interface Cell {
   row: number;
@@ -21,6 +21,7 @@ export interface SearchStep {
 export const ALGORITHM_LABELS: Record<AlgorithmType, string> = {
   bfs: "BFS (Breadth-First)",
   dfs: "DFS (Depth-First)",
+  iddfs: "IDDFS (Iterative Deepening DFS)",
   astar: "A* (Manhattan)",
   idastar: "IDA* (Iterative Deepening)",
 };

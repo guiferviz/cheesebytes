@@ -159,6 +159,99 @@ function* dfs(
 }
 
 // ======================
+// IDDFS (Iterative Deepening Depth-First Search)
+// ======================
+function* iddfs(
+  start: Cell,
+  end: Cell,
+  rows: number,
+  cols: number,
+  walls: Set<string>,
+): Generator<SearchStep> {
+  const startK = cellKey(start.row, start.col);
+  const endK = cellKey(end.row, end.col);
+  const maxDepth = rows * cols - 1;
+
+  function pathKeysToCells(pathKeys: string[]): Cell[] {
+    return pathKeys.map((key) => {
+      const [r, c] = key.split(",").map(Number);
+      return { row: r, col: c };
+    });
+  }
+
+  for (let depthLimit = 0; depthLimit <= maxDepth; depthLimit++) {
+    const explored = new Set<string>();
+    const pathKeys: string[] = [startK];
+    const onPath = new Set<string>([startK]);
+    let anyPruned = false;
+
+    function* depthLimitedSearch(
+      currentKey: string,
+      depth: number,
+    ): Generator<SearchStep, boolean, void> {
+      explored.add(currentKey);
+
+      const [cr, cc] = currentKey.split(",").map(Number);
+      const frontier = new Set<string>();
+      if (depth < depthLimit) {
+        for (const nb of neighbors({ row: cr, col: cc }, rows, cols, walls)) {
+          const nk = cellKey(nb.row, nb.col);
+          if (!onPath.has(nk)) frontier.add(nk);
+        }
+      }
+
+      yield {
+        explored: new Set(explored),
+        frontier,
+        path: null,
+        currentPath: pathKeysToCells(pathKeys),
+      };
+
+      if (currentKey === endK) {
+        yield {
+          explored: new Set(explored),
+          frontier: new Set(),
+          path: pathKeysToCells(pathKeys),
+        };
+        return true;
+      }
+
+      if (depth >= depthLimit) {
+        anyPruned = true;
+        return false;
+      }
+
+      for (const nb of neighbors({ row: cr, col: cc }, rows, cols, walls)) {
+        const nk = cellKey(nb.row, nb.col);
+        if (onPath.has(nk)) continue;
+
+        pathKeys.push(nk);
+        onPath.add(nk);
+        const found = yield* depthLimitedSearch(nk, depth + 1);
+        pathKeys.pop();
+        onPath.delete(nk);
+
+        if (found) return true;
+      }
+
+      return false;
+    }
+
+    const found = yield* depthLimitedSearch(startK, 0);
+    if (found) return;
+    if (!anyPruned) break;
+
+    yield {
+      explored: new Set(),
+      frontier: new Set(),
+      path: null,
+    };
+  }
+
+  yield { explored: new Set(), frontier: new Set(), path: null };
+}
+
+// ======================
 // A*
 // ======================
 function* astar(
@@ -354,6 +447,8 @@ export function runAlgorithm(
       return bfs(start, end, rows, cols, walls);
     case "dfs":
       return dfs(start, end, rows, cols, walls);
+    case "iddfs":
+      return iddfs(start, end, rows, cols, walls);
     case "astar":
       return astar(start, end, rows, cols, walls);
     case "idastar":

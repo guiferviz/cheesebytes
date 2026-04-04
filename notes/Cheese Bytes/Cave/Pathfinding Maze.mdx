@@ -13,7 +13,7 @@ But not all search algorithms are created equal. Some find the shortest path,
 others just find a path. Some explore everything, others are guided by
 intuition. The best way to understand the difference is to **watch them work**.
 
-Below you can experiment with four classic pathfinding algorithms on a grid with
+Below you can experiment with five classic pathfinding algorithms on a grid with
 random obstacles. Click to draw or erase walls, move the start and end points,
 pick an algorithm, and hit **Run** to watch it explore.
 
@@ -34,6 +34,19 @@ all cells at distance $d$ before any cell at distance $d+1$.
 DFS dives deep into one direction before backtracking. It can find a path
 quickly, but that path is often far from optimal — it meanders through the grid
 like someone exploring a maze by always turning left.
+
+## IDDFS (Iterative Deepening Depth-First Search)
+
+IDDFS gets the best of both worlds: the completeness and optimality of BFS with
+the memory efficiency of DFS. It runs a depth-limited DFS with limit 0, then
+limit 1, then limit 2, and so on — each time starting from scratch. This sounds
+wasteful, but since the number of nodes grows exponentially with depth, the
+repeated work at shallower levels is dwarfed by the work at the deepest level.
+
+The result is an algorithm that finds the **shortest path** (like BFS) while
+using only $O(bd)$ memory (like DFS), where $b$ is the branching factor and $d$
+is the depth of the solution. Watch it run and you'll see the explored area
+reset between iterations as the depth limit increases.
 
 ## A\* (A-Star)
 

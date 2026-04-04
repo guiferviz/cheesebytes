@@ -116,6 +116,14 @@ function isEditable(el: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
+function isInsertFrame(el: Element | null): boolean {
+  if (!(el instanceof HTMLIFrameElement)) return false;
+  return (
+    el.classList.contains("giscus-frame") ||
+    el.hasAttribute("data-vim-insert-frame")
+  );
+}
+
 // ── Palette DOM ──────────────────────────────────────────────────────
 
 function createPalette(): {
@@ -418,7 +426,8 @@ export function createVimMode(): VimModeAPI {
   // ── Helpers ────────────────────────────────────────────────────
 
   function getMode(): VimModeType {
-    return isEditable(document.activeElement) ? "insert" : "normal";
+    const active = document.activeElement;
+    return isEditable(active) || isInsertFrame(active) ? "insert" : "normal";
   }
 
   function syncMode() {
@@ -579,6 +588,10 @@ export function createVimMode(): VimModeAPI {
     syncMode();
   }
 
+  function onWindowFocusChange() {
+    syncMode();
+  }
+
   // ── Theme-aware palette vars ─────────────────────────────────────
 
   function syncThemeVars() {
@@ -617,6 +630,8 @@ export function createVimMode(): VimModeAPI {
   document.addEventListener("focusin", onFocusChange);
   document.addEventListener("focusout", onFocusChange);
   document.addEventListener("themeChanged", syncThemeVars);
+  window.addEventListener("focus", onWindowFocusChange, true);
+  window.addEventListener("blur", onWindowFocusChange, true);
 
   // Observe class changes on <html> for theme
   const themeObs = new MutationObserver(syncThemeVars);
@@ -734,6 +749,8 @@ export function createVimMode(): VimModeAPI {
       document.removeEventListener("focusin", onFocusChange);
       document.removeEventListener("focusout", onFocusChange);
       document.removeEventListener("themeChanged", syncThemeVars);
+      window.removeEventListener("focus", onWindowFocusChange, true);
+      window.removeEventListener("blur", onWindowFocusChange, true);
       themeObs.disconnect();
       palette.root.remove();
       indicator.destroy();
