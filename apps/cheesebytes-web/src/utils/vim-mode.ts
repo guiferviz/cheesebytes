@@ -208,6 +208,7 @@ function createPalette(): {
     padding-top: min(18vh, 110px);
     background: rgba(0,0,0,0.45);
     backdrop-filter: blur(4px);
+    pointer-events: none;
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   `;
 
@@ -220,6 +221,7 @@ function createPalette(): {
     padding: 14px;
     max-height: 60vh;
     overflow-y: auto;
+    pointer-events: auto;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   `;
 
@@ -237,10 +239,6 @@ function createPalette(): {
   window.addEventListener("pointerdown", onWindowPointerDownCapture, true);
 
   root.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
-  root.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    if (e.target === root) hide();
-  });
 
   document.body.appendChild(root);
 
@@ -264,47 +262,49 @@ function createPalette(): {
     const isPass = !!cmd.passthrough;
     const keyEventInit = isPass ? keyboardEventInitFor(cmd.key) : null;
     const canSimulate = !!keyEventInit;
-    const dimmed = overridden && !isPass;
+    const disabled = overridden;
+    const dimmed = overridden;
     const row = document.createElement("div");
     row.style.cssText = `
       display: flex; align-items: center; gap: 8px;
       padding: 3px 6px; border-radius: 4px;
-      cursor: ${!isPass || canSimulate ? "pointer" : "default"};
+      cursor: ${disabled ? "default" : !isPass || canSimulate ? "pointer" : "default"};
       transition: background 0.1s;
       ${dimmed ? "opacity: 0.55;" : ""}
     `;
-    row.addEventListener("mouseenter", () => {
-      row.style.background = "var(--vim-palette-hover, rgba(255,255,255,0.06))";
-    });
-    row.addEventListener("mouseleave", () => {
-      row.style.background = "transparent";
-    });
-    row.addEventListener("click", () => {
-      if (cmd.key === "?") {
-        cmd.run();
-        return;
-      }
-      if (isPending && ret.onPendingClick) {
-        ret.onPendingClick(cmd);
-        hide();
-        return;
-      }
-      hide();
-      if (isPass) {
-        if (!keyEventInit) return;
-        if (
-          savedFocusRef.value instanceof HTMLElement &&
-          document.contains(savedFocusRef.value)
-        ) {
-          savedFocusRef.value.focus({ preventScroll: true });
+    if (!disabled) {
+      row.addEventListener("mouseenter", () => {
+        row.style.background =
+          "var(--vim-palette-hover, rgba(255,255,255,0.06))";
+      });
+      row.addEventListener("mouseleave", () => {
+        row.style.background = "transparent";
+      });
+      row.addEventListener("click", () => {
+        if (cmd.key === "?") {
+          cmd.run();
+          return;
         }
-        // Dispatch on document because the game listens there in capture mode.
-        document.dispatchEvent(new KeyboardEvent("keydown", keyEventInit));
-        document.dispatchEvent(new KeyboardEvent("keyup", keyEventInit));
-      } else {
-        cmd.run();
-      }
-    });
+        if (isPending && ret.onPendingClick) {
+          ret.onPendingClick(cmd);
+          return;
+        }
+        if (isPass) {
+          if (!keyEventInit) return;
+          if (
+            savedFocusRef.value instanceof HTMLElement &&
+            document.contains(savedFocusRef.value)
+          ) {
+            savedFocusRef.value.focus({ preventScroll: true });
+          }
+          // Dispatch on document because the game listens there in capture mode.
+          document.dispatchEvent(new KeyboardEvent("keydown", keyEventInit));
+          document.dispatchEvent(new KeyboardEvent("keyup", keyEventInit));
+        } else {
+          cmd.run();
+        }
+      });
+    }
 
     const badges = document.createElement("span");
     badges.style.cssText =
@@ -578,6 +578,7 @@ export function createVimMode(): VimModeAPI {
     cmd.run();
     if (!activePending) pendingTrail = "";
     syncIndicator();
+    refreshPaletteIfVisible();
   };
   const indicator = createIndicator(() => {
     const entry = getEntry(effectiveMode());
@@ -695,10 +696,18 @@ export function createVimMode(): VimModeAPI {
 
     // Collect all keys defined in child modes to mark parent overrides
     const childKeys = new Map<string, Set<string>>();
+    const pendingKeys = activePending
+      ? new Set(Array.from(activePending.scope.keys()))
+      : null;
     for (let i = 0; i < nonPassive.length; i++) {
       const overridden = new Set<string>();
       for (let j = i + 1; j < nonPassive.length; j++) {
         for (const k of nonPassive[j].commands.keys()) {
+          overridden.add(k);
+        }
+      }
+      if (pendingKeys) {
+        for (const k of pendingKeys) {
           overridden.add(k);
         }
       }
@@ -745,6 +754,10 @@ export function createVimMode(): VimModeAPI {
 
   // ── Sync ─────────────────────────────────────────────────────────
 
+  function refreshPaletteIfVisible() {
+    if (palette.visible()) palette.show(paletteColumns());
+  }
+
   function syncIndicator() {
     const mode = effectiveMode();
     const entry = getEntry(mode);
@@ -762,6 +775,7 @@ export function createVimMode(): VimModeAPI {
     if (mode !== lastMode) {
       lastMode = mode;
       syncIndicator();
+      refreshPaletteIfVisible();
     }
   }
 
@@ -795,7 +809,7 @@ export function createVimMode(): VimModeAPI {
           cmd.run();
           if (!activePending) pendingTrail = ""; // sequence done
           syncIndicator();
-          if (palette.visible()) palette.show(paletteColumns());
+          refreshPaletteIfVisible();
           return;
         }
 
@@ -805,7 +819,7 @@ export function createVimMode(): VimModeAPI {
           e.stopImmediatePropagation();
           cancelPending();
           syncIndicator();
-          if (palette.visible()) palette.show(paletteColumns());
+          refreshPaletteIfVisible();
           return;
         }
 
@@ -845,7 +859,7 @@ export function createVimMode(): VimModeAPI {
         cmd.run();
         if (!activePending) pendingTrail = "";
         syncIndicator();
-        if (palette.visible()) palette.show(paletteColumns());
+        refreshPaletteIfVisible();
       }
       return;
     }
@@ -896,8 +910,8 @@ export function createVimMode(): VimModeAPI {
       if (cmd) {
         e.preventDefault();
         e.stopPropagation();
-        palette.hide();
         if (!cmd.passthrough) cmd.run();
+        refreshPaletteIfVisible();
         return;
       }
     }
@@ -912,6 +926,7 @@ export function createVimMode(): VimModeAPI {
       cmd.run();
       if (!activePending) pendingTrail = ""; // cmd didn't push pending
       syncIndicator();
+      refreshPaletteIfVisible();
     }
   }
 
@@ -1023,13 +1038,13 @@ export function createVimMode(): VimModeAPI {
     pushPending(config) {
       doPushPending(config);
       syncIndicator();
-      if (palette.visible()) palette.show(paletteColumns());
+      refreshPaletteIfVisible();
     },
 
     cancelPending() {
       cancelPending();
       syncIndicator();
-      if (palette.visible()) palette.show(paletteColumns());
+      refreshPaletteIfVisible();
     },
 
     registerSequence(word, config) {

@@ -510,7 +510,6 @@ export const GoldMineGame: React.FC = () => {
 
     const syncSlideControls = () => {
       if (isCurrentRevealSectionActive(rootRef.current)) {
-        activateGameControls();
         return;
       }
       deactivateGameControls();
