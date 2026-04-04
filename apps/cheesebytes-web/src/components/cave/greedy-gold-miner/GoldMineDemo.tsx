@@ -358,24 +358,6 @@ function mfIdx(m: Manifest, id: string): number {
   return Math.floor(f.y / sy) * m.meta.columns + Math.floor(f.x / sx);
 }
 
-function dirFromKey(code: string): Dir | null {
-  if (code === "ArrowUp" || code === "KeyW") return "north";
-  if (code === "ArrowDown" || code === "KeyS") return "south";
-  if (code === "ArrowLeft" || code === "KeyA") return "west";
-  if (code === "ArrowRight" || code === "KeyD") return "east";
-  return null;
-}
-
-function isEditable(t: EventTarget | null): boolean {
-  if (!(t instanceof HTMLElement)) return false;
-  return (
-    t.isContentEditable ||
-    t.tagName === "INPUT" ||
-    t.tagName === "TEXTAREA" ||
-    t.tagName === "SELECT"
-  );
-}
-
 // ── Component ───────────────────────────────────────────────────────
 
 export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
@@ -408,7 +390,6 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   const undoRef = useRef<(() => void) | null>(null);
   const armedRef = useRef(false);
   const sfxRef = useRef(true);
-  const heldDirRef = useRef<Dir | null>(null);
   const musicRef = useRef<MusicEngine | null>(null);
   // Stable refs for vim commands
   const toggleMusicRef = useRef<() => void>(() => {});
@@ -460,20 +441,10 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
 
   // Keyboard + pointer capture
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const d = dirFromKey(e.code);
-      if (!d || isEditable(e.target) || !armedRef.current) return;
-      e.preventDefault();
-      e.stopPropagation();
-      heldDirRef.current = d;
-      moveRef.current?.(d);
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      const d = dirFromKey(e.code);
-      if (d && d === heldDirRef.current) heldDirRef.current = null;
-    };
     const root = rootRef.current;
     if (!root) return;
+
+    const move = (dir: Dir) => () => moveRef.current?.(dir);
 
     const setGameMode = (inside: boolean) => {
       armedRef.current = inside;
@@ -485,35 +456,55 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
           label: "Game",
           extends: "normal",
           commands: [
-            // Movement keys — passthrough so the game's own listener handles them,
-            // but they shadow global bindings (e.g. S for sidebar) and show in help.
+            // Movement keys are handled directly by VimMode so keyboard and palette clicks
+            // follow the same path, independent of where the game listens for key events.
             {
               key: "w",
               label: "Move north",
-              run: () => {},
-              passthrough: true,
+              run: move("north"),
               altKeys: ["\u2191"],
             },
             {
               key: "a",
               label: "Move west",
-              run: () => {},
-              passthrough: true,
+              run: move("west"),
               altKeys: ["\u2190"],
             },
             {
               key: "s",
               label: "Move south",
-              run: () => {},
-              passthrough: true,
+              run: move("south"),
               altKeys: ["\u2193"],
             },
             {
               key: "d",
               label: "Move east",
-              run: () => {},
-              passthrough: true,
+              run: move("east"),
               altKeys: ["\u2192"],
+            },
+            {
+              key: "arrowup",
+              label: "Move north",
+              run: move("north"),
+              hidden: true,
+            },
+            {
+              key: "arrowleft",
+              label: "Move west",
+              run: move("west"),
+              hidden: true,
+            },
+            {
+              key: "arrowdown",
+              label: "Move south",
+              run: move("south"),
+              hidden: true,
+            },
+            {
+              key: "arrowright",
+              label: "Move east",
+              run: move("east"),
+              hidden: true,
             },
             // Actions
             {
@@ -562,14 +553,10 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       });
     };
 
-    document.addEventListener("keydown", onKey, true);
-    document.addEventListener("keyup", onKeyUp, true);
     root.addEventListener("pointerdown", focusRoot, true);
     root.addEventListener("focusin", syncArmed);
     root.addEventListener("focusout", syncArmed);
     return () => {
-      document.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("keyup", onKeyUp, true);
       root.removeEventListener("pointerdown", focusRoot, true);
       root.removeEventListener("focusin", syncArmed);
       root.removeEventListener("focusout", syncArmed);
@@ -957,10 +944,6 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
               this.idle(this.facing);
               this.moving = false;
               this.checkEnd();
-              // Auto-chain next move if key still held
-              if (heldDirRef.current === d && this.stat === "playing") {
-                this.tryMove(d);
-              }
             },
           });
         }
