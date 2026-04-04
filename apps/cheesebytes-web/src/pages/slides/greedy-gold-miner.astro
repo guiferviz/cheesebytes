@@ -2,9 +2,11 @@
 import RevealLayout from "../../layouts/PresentationLayout.astro";
 import { LogoAnimation } from "../../components/cave/intro";
 import {
+  GoldMineDemo,
   GoldMineSolver,
-  GoldMineGame,
   GreedyGoldMineMapEditor,
+  mediumMap,
+  mediumMapBestPossible,
 } from "../../components/cave/greedy-gold-miner";
 ---
 
@@ -14,7 +16,7 @@ import {
   theme="dark"
 >
   <!-- Slide 1: Intro text -->
-  <section>
+  <section class="w-full h-full">
     <aside class="notes">
       <p>
         You enter a gold mine with one goal: to become filthy rich and make it
@@ -24,7 +26,12 @@ import {
         escape?
       </p>
     </aside>
-    <GoldMineGame client:only="react" />
+    <GoldMineDemo
+      client:only="react"
+      rawMap={mediumMap}
+      bestPossible={mediumMapBestPossible}
+      showHud={false}
+    />
   </section>
 
   <!-- Slide 2: Interactive solver -->

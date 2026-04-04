@@ -1,36 +1,20 @@
-import { GoldMineDemo } from "../../../apps/cheesebytes-web/src/components/cave/greedy-gold-miner";
-
-export const simpleMap = [
-  "#########",
-  "#.......#",
-  "#.#####.#",
-  "#.#####.#",
-  "#S.....E#",
-  "#########",
-];
-
-export const mediumMap = [
-  "##################",
-  "#......##........#",
-  "#.####....###.##.#",
-  "#....S.##........#",
-  "####.#.#####.###.#",
-  "#....#.....#.#...#",
-  "#.########.#.#.#.#",
-  "#........#.#.....#",
-  "#.######.#.#####.#",
-  "#.#......#.....#.#",
-  "#.#.#.#.#####.##.#",
-  "#...#.#.........E#",
-  "##################",
-];
+import {
+  GoldMineDemo,
+  mediumMap,
+  mediumMapBestPossible,
+  simpleMap,
+} from "../../../apps/cheesebytes-web/src/components/cave/greedy-gold-miner";
 
 You enter a gold mine with one goal: to become filthy rich. But there's a catch.
 Every step you take collects gold and collapses the tunnel behind you. There's
 no going back. Luckily, there's another way out. So which route leaves you the
 richest by the time you escape?
 
-<GoldMineDemo client:only="react" rawMap={mediumMap} bestPossible={12} />
+<GoldMineDemo
+  client:only="react"
+  rawMap={mediumMap}
+  bestPossible={mediumMapBestPossible}
+/>
 
 # Draft
 

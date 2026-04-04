@@ -7,6 +7,7 @@
  * light/dark theme, blinking click-to-focus status bar, score tracking.
  */
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import type { VimModeAPI } from "../../../utils/vim-mode";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -22,6 +23,8 @@ export interface GoldMineDemoProps {
   rawMap: string[];
   /** Best possible gold.  If omitted the row is hidden. */
   bestPossible?: number;
+  /** Hide the HUD and keep only the game canvas. */
+  showHud?: boolean;
 }
 
 // ── Map parsing ─────────────────────────────────────────────────────
@@ -363,6 +366,7 @@ function mfIdx(m: Manifest, id: string): number {
 export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   rawMap,
   bestPossible,
+  showHud = true,
 }) => {
   const isDark = useIsDark();
   const th = isDark ? DARK_HUD : LIGHT_HUD;
@@ -444,12 +448,15 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
     const root = rootRef.current;
     if (!root) return;
 
+    const getVimMode = (): VimModeAPI | undefined =>
+      (window as Window & { vimMode?: VimModeAPI }).vimMode;
+
     const move = (dir: Dir) => () => moveRef.current?.(dir);
 
     const setGameMode = (inside: boolean) => {
       armedRef.current = inside;
       setArmed(inside);
-      const vm = (window as any).vimMode;
+      const vm = getVimMode();
       if (!vm) return;
       if (inside) {
         vm.pushMode("game", {
@@ -560,7 +567,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       root.removeEventListener("pointerdown", focusRoot, true);
       root.removeEventListener("focusin", syncArmed);
       root.removeEventListener("focusout", syncArmed);
-      (window as any).vimMode?.popMode("game");
+      getVimMode()?.popMode("game");
     };
   }, []);
 
@@ -1105,7 +1112,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         height: WH,
         backgroundColor: "#05070a",
         scene: Scene,
-        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+        scale: { mode: Phaser.Scale.NONE },
         render: { pixelArt: true, antialias: true, roundPixels: false },
       });
     });
@@ -1132,11 +1139,19 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
     <div
       ref={rootRef}
       tabIndex={0}
-      style={{ margin: "2rem 0", outline: "none" }}
+      style={{
+        margin: showHud ? "2rem 0" : "0",
+        outline: "none",
+        height: showHud ? undefined : "100%",
+        display: showHud ? undefined : "flex",
+        alignItems: showHud ? undefined : "center",
+        justifyContent: showHud ? undefined : "center",
+      }}
     >
       <style>{`
         @keyframes gmd-pulse { 0%,100%{opacity:1} 50%{opacity:0.15} }
         .gmd-blink { animation: gmd-pulse 1.2s ease-in-out infinite; }
+        .gmd-container canvas { width: 100% !important; height: 100% !important; object-fit: contain; }
       `}</style>
 
       {/* Game canvas */}
@@ -1144,156 +1159,163 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         ref={wrapRef}
         style={{
           overflow: "hidden",
-          borderRadius: "10px 10px 0 0",
+          borderRadius: showHud ? "10px 10px 0 0" : "10px",
           border: `2px solid ${th.hudBorder}`,
-          borderBottom: "none",
+          borderBottom: showHud ? "none" : `2px solid ${th.hudBorder}`,
           background: th.frameBg,
+          boxSizing: showHud ? undefined : "border-box",
+          height: showHud ? undefined : "100%",
+          aspectRatio: showHud ? undefined : `${aspect}`,
+          maxWidth: showHud ? undefined : "100%",
         }}
       >
         <div
           ref={containerRef}
-          style={{ width: "100%", aspectRatio: `${aspect}` }}
+          className="gmd-container"
+          style={{
+            width: "100%",
+            height: "100%",
+            aspectRatio: `${aspect}`,
+          }}
         />
       </div>
 
-      {/* HUD bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 8,
-          background: th.hudBg,
-          border: `2px solid ${th.hudBorder}`,
-          borderRadius: "0 0 10px 10px",
-          padding: "7px 12px",
-          fontFamily: "monospace",
-          fontSize: 11,
-          color: th.hudText,
-          userSelect: "none",
-          minHeight: 34,
-        }}
-      >
-        {/* Left: controls */}
+      {showHud && (
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            flexShrink: 0,
-          }}
-        >
-          <HudBtn
-            onClick={() => setMusicOn((v) => !v)}
-            active={musicOn}
-            th={th}
-            title={musicOn ? "Mute music [M]" : "Enable music [M]"}
-          >
-            <MusicIcon
-              muted={!musicOn}
-              color={musicOn ? th.hudBtnActiveText : th.hudText}
-            />
-          </HudBtn>
-          <HudBtn
-            onClick={() => setSfxOn((v) => !v)}
-            active={sfxOn}
-            th={th}
-            title={
-              sfxOn ? "Mute sound effects [X]" : "Enable sound effects [X]"
-            }
-          >
-            <SpeakerIcon
-              muted={!sfxOn}
-              color={sfxOn ? th.hudBtnActiveText : th.hudText}
-            />
-          </HudBtn>
-          <HudBtn
-            onClick={() => undoRef.current?.()}
-            th={th}
-            title="Undo last move [U]"
-          >
-            <span style={{ display: "inline-flex", alignItems: "baseline" }}>
-              <span style={{ fontWeight: 800, textDecoration: "underline" }}>
-                U
-              </span>
-              <span style={{ marginLeft: "-0.04em" }}>ndo</span>
-            </span>
-          </HudBtn>
-          <HudBtn
-            onClick={() => setRunId((id) => id + 1)}
-            th={th}
-            title="Restart the game [R]"
-          >
-            <span style={{ display: "inline-flex", alignItems: "baseline" }}>
-              <span style={{ fontWeight: 800, textDecoration: "underline" }}>
-                R
-              </span>
-              <span style={{ marginLeft: "-0.04em" }}>estart</span>
-            </span>
-          </HudBtn>
-        </div>
-
-        {/* Center: focus / status */}
-        <div
-          className={!armed && status === "playing" ? "gmd-blink" : undefined}
-          style={{
-            flex: 1,
-            textAlign: "center",
-            fontWeight: 700,
+            flexWrap: "wrap",
+            gap: 8,
+            background: th.hudBg,
+            border: `2px solid ${th.hudBorder}`,
+            borderRadius: "0 0 10px 10px",
+            padding: "7px 12px",
+            fontFamily: "monospace",
             fontSize: 11,
-            letterSpacing: "0.04em",
-            color:
-              status === "won"
-                ? th.hudWin
-                : status === "lost"
-                  ? th.hudLose
-                  : armed
-                    ? th.hudArmed
-                    : th.hudAccent,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            padding: "0 6px",
-            minWidth: 120,
+            color: th.hudText,
+            userSelect: "none",
+            minHeight: 34,
           }}
         >
-          {statusText}
-        </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            <HudBtn
+              onClick={() => setMusicOn((v) => !v)}
+              active={musicOn}
+              th={th}
+              title={musicOn ? "Mute music [M]" : "Enable music [M]"}
+            >
+              <MusicIcon
+                muted={!musicOn}
+                color={musicOn ? th.hudBtnActiveText : th.hudText}
+              />
+            </HudBtn>
+            <HudBtn
+              onClick={() => setSfxOn((v) => !v)}
+              active={sfxOn}
+              th={th}
+              title={
+                sfxOn ? "Mute sound effects [X]" : "Enable sound effects [X]"
+              }
+            >
+              <SpeakerIcon
+                muted={!sfxOn}
+                color={sfxOn ? th.hudBtnActiveText : th.hudText}
+              />
+            </HudBtn>
+            <HudBtn
+              onClick={() => undoRef.current?.()}
+              th={th}
+              title="Undo last move [U]"
+            >
+              <span style={{ display: "inline-flex", alignItems: "baseline" }}>
+                <span style={{ fontWeight: 800, textDecoration: "underline" }}>
+                  U
+                </span>
+                <span style={{ marginLeft: "-0.04em" }}>ndo</span>
+              </span>
+            </HudBtn>
+            <HudBtn
+              onClick={() => setRunId((id) => id + 1)}
+              th={th}
+              title="Restart the game [R]"
+            >
+              <span style={{ display: "inline-flex", alignItems: "baseline" }}>
+                <span style={{ fontWeight: 800, textDecoration: "underline" }}>
+                  R
+                </span>
+                <span style={{ marginLeft: "-0.04em" }}>estart</span>
+              </span>
+            </HudBtn>
+          </div>
 
-        {/* Right: scores */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexShrink: 0,
-          }}
-        >
-          <HudStat
-            icon={<CoinIcon color={th.hudGold} />}
-            value={gold}
-            color={th.hudGold}
-            muted={th.hudMuted}
-            title="Gold collected this run"
-          />
-          <HudStat
-            icon={<TrophyIcon color={th.hudBest} />}
-            value={bestGold}
-            color={th.hudBest}
-            muted={th.hudMuted}
-            title="Best score this session"
-          />
-          {bestPossible != null && (
+          <div
+            className={!armed && status === "playing" ? "gmd-blink" : undefined}
+            style={{
+              flex: 1,
+              textAlign: "center",
+              fontWeight: 700,
+              fontSize: 11,
+              letterSpacing: "0.04em",
+              color:
+                status === "won"
+                  ? th.hudWin
+                  : status === "lost"
+                    ? th.hudLose
+                    : armed
+                      ? th.hudArmed
+                      : th.hudAccent,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              padding: "0 6px",
+              minWidth: 120,
+            }}
+          >
+            {statusText}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexShrink: 0,
+            }}
+          >
             <HudStat
-              icon={<StarIcon color={th.hudAccent} />}
-              value={bestPossible}
-              color={th.hudAccent}
+              icon={<CoinIcon color={th.hudGold} />}
+              value={gold}
+              color={th.hudGold}
               muted={th.hudMuted}
-              title="Best possible score for this map"
+              title="Gold collected this run"
             />
-          )}
+            <HudStat
+              icon={<TrophyIcon color={th.hudBest} />}
+              value={bestGold}
+              color={th.hudBest}
+              muted={th.hudMuted}
+              title="Best score this session"
+            />
+            {bestPossible != null && (
+              <HudStat
+                icon={<StarIcon color={th.hudAccent} />}
+                value={bestPossible}
+                color={th.hudAccent}
+                muted={th.hudMuted}
+                title="Best possible score for this map"
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
