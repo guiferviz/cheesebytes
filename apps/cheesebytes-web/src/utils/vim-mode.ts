@@ -280,6 +280,10 @@ function createPalette(): {
       row.addEventListener("mouseleave", () => {
         row.style.background = "transparent";
       });
+      row.addEventListener("mousedown", (e) => {
+        // Prevent focus from leaving the game/app when clicking a command
+        e.preventDefault();
+      });
       row.addEventListener("click", () => {
         if (cmd.key === "?") {
           cmd.run();

@@ -678,30 +678,37 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
 
         toggleZoom() {
           const cam = this.cameras.main;
+          // Calculate current world center
+          const cx = cam.scrollX + cam.width / 2;
+          const cy = cam.scrollY + cam.height / 2;
           this.zoomed = !this.zoomed;
+
           if (this.zoomed) {
-            const zoomLevel = 2.5;
-            const z = { v: cam.zoom };
+            const state = { zoom: cam.zoom, x: cx, y: cy };
             this.tweens.add({
-              targets: z,
-              v: zoomLevel,
+              targets: state,
+              zoom: 2.5,
+              x: this.miner.x,
+              y: this.miner.y,
               duration: 350,
               ease: "Quad.Out",
               onUpdate: () => {
-                cam.setZoom(z.v);
-                cam.centerOn(this.miner.x, this.miner.y);
+                cam.setZoom(state.zoom);
+                cam.centerOn(state.x, state.y);
               },
             });
           } else {
-            const z = { v: cam.zoom };
+            const state = { zoom: cam.zoom, x: cx, y: cy };
             this.tweens.add({
-              targets: z,
-              v: 1,
+              targets: state,
+              zoom: 1,
+              x: WW / 2,
+              y: WH / 2,
               duration: 350,
               ease: "Quad.Out",
               onUpdate: () => {
-                cam.setZoom(z.v);
-                cam.centerOn(WW / 2, WH / 2);
+                cam.setZoom(state.zoom);
+                cam.centerOn(state.x, state.y);
               },
             });
           }
