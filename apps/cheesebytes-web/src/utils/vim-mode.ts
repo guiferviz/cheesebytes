@@ -193,6 +193,7 @@ function createPalette(): {
   hide: () => void;
   visible: () => boolean;
   destroy: () => void;
+  onPendingClick: ((cmd: VimCommand) => void) | null;
 } {
   const root = document.createElement("div");
   root.id = "vim-palette";
@@ -258,6 +259,7 @@ function createPalette(): {
     cmd: VimCommand,
     overridden: boolean,
     savedFocusRef: { value: Element | null },
+    isPending = false,
   ): HTMLElement {
     const isPass = !!cmd.passthrough;
     const keyEventInit = isPass ? keyboardEventInitFor(cmd.key) : null;
@@ -280,6 +282,11 @@ function createPalette(): {
     row.addEventListener("click", () => {
       if (cmd.key === "?") {
         cmd.run();
+        return;
+      }
+      if (isPending && ret.onPendingClick) {
+        ret.onPendingClick(cmd);
+        hide();
         return;
       }
       hide();
@@ -393,7 +400,9 @@ function createPalette(): {
       for (const cmd of col.commands) {
         const isOverridden =
           col.overriddenKeys?.has(cmd.key.toLowerCase()) ?? false;
-        colEl.appendChild(renderRow(cmd, isOverridden, savedFocusRef));
+        colEl.appendChild(
+          renderRow(cmd, isOverridden, savedFocusRef, col.kind === "pending"),
+        );
       }
 
       grid.appendChild(colEl);
@@ -420,7 +429,15 @@ function createPalette(): {
     root.remove();
   }
 
-  return { root, show, hide, visible, destroy };
+  const ret = {
+    root,
+    show,
+    hide,
+    visible,
+    destroy,
+    onPendingClick: null as ((cmd: VimCommand) => void) | null,
+  };
+  return ret;
 }
 
 // ── Mode indicator ───────────────────────────────────────────────────
@@ -552,6 +569,16 @@ export function createVimMode(): VimModeAPI {
   const modeStack: string[] = [];
 
   const palette = createPalette();
+  palette.onPendingClick = (cmd) => {
+    if (activePending) {
+      if (activePending.timer) clearTimeout(activePending.timer);
+      activePending = null;
+    }
+    pendingTrail = "";
+    cmd.run();
+    if (!activePending) pendingTrail = "";
+    syncIndicator();
+  };
   const indicator = createIndicator(() => {
     const entry = getEntry(effectiveMode());
     if (!entry.passive) api.togglePalette();
