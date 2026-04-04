@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import "katex/dist/katex.min.css";
 import BaseHead from "../components/BaseHead.astro";
+import DrawingOverlay from "../components/DrawingOverlay.tsx";
 import SideBar from "../components/SideBar.astro";
 import SearchModal from "../components/SearchModal.astro";
 
@@ -36,16 +37,30 @@ const { title, description } = Astro.props;
     <!-- Modal de búsqueda -->
     <SearchModal />
 
+    <DrawingOverlay client:load enableKeyboardShortcut={false} />
+
     <!-- VimMode -->
     <script>
       import { createVimMode } from "../utils/vim-mode";
 
-      if (!(window as any).__vimMode) {
+      const vimMedia = window.matchMedia(
+        "(max-width: 900px), (pointer: coarse)",
+      );
+
+      function destroyVimMode() {
+        const vm = (window as any).__vimMode;
+        vm?.destroy?.();
+        delete (window as any).__vimMode;
+        delete (window as any).vimMode;
+      }
+
+      function createDesktopVimMode() {
+        if ((window as any).__vimMode) return;
+
         const vm = createVimMode();
         (window as any).__vimMode = vm;
         (window as any).vimMode = vm;
 
-        // Default commands
         vm.register("t", {
           label: "Toggle theme",
           category: "General",
@@ -63,7 +78,24 @@ const { title, description } = Astro.props;
           category: "General",
           run: () => (window as any).openSearchModal?.(),
         });
+
+        vm.register("p", {
+          label: "Toggle drawing",
+          category: "General",
+          run: () => window.dispatchEvent(new CustomEvent("toggle-drawing")),
+        });
       }
+
+      function syncVimMode() {
+        if (vimMedia.matches) {
+          destroyVimMode();
+          return;
+        }
+        createDesktopVimMode();
+      }
+
+      syncVimMode();
+      vimMedia.addEventListener("change", syncVimMode);
     </script>
   </body>
 </html>

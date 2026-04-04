@@ -283,19 +283,107 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     }
   }, [saveToHistory]);
 
+  const activateOverlay = useCallback(() => {
+    setMenuMode("normal");
+    setIsActive((prev) => {
+      if (prev) return prev;
+
+      requestAnimationFrame(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext("2d");
+        if (ctx && canvas && historyRef.current.length === 0) {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          historyRef.current.push(imageData);
+          historyIndexRef.current = 0;
+        }
+      });
+
+      return true;
+    });
+  }, []);
+
+  const deactivateOverlay = useCallback(() => {
+    setTextInput(null);
+    setMenuMode("normal");
+    setIsActive(false);
+    // Pop mode synchronously so VimMode sees updated stack immediately
+    (window as any).vimMode?.popMode("paint");
+  }, []);
+
+  useEffect(() => {
+    const vm = (window as any).vimMode;
+    if (!vm) return;
+
+    if (!isActive) {
+      vm.popMode("paint");
+      return;
+    }
+
+    vm.pushMode("paint", {
+      label: "Paint",
+      extends: vm.mode(),
+      commands: [
+        {
+          key: "c",
+          label: "Color menu",
+          run: () => {
+            setMousePos(mousePosRef.current);
+            setMenuMode("color");
+          },
+        },
+        {
+          key: "t",
+          label: "Tool menu",
+          run: () => {
+            setMousePos(mousePosRef.current);
+            setMenuMode("tool");
+          },
+        },
+        {
+          key: "s",
+          label: "Size menu",
+          run: () => {
+            setMousePos(mousePosRef.current);
+            setMenuMode("size");
+          },
+        },
+        {
+          key: "h",
+          label: "Paint help",
+          run: () => {
+            setMousePos(mousePosRef.current);
+            setMenuMode("help");
+          },
+        },
+        { key: "d", label: "Delete all", run: clearCanvas },
+        { key: "u", label: "Undo", run: undo },
+        { key: "r", label: "Redo", run: redo },
+        { key: "p", label: "Exit paint", run: deactivateOverlay },
+        { key: "escape", label: "Exit paint", run: deactivateOverlay },
+      ],
+    });
+
+    return () => {
+      vm.popMode("paint");
+    };
+  }, [isActive, clearCanvas, deactivateOverlay, redo, undo]);
+
   // Initialize canvas and event listeners
   useEffect(() => {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    // Handler for keys WHILE drawing mode is active (always registered)
+    // Handler for paint sub-menus (color/tool/size/help radial menus).
+    // In "normal" paint mode, VimMode handles all keys (including inherited game arrows).
     const handleDrawingKeys = (e: KeyboardEvent) => {
-      // Only handle when drawing mode is active
       if (!isActive) return;
 
       const key = e.key.toLowerCase();
 
-      // If text input is active, only handle Escape to exit text mode
+      // Let VimMode handle palette/help while paint mode is active.
+      if (key === "?") return;
+
+      // Text input mode: only intercept Escape to exit text entry
       if (textInput) {
         if (key === "escape") {
           e.stopPropagation();
@@ -303,48 +391,26 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
           e.preventDefault();
           setTextInput(null);
         }
-        // Let all other keys pass through to the textarea
         return;
       }
 
-      // CRITICAL: Stop propagation to prevent Reveal.js from capturing our keys
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      e.preventDefault();
+      // In "normal" paint mode, let VimMode handle everything
+      // (including inherited commands like game arrows)
+      if (menuMode === "normal") return;
 
-      // Handle keys based on current menu mode
+      // Sub-menu handling: only intercept keys that are meaningful
+      let handled = false;
       switch (menuMode) {
-        case "normal":
-          if (key === "c") {
-            setMousePos(mousePosRef.current);
-            setMenuMode("color");
-          } else if (key === "t") {
-            setMousePos(mousePosRef.current);
-            setMenuMode("tool");
-          } else if (key === "d")
-            clearCanvas(); // D directly clears all
-          else if (key === "s") {
-            setMousePos(mousePosRef.current);
-            setMenuMode("size");
-          } else if (key === "h") {
-            setMousePos(mousePosRef.current);
-            setMenuMode("help");
-          } else if (key === "u") undo();
-          else if (key === "r") redo();
-          else if (key === "p" || key === "escape") {
-            setIsActive(false);
-            setMenuMode("normal");
-          }
-          break;
-
         case "color":
           if (key === "escape") {
             setMenuMode("normal");
+            handled = true;
           } else {
             const colorOption = COLOR_OPTIONS.find((opt) => opt.key === key);
             if (colorOption) {
               setStrokeColor(colorOption.color);
               setMenuMode("normal");
+              handled = true;
             }
           }
           break;
@@ -352,11 +418,13 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
         case "tool":
           if (key === "escape") {
             setMenuMode("normal");
+            handled = true;
           } else {
             const toolOption = TOOL_OPTIONS.find((opt) => opt.key === key);
             if (toolOption) {
               setCurrentTool(toolOption.tool);
               setMenuMode("normal");
+              handled = true;
             }
           }
           break;
@@ -364,11 +432,13 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
         case "size":
           if (key === "escape") {
             setMenuMode("normal");
+            handled = true;
           } else {
             const sizeOption = SIZE_OPTIONS.find((opt) => opt.key === key);
             if (sizeOption) {
               setStrokeWidth(sizeOption.size);
               setMenuMode("normal");
+              handled = true;
             }
           }
           break;
@@ -376,26 +446,39 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
         case "help":
           if (key === "escape" || key === "h") {
             setMenuMode("normal");
+            handled = true;
           } else if (key === "c") {
             setMenuMode("color");
+            handled = true;
           } else if (key === "t") {
             setMenuMode("tool");
+            handled = true;
           } else if (key === "s") {
             setMenuMode("size");
+            handled = true;
           } else if (key === "d") {
             clearCanvas();
             setMenuMode("normal");
+            handled = true;
           } else if (key === "u") {
             undo();
             setMenuMode("normal");
+            handled = true;
           } else if (key === "r") {
             redo();
             setMenuMode("normal");
+            handled = true;
           } else if (key === "p") {
-            setIsActive(false);
-            setMenuMode("normal");
+            deactivateOverlay();
+            handled = true;
           }
           break;
+      }
+
+      if (handled) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        e.preventDefault();
       }
     };
 
@@ -405,34 +488,14 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       if (key === "p" && !e.ctrlKey && !e.metaKey && !isActive) {
         e.preventDefault();
         e.stopPropagation();
-        setIsActive(true);
+        activateOverlay();
       }
     };
 
     // Listen for custom toggle event from outside (e.g. Reveal.js)
     const handleToggleEvent = () => {
-      setIsActive((prev) => {
-        if (prev) {
-          setMenuMode("normal");
-        } else {
-          // Save initial state when activating drawing mode
-          requestAnimationFrame(() => {
-            const canvas = canvasRef.current;
-            const ctx = canvas?.getContext("2d");
-            if (ctx && canvas && historyRef.current.length === 0) {
-              const imageData = ctx.getImageData(
-                0,
-                0,
-                canvas.width,
-                canvas.height,
-              );
-              historyRef.current.push(imageData);
-              historyIndexRef.current = 0;
-            }
-          });
-        }
-        return !prev;
-      });
+      if (isActive) deactivateOverlay();
+      else activateOverlay();
     };
 
     // ALWAYS register drawing keys handler when component mounts (capture phase)
@@ -466,6 +529,8 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     clearCanvas,
     undo,
     redo,
+    activateOverlay,
+    deactivateOverlay,
     enableKeyboardShortcut,
   ]);
 

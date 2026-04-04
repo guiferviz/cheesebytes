@@ -1581,85 +1581,31 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
         }
       }
 
-      // ── Event handlers ────────────────────────────────────────────────────────
+      // ── VimMode integration ──────────────────────────────────────────────────
 
-      function onKeyDown(e: KeyboardEvent) {
-        e.stopPropagation();
+      // Track Shift state for face rotation CW/CCW detection
+      let shiftDown = false;
+      const trackShiftDown = (ev: KeyboardEvent) => {
+        shiftDown = ev.shiftKey;
+      };
+      const trackShiftUp = () => {
+        shiftDown = false;
+      };
+      document.addEventListener("keydown", trackShiftDown, true);
+      document.addEventListener("keyup", trackShiftUp, true);
 
-        if (e.key === "h" || e.key === "H") {
-          setShowHelp(!showHelpRef.current);
-          return;
-        }
-
-        if (e.key === "n" || e.key === "N") {
-          notationMode = ((notationMode + 1) % 4) as NotationMode;
-          updateNotationOverlay();
-          return;
-        }
-
-        if (e.code === "Space") {
-          e.preventDefault();
-          toggleUnfold();
-          return;
-        }
-
-        if (isAnimating || isUnfolded) return;
-
-        // Arrow keys: discrete camera snap, always face-to-face
-        const right = getRight(currentFront, currentUp);
-        if (e.code === "ArrowLeft") {
-          snapCameraTo(neg(right), currentUp.clone());
-          return;
-        }
-        if (e.code === "ArrowRight") {
-          snapCameraTo(right, currentUp.clone());
-          return;
-        }
-        if (e.code === "ArrowUp") {
-          // up face becomes front
-          snapCameraTo(currentUp.clone(), neg(currentFront));
-          return;
-        }
-        if (e.code === "ArrowDown") {
-          // down face becomes front
-          snapCameraTo(neg(currentUp), currentFront.clone());
-          return;
-        }
-
-        // [ ] — roll around front axis (Z rotation of the view)
-        if (e.key === "[") {
-          // CCW roll: up moves to the left
-          const newUp = right.clone();
-          snapCameraTo(currentFront.clone(), newUp);
-          return;
-        }
-        if (e.key === "]") {
-          // CW roll: up moves to the right
-          const newUp = neg(right);
-          snapCameraTo(currentFront.clone(), newUp);
-          return;
-        }
-
-        // '2' prefix for double moves
-        if (e.key === "2") {
-          doublePrefix = true;
-          if (doublePrefixTimer) clearTimeout(doublePrefixTimer);
-          doublePrefixTimer = setTimeout(() => {
-            doublePrefix = false;
-            doublePrefixTimer = null;
-          }, 1000);
-          return;
-        }
-
-        const logicalFace = e.key.toUpperCase();
-        if (logicalFace in faceDef) {
+      function faceMoveCmd(face: string) {
+        return () => {
+          if (isAnimating || isUnfolded) return;
+          const logicalFace = face.toUpperCase();
+          if (!(logicalFace in faceDef)) return;
           const isDouble = doublePrefix;
           doublePrefix = false;
           if (doublePrefixTimer) {
             clearTimeout(doublePrefixTimer);
             doublePrefixTimer = null;
           }
-
+          const right = getRight(currentFront, currentUp);
           const relativeFaceVec: Record<string, THREE.Vector3> = {
             F: currentFront.clone(),
             B: neg(currentFront),
@@ -1672,9 +1618,225 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
           if (isDouble) {
             animateFaceMove(worldFace, true, true);
           } else {
-            animateFaceMove(worldFace, !e.shiftKey);
+            animateFaceMove(worldFace, !shiftDown);
           }
-        }
+        };
+      }
+
+      const cubeCommands = [
+        // Visible commands
+        {
+          key: "h",
+          label: "Toggle help",
+          run: () => setShowHelp(!showHelpRef.current),
+        },
+        {
+          key: "n",
+          label: "Cycle notation",
+          run: () => {
+            notationMode = ((notationMode + 1) % 4) as NotationMode;
+            updateNotationOverlay();
+          },
+        },
+        { key: "f", label: "F face (⇧=inv)", run: faceMoveCmd("f") },
+        { key: "b", label: "B face (⇧=inv)", run: faceMoveCmd("b") },
+        { key: "u", label: "U face (⇧=inv)", run: faceMoveCmd("u") },
+        { key: "d", label: "D face (⇧=inv)", run: faceMoveCmd("d") },
+        { key: "r", label: "R face (⇧=inv)", run: faceMoveCmd("r") },
+        { key: "l", label: "L face (⇧=inv)", run: faceMoveCmd("l") },
+        // Hidden commands
+        {
+          key: " ",
+          label: "Toggle unfold",
+          run: () => toggleUnfold(),
+          hidden: true,
+        },
+        {
+          key: "arrowleft",
+          label: "Camera left",
+          run: () => {
+            if (isAnimating || isUnfolded) return;
+            const right = getRight(currentFront, currentUp);
+            snapCameraTo(neg(right), currentUp.clone());
+          },
+          hidden: true,
+        },
+        {
+          key: "arrowright",
+          label: "Camera right",
+          run: () => {
+            if (isAnimating || isUnfolded) return;
+            const right = getRight(currentFront, currentUp);
+            snapCameraTo(right, currentUp.clone());
+          },
+          hidden: true,
+        },
+        {
+          key: "arrowup",
+          label: "Camera up",
+          run: () => {
+            if (isAnimating || isUnfolded) return;
+            snapCameraTo(currentUp.clone(), neg(currentFront));
+          },
+          hidden: true,
+        },
+        {
+          key: "arrowdown",
+          label: "Camera down",
+          run: () => {
+            if (isAnimating || isUnfolded) return;
+            snapCameraTo(neg(currentUp), currentFront.clone());
+          },
+          hidden: true,
+        },
+        {
+          key: "[",
+          label: "Roll CCW",
+          run: () => {
+            if (isAnimating || isUnfolded) return;
+            const right = getRight(currentFront, currentUp);
+            snapCameraTo(currentFront.clone(), right.clone());
+          },
+          hidden: true,
+        },
+        {
+          key: "]",
+          label: "Roll CW",
+          run: () => {
+            if (isAnimating || isUnfolded) return;
+            const right = getRight(currentFront, currentUp);
+            snapCameraTo(currentFront.clone(), neg(right));
+          },
+          hidden: true,
+        },
+        {
+          key: "2",
+          label: "Double-move prefix",
+          run: () => {
+            if (isAnimating || isUnfolded) return;
+            doublePrefix = true;
+            if (doublePrefixTimer) clearTimeout(doublePrefixTimer);
+            doublePrefixTimer = setTimeout(() => {
+              doublePrefix = false;
+              doublePrefixTimer = null;
+            }, 1000);
+          },
+          hidden: true,
+        },
+        // Block Reveal.js navigation keys inherited from normal mode
+        { key: "j", run: () => {}, label: "", hidden: true },
+        { key: "k", run: () => {}, label: "", hidden: true },
+        { key: "o", run: () => {}, label: "", hidden: true },
+        { key: "p", run: () => {}, label: "", hidden: true },
+        {
+          key: "escape",
+          label: "Exit cube controls",
+          run: () => {
+            popCubeMode();
+            mount.blur();
+          },
+          hidden: true,
+        },
+      ];
+
+      const vm = (window as any).vimMode as
+        | import("../../../utils/vim-mode").VimModeAPI
+        | undefined;
+
+      const pushCubeMode = () => {
+        vm?.pushMode("cube", {
+          label: "Cube",
+          extends: "normal",
+          commands: cubeCommands,
+        });
+      };
+      const popCubeMode = () => vm?.popMode("cube");
+
+      // Fallback key handler (used when VimMode is not available)
+      const onKeyDownFallback = vm
+        ? null
+        : (e: KeyboardEvent) => {
+            e.stopPropagation();
+
+            if (e.key === "h" || e.key === "H") {
+              setShowHelp(!showHelpRef.current);
+              return;
+            }
+            if (e.key === "n" || e.key === "N") {
+              notationMode = ((notationMode + 1) % 4) as NotationMode;
+              updateNotationOverlay();
+              return;
+            }
+            if (e.code === "Space") {
+              e.preventDefault();
+              toggleUnfold();
+              return;
+            }
+            if (isAnimating || isUnfolded) return;
+            const right = getRight(currentFront, currentUp);
+            if (e.code === "ArrowLeft") {
+              snapCameraTo(neg(right), currentUp.clone());
+              return;
+            }
+            if (e.code === "ArrowRight") {
+              snapCameraTo(right, currentUp.clone());
+              return;
+            }
+            if (e.code === "ArrowUp") {
+              snapCameraTo(currentUp.clone(), neg(currentFront));
+              return;
+            }
+            if (e.code === "ArrowDown") {
+              snapCameraTo(neg(currentUp), currentFront.clone());
+              return;
+            }
+            if (e.key === "[") {
+              snapCameraTo(currentFront.clone(), right.clone());
+              return;
+            }
+            if (e.key === "]") {
+              snapCameraTo(currentFront.clone(), neg(right));
+              return;
+            }
+            if (e.key === "2") {
+              doublePrefix = true;
+              if (doublePrefixTimer) clearTimeout(doublePrefixTimer);
+              doublePrefixTimer = setTimeout(() => {
+                doublePrefix = false;
+                doublePrefixTimer = null;
+              }, 1000);
+              return;
+            }
+            const logicalFace = e.key.toUpperCase();
+            if (logicalFace in faceDef) {
+              const isDouble = doublePrefix;
+              doublePrefix = false;
+              if (doublePrefixTimer) {
+                clearTimeout(doublePrefixTimer);
+                doublePrefixTimer = null;
+              }
+              const relativeFaceVec: Record<string, THREE.Vector3> = {
+                F: currentFront.clone(),
+                B: neg(currentFront),
+                U: currentUp.clone(),
+                D: neg(currentUp),
+                R: right.clone(),
+                L: neg(right),
+              };
+              const worldFace = worldFaceFromVec(relativeFaceVec[logicalFace]);
+              if (isDouble) {
+                animateFaceMove(worldFace, true, true);
+              } else {
+                animateFaceMove(worldFace, !e.shiftKey);
+              }
+            }
+          };
+
+      if (vm) {
+        mount.addEventListener("focus", pushCubeMode);
+        mount.addEventListener("blur", popCubeMode);
+      } else if (onKeyDownFallback) {
+        mount.addEventListener("keydown", onKeyDownFallback);
       }
 
       function onWheel(e: WheelEvent) {
@@ -1703,7 +1865,6 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
 
       // ── Attach events ─────────────────────────────────────────────────────────
 
-      mount.addEventListener("keydown", onKeyDown);
       mount.addEventListener("wheel", onWheel, { passive: false });
 
       // ── Raycast hover for state editor ────────────────────────────────────────
@@ -1730,7 +1891,15 @@ const RubikCube = forwardRef<RubikCubeHandle, RubikCubeProps>(
       return () => {
         cancelAnimationFrame(rafId);
         if (doublePrefixTimer) clearTimeout(doublePrefixTimer);
-        mount.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("keydown", trackShiftDown, true);
+        document.removeEventListener("keyup", trackShiftUp, true);
+        if (vm) {
+          popCubeMode();
+          mount.removeEventListener("focus", pushCubeMode);
+          mount.removeEventListener("blur", popCubeMode);
+        } else if (onKeyDownFallback) {
+          mount.removeEventListener("keydown", onKeyDownFallback);
+        }
         mount.removeEventListener("wheel", onWheel);
         if (showStateEditor)
           mount.removeEventListener("mousemove", onMouseMove);

@@ -46,108 +46,203 @@ const {
     ></script>
     <script is:inline>
       window.addEventListener("DOMContentLoaded", function () {
-        const syncHighlightTheme = () => {
-          const themeLink = document.getElementById("highlight-theme");
+        var syncHighlightTheme = function () {
+          var themeLink = document.getElementById("highlight-theme");
           if (themeLink) {
-            const isDark = document.documentElement.classList.contains("dark");
-            const theme = isDark ? "atom-one-dark" : "atom-one-light";
-            themeLink.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${theme}.min.css`;
+            var isDark = document.documentElement.classList.contains("dark");
+            var t = isDark ? "atom-one-dark" : "atom-one-light";
+            themeLink.href =
+              "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/" +
+              t +
+              ".min.css";
           }
         };
         syncHighlightTheme();
+        // Expose for VimMode theme toggle
+        window._syncHighlightTheme = syncHighlightTheme;
 
         // Script to move the custom cursor.
-        const customCursor = document.getElementById("customCursor");
-        // Guardar el scale actual en window
+        var customCursor = document.getElementById("customCursor");
         window._customCursorScale = 1;
         document.addEventListener("mousemove", function (e) {
-          const scale = window._customCursorScale || 1;
-          customCursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) scale(${scale})`;
+          var scale = window._customCursorScale || 1;
+          customCursor.style.transform =
+            "translate(" +
+            e.clientX +
+            "px, " +
+            e.clientY +
+            "px) scale(" +
+            scale +
+            ")";
         });
         document.addEventListener("pointermove", function (e) {
-          const scale = window._customCursorScale || 1;
-          customCursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) scale(${scale})`;
+          var scale = window._customCursorScale || 1;
+          customCursor.style.transform =
+            "translate(" +
+            e.clientX +
+            "px, " +
+            e.clientY +
+            "px) scale(" +
+            scale +
+            ")";
         });
-        // Initialize Reveal.js.
+        // Initialize Reveal.js (keyboard shortcuts handled by VimMode).
         Reveal.initialize({
           controls: false,
           progress: false,
-          //center: true,
-          //disableLayout: false,
           minScale: 0.25,
           maxScale: 3,
           margin: 0,
           transition: "fade",
           width: 1080,
           height: 720,
-          //view: "scroll",
-          //scrollProgress: true,
           plugins: [RevealHighlight, RevealNotes],
-          keyboard: {
-            // 80 es la tecla 'p'/'P'. Usamos Reveal para manejarlo y evitar conflictos con inputs.
-            80: function () {
-              window.dispatchEvent(new CustomEvent("toggle-drawing"));
-            },
-            // '84' es el keyCode de 't'/'T'
-            // Cambiar entre el modo claro y oscuro.
-            84: function () {
-              const html = document.documentElement;
-              if (html.classList.contains("dark")) {
-                html.classList.remove("dark");
-              } else {
-                html.classList.add("dark");
-              }
-              syncHighlightTheme();
-            },
-            // '67' es el keyCode de 'c'/'C'
-            // Cambiar la visibilidad del cursor personalizado.
-            67: function () {
-              if (customCursor) {
-                customCursor.style.opacity =
-                  customCursor.style.opacity === "0" ? "1" : "0";
-              }
-            },
-            // '68' es el keyCode de 'd'/'D'
-            // Disminuñe el cursor personalizado.
-            68: function () {
-              if (customCursor) {
-                const current = window._customCursorScale || 1;
-                const newScale = Math.max(current - 0.2, 0.4);
-                window._customCursorScale = newScale;
-                const match =
-                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
-                const translate = match ? `translate(${match[1]})` : "";
-                customCursor.style.transform = `${translate} scale(${newScale})`;
-              }
-            },
-            // '69' es el keyCode de 'e'/'E'
-            // Engrandecer el cursor.
-            69: function () {
-              if (customCursor) {
-                const current = window._customCursorScale || 1;
-                const newScale = Math.min(current + 0.2, 3);
-                window._customCursorScale = newScale;
-                // Obtener la posición actual
-                const match =
-                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
-                const translate = match ? `translate(${match[1]})` : "";
-                customCursor.style.transform = `${translate} scale(${newScale})`;
-              }
-            },
-            // '82' es el keyCode de 'r'/'R'
-            // Resetear el tamaño del cursor personalizado a su valor original (1)
-            82: function () {
-              if (customCursor) {
-                window._customCursorScale = 1;
-                const match =
-                  customCursor.style.transform.match(/translate\(([^)]+)\)/);
-                const translate = match ? `translate(${match[1]})` : "";
-                customCursor.style.transform = `${translate} scale(1)`;
-              }
-            },
-          },
         });
       });
+    </script>
+
+    <!-- VimMode -->
+    <script>
+      import { createVimMode } from "../utils/vim-mode";
+
+      const vimMedia = window.matchMedia(
+        "(max-width: 900px), (pointer: coarse)",
+      );
+
+      function destroyVimMode() {
+        const vm = (window as any).__vimMode;
+        vm?.destroy?.();
+        delete (window as any).__vimMode;
+        delete (window as any).vimMode;
+      }
+
+      function createDesktopVimMode() {
+        if ((window as any).__vimMode) return;
+
+        const vm = createVimMode();
+        (window as any).__vimMode = vm;
+        (window as any).vimMode = vm;
+
+        const R = () => (window as any).Reveal;
+
+        vm.register("h", {
+          label: "Previous slide",
+          run: () => R()?.left(),
+        });
+        vm.register("l", {
+          label: "Next slide",
+          run: () => R()?.right(),
+        });
+        vm.register("j", {
+          label: "Down / next fragment",
+          run: () => R()?.down(),
+        });
+        vm.register("k", {
+          label: "Up / prev fragment",
+          run: () => R()?.up(),
+        });
+
+        vm.register("t", {
+          label: "Toggle theme",
+          run: () => {
+            document.documentElement.classList.toggle("dark");
+            (window as any)._syncHighlightTheme?.();
+          },
+        });
+        vm.register("p", {
+          label: "Toggle drawing",
+          run: () => window.dispatchEvent(new CustomEvent("toggle-drawing")),
+        });
+        vm.register("o", {
+          label: "Toggle overview",
+          run: () => R()?.toggleOverview(),
+        });
+        vm.register("b", {
+          label: "Toggle pause / blackout",
+          run: () => R()?.togglePause(),
+        });
+        vm.register("f", {
+          label: "Toggle fullscreen",
+          run: () => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen?.();
+            } else {
+              document.exitFullscreen?.();
+            }
+          },
+        });
+
+        function cursorTransform(scale: number): string {
+          const el = document.getElementById("customCursor");
+          if (!el) return "";
+          const m = el.style.transform.match(/translate\(([^)]+)\)/);
+          return m ? `translate(${m[1]}) scale(${scale})` : `scale(${scale})`;
+        }
+
+        vm.register("c", {
+          label: "Cursor controls…",
+          run: () => {
+            vm.pushPending({
+              id: "cursor",
+              commands: [
+                {
+                  key: "v",
+                  label: "Toggle visibility",
+                  run: () => {
+                    const el = document.getElementById("customCursor");
+                    if (el)
+                      el.style.opacity = el.style.opacity === "0" ? "1" : "0";
+                  },
+                },
+                {
+                  key: "d",
+                  label: "Decrease size",
+                  run: () => {
+                    const w = window as any;
+                    const s = Math.max((w._customCursorScale || 1) - 0.2, 0.4);
+                    w._customCursorScale = s;
+                    const el = document.getElementById("customCursor");
+                    if (el) el.style.transform = cursorTransform(s);
+                  },
+                },
+                {
+                  key: "e",
+                  label: "Enlarge size",
+                  run: () => {
+                    const w = window as any;
+                    const s = Math.min((w._customCursorScale || 1) + 0.2, 3);
+                    w._customCursorScale = s;
+                    const el = document.getElementById("customCursor");
+                    if (el) el.style.transform = cursorTransform(s);
+                  },
+                },
+                {
+                  key: "r",
+                  label: "Reset size",
+                  run: () => {
+                    (window as any)._customCursorScale = 1;
+                    const el = document.getElementById("customCursor");
+                    if (el) el.style.transform = cursorTransform(1);
+                  },
+                },
+              ],
+              timeout: 3000,
+              label: "Cursor",
+            });
+          },
+        });
+      }
+
+      function syncVimMode() {
+        if (vimMedia.matches) {
+          destroyVimMode();
+          return;
+        }
+        createDesktopVimMode();
+      }
+
+      syncVimMode();
+      vimMedia.addEventListener("change", syncVimMode);
     </script>
     <style is:inline>
       html,

@@ -334,25 +334,6 @@ function availableMoves(
   });
 }
 
-function directionFromKey(code: string): Direction | null {
-  if (code === "ArrowUp" || code === "KeyW") return "north";
-  if (code === "ArrowDown" || code === "KeyS") return "south";
-  if (code === "ArrowLeft" || code === "KeyA") return "west";
-  if (code === "ArrowRight" || code === "KeyD") return "east";
-  return null;
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tagName = target.tagName;
-  return (
-    target.isContentEditable ||
-    tagName === "INPUT" ||
-    tagName === "TEXTAREA" ||
-    tagName === "SELECT"
-  );
-}
-
 function isCurrentRevealSectionActive(element: HTMLElement | null): boolean {
   const section = element?.closest("section");
   return section?.classList.contains("present") ?? false;
@@ -426,41 +407,130 @@ export const GoldMineGame: React.FC = () => {
       "Every step gives you 1 gold. The tile you leave behind collapses and disappears.",
     );
     setZoom(INITIAL_ZOOM);
-    setControlsCapture(false);
   }, [runId, mapState.version]);
 
   useEffect(() => {
-    const handleKeyDownCapture = (event: KeyboardEvent) => {
-      const direction = directionFromKey(event.code);
-      if (!direction) return;
-      if (isEditableTarget(event.target)) return;
-      if (!isCurrentRevealSectionActive(rootRef.current)) return;
-      if (!controlsArmedRef.current) return;
+    function activateGameControls() {
+      if (controlsArmedRef.current) return;
+      setControlsCapture(true);
+      pushGameMode();
+    }
 
-      event.preventDefault();
-      event.stopPropagation();
-      sceneControllerRef.current?.move(direction);
-    };
+    function deactivateGameControls() {
+      if (!controlsArmedRef.current) return;
+      setControlsCapture(false);
+      popGameMode();
+    }
+
+    function pushGameMode() {
+      const vm = (window as any).vimMode;
+      if (!vm) return;
+      vm.pushMode("gold-mine-game", {
+        label: "Game",
+        extends: "normal",
+        commands: [
+          {
+            key: "w",
+            label: "Move north",
+            altKeys: ["↑"],
+            run: () => move("north"),
+          },
+          {
+            key: "a",
+            label: "Move west",
+            altKeys: ["←"],
+            run: () => move("west"),
+          },
+          {
+            key: "s",
+            label: "Move south",
+            altKeys: ["↓"],
+            run: () => move("south"),
+          },
+          {
+            key: "d",
+            label: "Move east",
+            altKeys: ["→"],
+            run: () => move("east"),
+          },
+          {
+            key: "arrowup",
+            label: "Move north",
+            run: () => move("north"),
+            hidden: true,
+          },
+          {
+            key: "arrowleft",
+            label: "Move west",
+            run: () => move("west"),
+            hidden: true,
+          },
+          {
+            key: "arrowdown",
+            label: "Move south",
+            run: () => move("south"),
+            hidden: true,
+          },
+          {
+            key: "arrowright",
+            label: "Move east",
+            run: () => move("east"),
+            hidden: true,
+          },
+          {
+            key: "escape",
+            label: "Exit game controls",
+            run: () => {
+              deactivateGameControls();
+            },
+          },
+        ],
+      });
+    }
+
+    function popGameMode() {
+      (window as any).vimMode?.popMode("gold-mine-game");
+    }
 
     const handlePointerDownCapture = (event: PointerEvent) => {
       const root = rootRef.current;
       if (!root) return;
       if (root.contains(event.target as Node)) {
-        setControlsCapture(true);
+        activateGameControls();
         return;
       }
-      setControlsCapture(false);
+      // Don't deactivate if a higher mode is stacked on top (e.g. paint overlay)
+      const vm = (window as any).vimMode;
+      if (vm) {
+        const current = vm.mode();
+        if (current !== "gold-mine-game" && current !== "normal") return;
+      }
+      deactivateGameControls();
     };
 
-    document.addEventListener("keydown", handleKeyDownCapture, true);
+    const syncSlideControls = () => {
+      if (isCurrentRevealSectionActive(rootRef.current)) {
+        activateGameControls();
+        return;
+      }
+      deactivateGameControls();
+    };
+
     document.addEventListener("pointerdown", handlePointerDownCapture, true);
+    const reveal = (window as { Reveal?: any }).Reveal;
+    reveal?.on?.("slidechanged", syncSlideControls);
+    reveal?.on?.("ready", syncSlideControls);
+    syncSlideControls();
+
     return () => {
-      document.removeEventListener("keydown", handleKeyDownCapture, true);
       document.removeEventListener(
         "pointerdown",
         handlePointerDownCapture,
         true,
       );
+      reveal?.off?.("slidechanged", syncSlideControls);
+      reveal?.off?.("ready", syncSlideControls);
+      popGameMode();
     };
   }, []);
 

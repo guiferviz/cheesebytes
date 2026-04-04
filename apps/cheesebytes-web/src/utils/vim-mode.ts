@@ -176,6 +176,7 @@ function createPalette(): {
   show: (columns: PaletteColumn[]) => void;
   hide: () => void;
   visible: () => boolean;
+  destroy: () => void;
 } {
   const root = document.createElement("div");
   root.id = "vim-palette";
@@ -206,6 +207,17 @@ function createPalette(): {
   `;
 
   root.appendChild(panel);
+
+  const onWindowPointerDownCapture = (e: PointerEvent) => {
+    const target = e.target;
+    if (!(target instanceof Node)) return;
+    if (!root.contains(target)) return;
+    // Shield palette interactions from all lower capture handlers.
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  };
+
+  window.addEventListener("pointerdown", onWindowPointerDownCapture, true);
 
   root.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
   root.addEventListener("mousedown", (e) => {
@@ -250,6 +262,10 @@ function createPalette(): {
       row.style.background = "transparent";
     });
     row.addEventListener("click", () => {
+      if (cmd.key === "?") {
+        cmd.run();
+        return;
+      }
       hide();
       if (isPass) {
         if (!keyEventInit) return;
@@ -357,7 +373,12 @@ function createPalette(): {
     return root.style.display !== "none";
   }
 
-  return { root, show, hide, visible };
+  function destroy() {
+    window.removeEventListener("pointerdown", onWindowPointerDownCapture, true);
+    root.remove();
+  }
+
+  return { root, show, hide, visible, destroy };
 }
 
 // ── Mode indicator ───────────────────────────────────────────────────
@@ -703,6 +724,9 @@ export function createVimMode(): VimModeAPI {
     // ── Passive mode ──────────────────────────────────────────────
     if (passive) {
       if (key === "escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         const active = document.activeElement;
         if (isEditable(active) && active instanceof HTMLElement) {
           active.blur();
@@ -730,17 +754,35 @@ export function createVimMode(): VimModeAPI {
       return;
     }
 
-    if (key === "escape" && palette.visible()) {
+    // ── Escape — always swallow to prevent Reveal.js overview toggle
+    if (key === "escape") {
       e.preventDefault();
-      palette.hide();
-      return;
-    }
-
-    // ── Escape in manual modes (game, etc.) → blur & return to normal
-    if (key === "escape" && modeStack.length > 0) {
-      e.preventDefault();
-      const active = document.activeElement;
-      if (active instanceof HTMLElement) active.blur();
+      e.stopPropagation();
+      const paletteWasOpen = palette.visible();
+      // Let mode commands handle Escape first (e.g. paint exit → game)
+      const cmd = resolveKey("escape");
+      if (cmd && !cmd.passthrough) {
+        cmd.run();
+        syncIndicator();
+        // If palette was open, refresh it to show the next active mode in the stack.
+        if (paletteWasOpen) {
+          palette.show(paletteColumns());
+        }
+        return;
+      }
+      // Fallback: pop top manual mode if present
+      if (modeStack.length > 0) {
+        const top = modeStack[modeStack.length - 1];
+        api.popMode(top);
+        if (paletteWasOpen) {
+          palette.show(paletteColumns());
+        }
+        return;
+      }
+      // With no manual mode to pop, Escape does not dismiss the help palette.
+      if (paletteWasOpen) {
+        palette.show(paletteColumns());
+      }
       return;
     }
 
@@ -812,7 +854,7 @@ export function createVimMode(): VimModeAPI {
 
   // ── Bootstrap ────────────────────────────────────────────────────
 
-  document.addEventListener("keydown", onKeyDown, true);
+  window.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("focusin", onFocusChange);
   document.addEventListener("focusout", onFocusChange);
   document.addEventListener("themeChanged", syncThemeVars);
@@ -943,14 +985,14 @@ export function createVimMode(): VimModeAPI {
     },
 
     destroy() {
-      document.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("focusin", onFocusChange);
       document.removeEventListener("focusout", onFocusChange);
       document.removeEventListener("themeChanged", syncThemeVars);
       window.removeEventListener("focus", onWindowFocusChange, true);
       window.removeEventListener("blur", onWindowFocusChange, true);
       themeObs.disconnect();
-      palette.root.remove();
+      palette.destroy();
       indicator.destroy();
     },
   };
