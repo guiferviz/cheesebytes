@@ -3,6 +3,7 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
 import { LogoAnimation } from "../../components/cave/intro";
 import {
   GoldMineDemo,
+  GoldMinePathGallery,
   GoldMineSolver,
   GreedyGoldMineMapEditor,
   mediumMap,
@@ -44,6 +45,17 @@ import {
       </p>
     </aside>
     <GoldMineSolver client:only="react" />
+  </section>
+
+  <section class="w-full h-full p-10">
+    <aside class="notes">
+      <p>
+        Here are all possible escape routes through the current mine, sorted
+        from shortest to longest. Use the spinner arrows or the mouse wheel to
+        inspect them one by one.
+      </p>
+    </aside>
+    <GoldMinePathGallery client:only="react" />
   </section>
 
   <section>

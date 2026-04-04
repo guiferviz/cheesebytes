@@ -121,6 +121,20 @@ function isEditable(el: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
+function getDeepActiveElement(
+  root: Document | ShadowRoot = document,
+): Element | null {
+  let active: Element | null = root.activeElement;
+  while (active instanceof HTMLElement && active.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  return active;
+}
+
+function isMarimoIsland(el: Element | null): boolean {
+  return el instanceof HTMLElement && !!el.closest("marimo-island");
+}
+
 function isIframe(el: Element | null): boolean {
   return el instanceof HTMLIFrameElement;
 }
@@ -634,9 +648,11 @@ export function createVimMode(): VimModeAPI {
   // ── Mode helpers ─────────────────────────────────────────────────
 
   function autoMode(): string {
-    const active = document.activeElement;
+    const active = getDeepActiveElement();
+    const hostActive = document.activeElement;
     if (isEditable(active)) return "insert";
-    if (isIframe(active)) return "iframe";
+    if (isIframe(active) || isIframe(hostActive)) return "iframe";
+    if (isMarimoIsland(active) || isMarimoIsland(hostActive)) return "iframe";
     return "normal";
   }
 
@@ -849,7 +865,7 @@ export function createVimMode(): VimModeAPI {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        const active = document.activeElement;
+        const active = getDeepActiveElement();
         if (isEditable(active) && active instanceof HTMLElement) {
           active.blur();
           syncMode();

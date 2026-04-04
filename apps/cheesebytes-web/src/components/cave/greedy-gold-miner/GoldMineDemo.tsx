@@ -9,6 +9,16 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import type { VimModeAPI } from "../../../utils/vim-mode";
 
+// ── Reveal.js global type ───────────────────────────────────────────
+interface RevealApi {
+  on: (event: string, cb: () => void) => void;
+  off: (event: string, cb: () => void) => void;
+}
+const getReveal = (): RevealApi | null =>
+  (typeof window !== "undefined" &&
+    (window as unknown as { Reveal?: RevealApi }).Reveal) ||
+  null;
+
 // ── Types ───────────────────────────────────────────────────────────
 
 interface Pos {
@@ -393,8 +403,10 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   const zoomRef = useRef<(() => void) | null>(null);
   const undoRef = useRef<(() => void) | null>(null);
   const armedRef = useRef(false);
+  const viewportVisibleRef = useRef(true);
   const sfxRef = useRef(true);
   const musicRef = useRef<MusicEngine | null>(null);
+  const syncMusicPlaybackRef = useRef<() => void>(() => {});
   // Stable refs for vim commands
   const toggleMusicRef = useRef<() => void>(() => {});
   const toggleSfxRef = useRef<() => void>(() => {});
@@ -416,26 +428,61 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   toggleMusicRef.current = () => setMusicOn((v) => !v);
   toggleSfxRef.current = () => setSfxOn((v) => !v);
   restartRef.current = () => setRunId((id) => id + 1);
+  syncMusicPlaybackRef.current = () => {
+    if (!musicRef.current) return;
+    const shouldPlay =
+      musicOn &&
+      !document.hidden &&
+      armedRef.current &&
+      viewportVisibleRef.current;
+    if (shouldPlay) musicRef.current.start();
+    else musicRef.current.stop();
+  };
 
   // Music lifecycle
   useEffect(() => {
     if (!musicRef.current) musicRef.current = new MusicEngine();
-    if (musicOn) musicRef.current.start();
-    else musicRef.current.stop();
+    syncMusicPlaybackRef.current();
     return () => {
       musicRef.current?.stop();
     };
   }, [musicOn]);
 
-  // Pause music when tab hidden
+  // Pause music and release controls when the tab loses visibility or focus
   useEffect(() => {
-    const sync = () => {
-      if (document.hidden) musicRef.current?.stop();
-      else if (musicOn) musicRef.current?.start();
+    const releaseControls = () => {
+      armedRef.current = false;
+      setArmed(false);
+      syncMusicPlaybackRef.current();
+      (window as Window & { vimMode?: VimModeAPI }).vimMode?.popMode("game");
+      rootRef.current?.blur();
     };
-    document.addEventListener("visibilitychange", sync);
-    return () => document.removeEventListener("visibilitychange", sync);
-  }, [musicOn]);
+
+    const syncVisibility = () => {
+      if (document.hidden) {
+        releaseControls();
+        return;
+      }
+      syncMusicPlaybackRef.current();
+    };
+
+    const syncWindowFocus = () => {
+      if (!document.hasFocus()) {
+        releaseControls();
+        return;
+      }
+      syncMusicPlaybackRef.current();
+    };
+
+    document.addEventListener("visibilitychange", syncVisibility);
+    window.addEventListener("blur", syncWindowFocus);
+    window.addEventListener("focus", syncWindowFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", syncVisibility);
+      window.removeEventListener("blur", syncWindowFocus);
+      window.removeEventListener("focus", syncWindowFocus);
+    };
+  }, []);
 
   // Reset on restart
   useEffect(() => {
@@ -456,6 +503,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
     const setGameMode = (inside: boolean) => {
       armedRef.current = inside;
       setArmed(inside);
+      syncMusicPlaybackRef.current();
       const vm = getVimMode();
       if (!vm) return;
       if (inside) {
@@ -568,6 +616,61 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       root.removeEventListener("focusin", syncArmed);
       root.removeEventListener("focusout", syncArmed);
       getVimMode()?.popMode("game");
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const markNotVisible = () => {
+      viewportVisibleRef.current = false;
+      armedRef.current = false;
+      setArmed(false);
+      syncMusicPlaybackRef.current();
+      (window as Window & { vimMode?: VimModeAPI }).vimMode?.popMode("game");
+      root.blur();
+    };
+
+    // ── IntersectionObserver (non-Reveal contexts) ──
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.isIntersecting && entry.intersectionRatio > 0.65;
+        viewportVisibleRef.current = visible;
+        if (!visible) {
+          markNotVisible();
+          return;
+        }
+        syncMusicPlaybackRef.current();
+      },
+      { threshold: [0, 0.65, 1] },
+    );
+    observer.observe(root);
+
+    // ── Reveal.js slidechanged (Reveal uses CSS transforms, IO won't fire) ──
+    const reveal = getReveal();
+    const section = root.closest("section");
+
+    const handleSlideChanged = () => {
+      const isActive = !!section?.classList.contains("present");
+      viewportVisibleRef.current = isActive;
+      if (!isActive) {
+        markNotVisible();
+      } else {
+        syncMusicPlaybackRef.current();
+      }
+    };
+
+    if (reveal && section) {
+      reveal.on("slidechanged", handleSlideChanged);
+      // Initial check in case the slide is already inactive
+      setTimeout(handleSlideChanged, 200);
+    }
+
+    return () => {
+      observer.disconnect();
+      const r = getReveal();
+      if (r) r.off("slidechanged", handleSlideChanged);
     };
   }, []);
 
@@ -1134,9 +1237,8 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
     };
   }, [runId, ROWS, COLS, WALLS, START, EXIT, WW, WH]);
 
-  const statusText = !armed
-    ? "CLICK ANYWHERE IN THE GAME TO PLAY"
-    : status === "won"
+  const statusText =
+    status === "won"
       ? `ESCAPED WITH ${gold} GOLD!`
       : status === "lost"
         ? "TRAPPED! NO MOVES LEFT"
@@ -1165,6 +1267,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       <div
         ref={wrapRef}
         style={{
+          position: "relative",
           overflow: "hidden",
           borderRadius: showHud ? "10px 10px 0 0" : "10px",
           border: `2px solid ${th.hudBorder}`,
@@ -1185,6 +1288,43 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
             aspectRatio: `${aspect}`,
           }}
         />
+
+        {/* Overlay when game is not focused */}
+        {!armed && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(5, 7, 10, 0.14) 0%, rgba(5, 7, 10, 0.3) 100%)",
+              backdropFilter: "blur(0.9px) saturate(0.82)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none", // Let clicks pass through to focus the root element
+              zIndex: 10,
+            }}
+          >
+            <div
+              className="gmd-blink"
+              style={{
+                fontFamily: "monospace",
+                fontWeight: 700,
+                fontSize: "clamp(12px, 3vmin, 20px)",
+                letterSpacing: "0.05em",
+                color: "rgba(246, 189, 96, 0.96)",
+                textShadow: "0 1px 10px rgba(0, 0, 0, 0.45)",
+                backgroundColor: "rgba(8, 10, 14, 0.42)",
+                padding: "10px 18px",
+                borderRadius: "8px",
+                border: "1px solid rgba(246, 189, 96, 0.24)",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.18)",
+              }}
+            >
+              CLICK ANYWHERE IN THE GAME TO PLAY
+            </div>
+          </div>
+        )}
       </div>
 
       {showHud && (
@@ -1264,7 +1404,6 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
           </div>
 
           <div
-            className={!armed && status === "playing" ? "gmd-blink" : undefined}
             style={{
               flex: 1,
               textAlign: "center",

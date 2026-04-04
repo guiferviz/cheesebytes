@@ -1,5 +1,6 @@
 import {
   GoldMineDemo,
+  GoldMinePathGallery,
   mediumMap,
   mediumMapBestPossible,
   simpleMap,
@@ -15,6 +16,27 @@ richest by the time you escape?
   rawMap={mediumMap}
   bestPossible={mediumMapBestPossible}
 />
+
+# The Challenge
+
+Uno podría pensar que el mayor desafío de los laberintos es encontrar el camino
+más corto y salir cuanto antes. Pero este caso que nos ocupa es de hecho un poco
+más complicado. No queremos salir rápido, sino salir con la mayor cantidad de
+oro posible. Encontrar un camino cualquiera es fácil, encontrar el más corto es
+también fácil, pero encontrar el más largo de todos es un desafío totalmente
+diferente.
+
+El principal motivo por el cual este problema es tan difícil es porque tenemos
+que encontrar todos los caminos posibles para asegurarnos de que no nos estamos
+perdiendo de ningún camino con más oro. Y el número de caminos posibles crece
+rápidamente con el tamaño del mapa.
+
+Muchas veces subestimamose el poder de la combinatoria. Por ejemplo, este mapa
+simple realmente tiene 90 caminos diferentes. Si, 90, totalmente diferentes unos
+de otros. ¿Cuál es el mejor? Resulta que se pueden conseguir 87 unidades de oro
+con uno de ellos. ¿Podrías encontrarlo tú también?
+
+<GoldMinePathGallery client:only="react" />
 
 # Draft
 
