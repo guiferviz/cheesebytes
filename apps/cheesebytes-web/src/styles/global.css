@@ -60,7 +60,7 @@ body {
 #sidebar-scroll,
 #content-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #9ca3af #f3f4f6;
+  scrollbar-color: #9ca3af transparent;
 }
 
 #sidebar-scroll::-webkit-scrollbar,
@@ -71,14 +71,15 @@ body {
 
 #sidebar-scroll::-webkit-scrollbar-track,
 #content-scroll::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: transparent;
 }
 
 #sidebar-scroll::-webkit-scrollbar-thumb,
 #content-scroll::-webkit-scrollbar-thumb {
   background: #9ca3af;
   border-radius: 9999px;
-  border: 2px solid #f3f4f6;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 #sidebar-scroll::-webkit-scrollbar-thumb:hover,
@@ -88,18 +89,19 @@ body {
 
 .dark #sidebar-scroll,
 .dark #content-scroll {
-  scrollbar-color: #3f3f46 #000000;
+  scrollbar-color: #3f3f46 transparent;
 }
 
 .dark #sidebar-scroll::-webkit-scrollbar-track,
 .dark #content-scroll::-webkit-scrollbar-track {
-  background: #000000;
+  background: transparent;
 }
 
 .dark #sidebar-scroll::-webkit-scrollbar-thumb,
 .dark #content-scroll::-webkit-scrollbar-thumb {
   background: #27272a;
-  border: 2px solid #000000;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .dark #sidebar-scroll::-webkit-scrollbar-thumb:hover,
