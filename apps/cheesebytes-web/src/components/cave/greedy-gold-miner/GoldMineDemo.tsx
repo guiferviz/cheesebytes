@@ -26,6 +26,15 @@ interface Pos {
   c: number;
 }
 
+interface FullscreenDocument extends Document {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+}
+
+interface FullscreenElement extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+}
+
 // ── Props ───────────────────────────────────────────────────────────
 
 export interface GoldMineDemoProps {
@@ -411,6 +420,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   const toggleMusicRef = useRef<() => void>(() => {});
   const toggleSfxRef = useRef<() => void>(() => {});
   const restartRef = useRef<() => void>(() => {});
+  const toggleFullscreenRef = useRef<() => void>(() => {});
 
   const [runId, setRunId] = useState(0);
   const [gold, setGold] = useState(0);
@@ -419,6 +429,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   const [armed, setArmed] = useState(false);
   const [musicOn, setMusicOn] = useState(false);
   const [sfxOn, setSfxOn] = useState(true);
+  const [fullscreenOn, setFullscreenOn] = useState(false);
 
   useEffect(() => {
     sfxRef.current = sfxOn;
@@ -428,6 +439,20 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   toggleMusicRef.current = () => setMusicOn((v) => !v);
   toggleSfxRef.current = () => setSfxOn((v) => !v);
   restartRef.current = () => setRunId((id) => id + 1);
+  toggleFullscreenRef.current = () => {
+    const root = rootRef.current as FullscreenElement | null;
+    const doc = document as FullscreenDocument;
+    if (!root) return;
+    const activeFullscreen =
+      doc.fullscreenElement ?? doc.webkitFullscreenElement;
+    if (activeFullscreen === root) {
+      if (doc.exitFullscreen) doc.exitFullscreen();
+      else doc.webkitExitFullscreen?.();
+      return;
+    }
+    if (root.requestFullscreen) root.requestFullscreen();
+    else root.webkitRequestFullscreen?.();
+  };
   syncMusicPlaybackRef.current = () => {
     if (!musicRef.current) return;
     const shouldPlay =
@@ -447,6 +472,29 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       musicRef.current?.stop();
     };
   }, [musicOn]);
+
+  useEffect(() => {
+    const doc = document as FullscreenDocument;
+    const syncFullscreen = () => {
+      const activeFullscreen =
+        doc.fullscreenElement ?? doc.webkitFullscreenElement;
+      setFullscreenOn(activeFullscreen === rootRef.current);
+    };
+
+    syncFullscreen();
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    document.addEventListener(
+      "webkitfullscreenchange",
+      syncFullscreen as EventListener,
+    );
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreen);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        syncFullscreen as EventListener,
+      );
+    };
+  }, []);
 
   // Pause music and release controls when the tab loses visibility or focus
   useEffect(() => {
@@ -571,6 +619,11 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
               key: "m",
               label: "Toggle music",
               run: () => toggleMusicRef.current(),
+            },
+            {
+              key: "f",
+              label: "Toggle fullscreen",
+              run: () => toggleFullscreenRef.current(),
             },
             {
               key: "x",
@@ -1249,12 +1302,23 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       ref={rootRef}
       tabIndex={0}
       style={{
-        margin: showHud ? "2rem 0" : "0",
+        margin: fullscreenOn ? "0" : showHud ? "2rem 0" : "0",
         outline: "none",
-        height: showHud ? undefined : "100%",
-        display: showHud ? undefined : "flex",
-        alignItems: showHud ? undefined : "center",
-        justifyContent: showHud ? undefined : "center",
+        height: fullscreenOn ? "100%" : showHud ? undefined : "100%",
+        width: fullscreenOn ? "100%" : undefined,
+        minHeight: fullscreenOn ? "100vh" : undefined,
+        background: fullscreenOn ? th.frameBg : undefined,
+        display: fullscreenOn || !showHud ? "flex" : undefined,
+        flexDirection: fullscreenOn ? "column" : undefined,
+        alignItems: fullscreenOn ? "stretch" : showHud ? undefined : "center",
+        justifyContent: fullscreenOn
+          ? "center"
+          : showHud
+            ? undefined
+            : "center",
+        padding: fullscreenOn ? "12px" : undefined,
+        boxSizing: fullscreenOn ? "border-box" : undefined,
+        gap: fullscreenOn && showHud ? 0 : undefined,
       }}
     >
       <style>{`
@@ -1268,13 +1332,18 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         ref={wrapRef}
         style={{
           position: "relative",
+          display: fullscreenOn ? "flex" : undefined,
+          alignItems: fullscreenOn ? "center" : undefined,
+          justifyContent: fullscreenOn ? "center" : undefined,
+          flex: fullscreenOn ? 1 : undefined,
+          minHeight: fullscreenOn ? 0 : undefined,
           overflow: "hidden",
           borderRadius: showHud ? "10px 10px 0 0" : "10px",
           border: `2px solid ${th.hudBorder}`,
           borderBottom: showHud ? "none" : `2px solid ${th.hudBorder}`,
           background: th.frameBg,
           boxSizing: showHud ? undefined : "border-box",
-          height: showHud ? undefined : "100%",
+          height: fullscreenOn ? "100%" : showHud ? undefined : "100%",
           aspectRatio: showHud ? undefined : `${aspect}`,
           maxWidth: showHud ? undefined : "100%",
         }}
@@ -1283,9 +1352,11 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
           ref={containerRef}
           className="gmd-container"
           style={{
-            width: "100%",
-            height: "100%",
-            aspectRatio: `${aspect}`,
+            width: fullscreenOn ? "100%" : "100%",
+            height: fullscreenOn ? "100%" : "100%",
+            aspectRatio: fullscreenOn ? undefined : `${aspect}`,
+            maxWidth: fullscreenOn ? "100%" : undefined,
+            maxHeight: fullscreenOn ? "100%" : undefined,
           }}
         />
 
@@ -1376,6 +1447,21 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
                 muted={!sfxOn}
                 color={sfxOn ? th.hudBtnActiveText : th.hudText}
               />
+            </HudBtn>
+            <HudBtn
+              onClick={() => toggleFullscreenRef.current()}
+              active={fullscreenOn}
+              th={th}
+              title={
+                fullscreenOn ? "Exit fullscreen [F]" : "Enter fullscreen [F]"
+              }
+            >
+              <span style={{ display: "inline-flex", alignItems: "baseline" }}>
+                <span style={{ fontWeight: 800, textDecoration: "underline" }}>
+                  F
+                </span>
+                <span style={{ marginLeft: "-0.04em" }}>ull Screen</span>
+              </span>
             </HudBtn>
             <HudBtn
               onClick={() => undoRef.current?.()}
