@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import type { Pos } from "../dungeon-escape/types";
-import type { GreedyMineMapState } from "./map-state";
+import type { GreedyMineMapState } from "./gold-mine-viewer-shared";
 import {
   ATLAS_SRC,
   TS,
@@ -15,6 +15,7 @@ interface GoldMineMapViewerProps {
   width?: string | number;
   height?: string | number;
   maxWidth?: string | number;
+  joinHudBottom?: boolean;
 }
 
 interface SceneHandle {
@@ -28,6 +29,7 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
   width = "100%",
   height,
   maxWidth = "100%",
+  joinHudBottom = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<unknown>(null);
@@ -232,12 +234,13 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
             maxHeight: "100%",
             aspectRatio: height ? undefined : `${aspect}`,
             overflow: "hidden",
-            borderRadius: 12,
+            borderRadius: joinHudBottom ? "10px 10px 0 0" : 12,
             border: "2px solid #5a422e",
+            borderBottom: joinHudBottom ? "none" : "2px solid #5a422e",
             background: "#05070a",
             boxShadow: "0 12px 30px rgba(0, 0, 0, 0.28)",
             boxSizing: "border-box",
-            marginBottom: 2,
+            marginBottom: joinHudBottom ? 0 : 2,
           }}
         >
           <div

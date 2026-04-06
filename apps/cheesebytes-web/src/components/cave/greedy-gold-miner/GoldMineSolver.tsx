@@ -6,13 +6,20 @@
  * Clicking Run executes the code and paints the returned path on the map.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import PyodideCodeRunner from "../../PyodideCodeRunner";
 import type { Pos } from "../dungeon-escape/types";
 import pyodideContext from "../../../utils/pyodideContext";
 import { CheeseSlideContainer } from "../shared";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
-import { buildGridFromGreedyMap, useGreedyMineMap } from "./map-state";
+import { buildGridFromGreedyMap, parseRawMap } from "./gold-mine-viewer-shared";
+import { mediumMap } from "./maps";
 
 const INITIAL_CODE = `from collections import deque
 
@@ -51,8 +58,10 @@ def solve(grid, start, end):
   return dfs(grid, start, end, set())
 `;
 
-export const GoldMineSolver: React.FC = () => {
-  const mapState = useGreedyMineMap();
+export const GoldMineSolver: React.FC<{ rawMap?: string[] }> = ({
+  rawMap = mediumMap,
+}) => {
+  const mapState = useMemo(() => parseRawMap(rawMap), [rawMap]);
   const [pathCells, setPathCells] = useState<Pos[]>([]);
   const [pathError, setPathError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

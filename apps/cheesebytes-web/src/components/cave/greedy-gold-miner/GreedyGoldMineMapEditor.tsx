@@ -1,12 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { MAP_COLS, MAP_ROWS, posKey } from "../dungeon-escape/types";
 import { CheeseSlideContainer } from "../shared";
-import {
-  buildGridFromGreedyMap,
-  resetGreedyMineMap,
-  updateGreedyMineMap,
-  useGreedyMineMap,
-} from "./map-state";
+import { parseRawMap, buildGridFromGreedyMap } from "./gold-mine-viewer-shared";
+import type { GreedyMineMapState } from "./gold-mine-viewer-shared";
+import { mediumMap } from "./maps";
 
 type ClickMode = "wall" | "start" | "exit";
 
@@ -79,7 +76,7 @@ function tileBR(walls: Set<string>, r: number, c: number): number {
   return tIdx(3, 19);
 }
 
-function borderWalls(rows: number, cols: number): Set<string> {
+export function buildBorderWalls(rows: number, cols: number): Set<string> {
   const walls = new Set<string>();
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < cols; c += 1) {
@@ -91,12 +88,40 @@ function borderWalls(rows: number, cols: number): Set<string> {
   return walls;
 }
 
-function generateDFSMaze(
+export function generateGreedyMineDfsMaze(
   rows: number,
   cols: number,
   preserveWalls: Set<string>,
   extraOpenPercent: number,
 ): Set<string> {
+  function wouldCreateOpenSquare(nextWalls: Set<string>, r: number, c: number) {
+    for (let top = r - 1; top <= r; top += 1) {
+      for (let left = c - 1; left <= c; left += 1) {
+        if (
+          top < 1 ||
+          left < 1 ||
+          top + 1 >= rows - 1 ||
+          left + 1 >= cols - 1
+        ) {
+          continue;
+        }
+
+        const square = [
+          posKey(top, left),
+          posKey(top + 1, left),
+          posKey(top, left + 1),
+          posKey(top + 1, left + 1),
+        ];
+
+        if (square.every((key) => !nextWalls.has(key))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   const walls = new Set<string>();
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < cols; c += 1) {
@@ -182,17 +207,32 @@ function generateDFSMaze(
   }
 
   const toOpen = Math.floor(innerWalls.length * (extraOpenPercent / 100));
-  for (let i = 0; i < toOpen; i += 1) {
-    walls.delete(innerWalls[i]);
+  let opened = 0;
+  for (const key of innerWalls) {
+    if (opened >= toOpen) break;
+
+    const [rText, cText] = key.split(",");
+    const r = Number(rText);
+    const c = Number(cText);
+    if (Number.isNaN(r) || Number.isNaN(c)) continue;
+
+    const nextWalls = new Set(walls);
+    nextWalls.delete(key);
+    if (wouldCreateOpenSquare(nextWalls, r, c)) continue;
+
+    walls.delete(key);
+    opened += 1;
   }
 
   return walls;
 }
 
-export const GreedyGoldMineMapEditor: React.FC = () => {
+export const GreedyGoldMineMapEditor: React.FC<{ rawMap?: string[] }> = ({
+  rawMap = mediumMap,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasRef = useRef<HTMLImageElement | null>(null);
-  const map = useGreedyMineMap();
+  const [map, setMap] = useState<GreedyMineMapState>(() => parseRawMap(rawMap));
   const [mode, setMode] = useState<ClickMode>("wall");
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawAction, setDrawAction] = useState<"add" | "remove">("add");
@@ -355,11 +395,11 @@ export const GreedyGoldMineMapEditor: React.FC = () => {
       if (key === posKey(map.start.r, map.start.c)) return;
       if (key === posKey(map.exit.r, map.exit.c)) return;
 
-      updateGreedyMineMap((state) => {
+      setMap((state) => {
         const walls = new Set(state.walls);
         if (action === "add") walls.add(key);
         else walls.delete(key);
-        return { ...state, walls };
+        return { ...state, walls, version: state.version + 1 };
       });
     },
     [isBorder, map.exit.c, map.exit.r, map.start.c, map.start.r],
@@ -373,7 +413,11 @@ export const GreedyGoldMineMapEditor: React.FC = () => {
       if (mode === "start") {
         const key = posKey(cell.r, cell.c);
         if (!map.walls.has(key) && key !== posKey(map.exit.r, map.exit.c)) {
-          updateGreedyMineMap((state) => ({ ...state, start: cell }));
+          setMap((state) => ({
+            ...state,
+            start: cell,
+            version: state.version + 1,
+          }));
         }
         return;
       }
@@ -381,7 +425,11 @@ export const GreedyGoldMineMapEditor: React.FC = () => {
       if (mode === "exit") {
         const key = posKey(cell.r, cell.c);
         if (!map.walls.has(key) && key !== posKey(map.start.r, map.start.c)) {
-          updateGreedyMineMap((state) => ({ ...state, exit: cell }));
+          setMap((state) => ({
+            ...state,
+            exit: cell,
+            version: state.version + 1,
+          }));
         }
         return;
       }
@@ -426,11 +474,20 @@ export const GreedyGoldMineMapEditor: React.FC = () => {
   const handleMouseUp = useCallback(() => setIsDrawing(false), []);
 
   const handleGenerateMaze = useCallback(() => {
-    const preserve = borderWalls(map.rows, map.cols);
-    const generated = generateDFSMaze(map.rows, map.cols, preserve, extraOpen);
+    const preserve = buildBorderWalls(map.rows, map.cols);
+    const generated = generateGreedyMineDfsMaze(
+      map.rows,
+      map.cols,
+      preserve,
+      extraOpen,
+    );
     generated.delete(posKey(map.start.r, map.start.c));
     generated.delete(posKey(map.exit.r, map.exit.c));
-    updateGreedyMineMap((state) => ({ ...state, walls: generated }));
+    setMap((state) => ({
+      ...state,
+      walls: generated,
+      version: state.version + 1,
+    }));
   }, [
     extraOpen,
     map.cols,
@@ -453,13 +510,14 @@ export const GreedyGoldMineMapEditor: React.FC = () => {
         }
       }
     }
-    updateGreedyMineMap((state) => ({ ...state, walls }));
+    setMap((state) => ({ ...state, walls, version: state.version + 1 }));
   }, [map.cols, map.exit.c, map.exit.r, map.rows, map.start.c, map.start.r]);
 
   const handleClearInner = useCallback(() => {
-    updateGreedyMineMap((state) => ({
+    setMap((state) => ({
       ...state,
-      walls: borderWalls(state.rows, state.cols),
+      walls: buildBorderWalls(state.rows, state.cols),
+      version: state.version + 1,
     }));
   }, []);
 
@@ -522,7 +580,7 @@ export const GreedyGoldMineMapEditor: React.FC = () => {
             />
             <EditorActionButton
               label="Reset default map"
-              onClick={resetGreedyMineMap}
+              onClick={() => setMap(parseRawMap(rawMap))}
             />
           </div>
 

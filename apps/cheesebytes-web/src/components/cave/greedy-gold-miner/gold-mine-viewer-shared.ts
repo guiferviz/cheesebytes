@@ -1,6 +1,51 @@
 import type { Pos } from "../dungeon-escape/types";
 import { posKey } from "../dungeon-escape/types";
-import type { GreedyMineMapState } from "./map-state";
+
+export interface GreedyMapPos {
+  r: number;
+  c: number;
+}
+
+export interface GreedyMineMapState {
+  rows: number;
+  cols: number;
+  walls: Set<string>;
+  start: GreedyMapPos;
+  exit: GreedyMapPos;
+  version: number;
+}
+
+export function parseRawMap(raw: string[]): GreedyMineMapState {
+  const rows = raw.length;
+  const cols = raw[0]?.length ?? 0;
+  const walls = new Set<string>();
+  let start: GreedyMapPos = { r: 0, c: 0 };
+  let exit: GreedyMapPos = { r: 0, c: 0 };
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < (raw[r]?.length ?? 0); c++) {
+      const ch = raw[r][c];
+      if (ch === "#") walls.add(posKey(r, c));
+      if (ch === "S") start = { r, c };
+      if (ch === "E") exit = { r, c };
+    }
+  }
+  return { rows, cols, walls, start, exit, version: 0 };
+}
+
+export function buildGridFromGreedyMap(map: GreedyMineMapState): string[] {
+  const grid: string[] = [];
+  for (let r = 0; r < map.rows; r += 1) {
+    let row = "";
+    for (let c = 0; c < map.cols; c += 1) {
+      if (r === map.start.r && c === map.start.c) row += "S";
+      else if (r === map.exit.r && c === map.exit.c) row += "E";
+      else if (map.walls.has(posKey(r, c))) row += "#";
+      else row += ".";
+    }
+    grid.push(row);
+  }
+  return grid;
+}
 
 export const ATLAS_SRC = "/tiles/terrain_atlas.png";
 export const TS = 32;

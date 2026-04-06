@@ -2,15 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { VimModeAPI } from "../../../utils/vim-mode";
 import { CheeseSlideContainer } from "../shared";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
-import { useGreedyMineMap } from "./map-state";
-import { enumerateEscapePaths } from "./gold-mine-viewer-shared";
+import { enumerateEscapePaths, parseRawMap } from "./gold-mine-viewer-shared";
+import { mediumMap } from "./maps";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-export const GoldMinePathGallery: React.FC = () => {
-  const mapState = useGreedyMineMap();
+export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
+  rawMap = mediumMap,
+}) => {
+  const mapState = useMemo(() => parseRawMap(rawMap), [rawMap]);
   const paths = useMemo(() => enumerateEscapePaths(mapState), [mapState]);
   const aspect = useMemo(
     () => mapState.cols / mapState.rows,
