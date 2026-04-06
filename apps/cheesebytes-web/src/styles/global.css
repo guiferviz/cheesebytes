@@ -2,6 +2,16 @@
 @import './tailwind.css';
 @plugin '@tailwindcss/typography';
 
+/* Wide layout toggle (Vim: w) — expand note body */
+html.wide-layout main {
+  max-width: 90% !important;
+}
+html.wide-layout main > header,
+html.wide-layout main > article,
+html.wide-layout main > footer {
+  max-width: 90% !important;
+}
+
 @font-face {
   font-family: 'IosevkaTermSlab Nerd Font Mono';
   src: url('/fonts/IosevkaTermSlabNerdFontPropo-Regular.woff2') format('woff2'),

@@ -84,6 +84,12 @@ const { title, description } = Astro.props;
           category: "General",
           run: () => window.dispatchEvent(new CustomEvent("toggle-drawing")),
         });
+
+        vm.register("w", {
+          label: "Toggle wide layout",
+          category: "General",
+          run: () => document.documentElement.classList.toggle("wide-layout"),
+        });
       }
 
       function syncVimMode() {
