@@ -45,15 +45,18 @@ const cmExtensions = [python(), cmSmallFont];
 
 // ── Default editable code ────────────────────────────────────────
 
-const INITIAL_CODE = `def neighbors(grid, cell):
-    rows, cols = len(grid), len(grid[0])
+const INITIAL_CODE = `UP = (-1,0)
+RIGHT = (0,1)
+DOWN = (1,0)
+LEFT = (0,-1)
+MOVES = [RIGHT, UP, DOWN, LEFT]
+
+def neighbors(grid, cell):
     r, c = cell
-    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+    for dr, dc in MOVES:
         nr, nc = r + dr, c + dc
-        if 0 <= nr < rows and 0 <= nc < cols:
-            if grid[nr][nc] != '#':
-                yield (nr, nc)
-`;
+        if grid[nr][nc] != '#':
+            yield (nr, nc)`;
 
 // ── Grid overlay (click + hover + highlight) ─────────────────────
 
@@ -131,9 +134,9 @@ const NeighborOverlay: React.FC<{
               key={i}
               style={{
                 borderRight:
-                  c < cols - 1 ? "1px solid rgba(255,255,255,0.10)" : undefined,
+                  c < cols - 1 ? "1px solid rgba(255,255,255,0.18)" : undefined,
                 borderBottom:
-                  r < rows - 1 ? "1px solid rgba(255,255,255,0.10)" : undefined,
+                  r < rows - 1 ? "1px solid rgba(255,255,255,0.18)" : undefined,
                 background,
                 boxShadow,
               }}
@@ -185,8 +188,12 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
   const [hover, setHover] = useState<Pos | null>(null);
   const [selected, setSelected] = useState<Pos | null>(null);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
+  const [stdout, setStdout] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [engineReady, setEngineReady] = useState(() =>
+    pyodideWorkerContext.isReady(),
+  );
   const codeRef = useRef(code);
   codeRef.current = code;
 
@@ -194,8 +201,18 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
   useEffect(() => {
     setSelected(null);
     setHighlighted(new Set());
+    setStdout("");
     setError(null);
   }, [mapState]);
+
+  // Start loading Pyodide on mount so the first click has less latency.
+  useEffect(() => {
+    const unsubscribe = pyodideWorkerContext.onReady(() => {
+      setEngineReady(true);
+    });
+    return unsubscribe;
+  }, []);
+
   const [isDark, setIsDark] = useState(
     () =>
       typeof document !== "undefined" &&
@@ -224,6 +241,7 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
 
       setSelected(cell);
       setHighlighted(new Set());
+      setStdout("");
       setError(null);
       setRunning(true);
 
@@ -236,10 +254,20 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
           "_result = list(neighbors(MINE_MAP, (_row, _col)))",
         ].join("\n");
 
-        const { vars } = await pyodideWorkerContext.run(fullCode, {
-          context: { _row: cell.r, _col: cell.c },
-          returnVars: ["_result"],
-        });
+        const { stdout: finalStdout, vars } = await pyodideWorkerContext.run(
+          fullCode,
+          {
+            context: { _row: cell.r, _col: cell.c },
+            returnVars: ["_result"],
+            onStdoutChunk: (chunk) => {
+              setStdout((current) => current + chunk);
+            },
+          },
+        );
+
+        if (finalStdout) {
+          setStdout(finalStdout);
+        }
 
         const result = vars._result;
         const cells = new Set<string>();
@@ -304,9 +332,33 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
               extensions={cmExtensions}
               theme={isDark ? oneDark : undefined}
               onChange={handleCodeChange}
-              basicSetup={{ lineNumbers: true, foldGutter: false }}
+              indentWithTab
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: false,
+                tabSize: 4,
+              }}
             />
           </div>
+          {stdout && (
+            <div
+              style={{
+                fontSize: 11,
+                color: "#d4b896",
+                marginTop: 8,
+                fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
+                background: "rgba(8,10,14,0.78)",
+                border: "1px solid rgba(90,66,46,0.8)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                maxHeight: 120,
+                overflowY: "auto",
+              }}
+            >
+              {stdout}
+            </div>
+          )}
           {error && (
             <div
               style={{
@@ -395,7 +447,9 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
               </>
             ) : (
               <span style={{ color: HUD_THEME.muted, fontStyle: "italic" }}>
-                Click any open cell to run neighbors()
+                {engineReady
+                  ? "Click any open cell to run neighbors()"
+                  : "Warming up Python engine..."}
               </span>
             )}
           </div>

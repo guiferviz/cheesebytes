@@ -681,7 +681,12 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
               extensions={cmExtensions}
               theme={isDark ? oneDark : undefined}
               onChange={handleCodeChange}
-              basicSetup={{ lineNumbers: true, foldGutter: false }}
+              indentWithTab
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: false,
+                tabSize: 4,
+              }}
             />
           </div>
           {codeError && (
