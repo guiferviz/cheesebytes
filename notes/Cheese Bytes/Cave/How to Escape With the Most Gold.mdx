@@ -1,15 +1,20 @@
 import {
   GoldMineDemo,
+  GoldMineGridOverlay,
+  GoldMineMapCodeEditor,
+  GoldMineNeighbors,
   GoldMinePathGallery,
   mediumMap,
   mediumMapBestPossible,
-  simpleMap,
 } from "../../../apps/cheesebytes-web/src/components/cave/greedy-gold-miner";
 
 You enter a gold mine with one goal: to become filthy rich. But there's a catch.
 Every step you take collects gold and collapses the tunnel behind you. There's
 no going back. Luckily, there's another way out. So which route leaves you the
 richest by the time you escape?
+
+Give it a try in the interactive demo below. Just click on the game and move
+with the arrow keys.
 
 <GoldMineDemo
   client:only="react"
@@ -19,29 +24,80 @@ richest by the time you escape?
 
 # The Challenge
 
-Uno podría pensar que el mayor desafío de los laberintos es encontrar el camino
-más corto y salir cuanto antes. Pero este caso que nos ocupa es de hecho un poco
-más complicado. No queremos salir rápido, sino salir con la mayor cantidad de
-oro posible. Encontrar un camino cualquiera es fácil, encontrar el más corto es
-también fácil, pero encontrar el más largo de todos es un desafío totalmente
-diferente.
+One might think the main challenge in a maze is to find the shortest path and
+get out as quickly as possible. But in our case, things are a bit different. We
+do not want to escape fast, we want to escape rich.
 
-El principal motivo por el cual este problema es tan difícil es porque tenemos
-que encontrar todos los caminos posibles para asegurarnos de que no nos estamos
-perdiendo de ningún camino con más oro. Y el número de caminos posibles crece
-rápidamente con el tamaño del mapa.
+Finding just any path is easy. Finding the shortest one is also easy. But
+finding the longest one? That is a completely different challenge.
 
-Muchas veces subestimamose el poder de la combinatoria. Por ejemplo, este mapa
-simple realmente tiene 90 caminos diferentes. Si, 90, totalmente diferentes unos
-de otros. ¿Cuál es el mejor? Resulta que se pueden conseguir 87 unidades de oro
-con uno de ellos. ¿Podrías encontrarlo tú también?
+The main reason this problem is so difficult is that, in principle, we need to
+consider every possible path to make sure we are not missing one that yields
+more gold. And the number of possible paths grows very quickly with the size of
+the map.
+
+We often underestimate the power of combinatorics. For example, this simple map
+already has 90 different paths. Yes, 90, all completely different from each
+other. Which one is the best? It turns out that one of them yields 87 units of
+gold. Have you found that path?
+
+If not, I encourage you to try the game again above. Below these lines you will
+find a gallery with all possible paths, ordered from worst (shortest) to best
+(longest).
 
 <GoldMinePathGallery client:only="react" />
 
-# Draft
+If we are able to find all paths, then finding the one that gives us the most
+gold is simply a matter of picking the longest one. In this Cheese Byte, we will
+first look at how to find all possible paths, and then how to optimize the
+process so we do not waste time exploring paths we already know are not good.
+
+# Map Representation
+
+Before we start searching for paths, we need to move from a visual
+representation to something a computer can actually work with.
+
+In our case, the mine can be naturally represented as a grid, where each cell is
+either a wall or an open space. To simplify boundary checks, we'll assume that
+the entire border of the grid is always made up of walls. This way, we never
+need to check whether we've stepped outside the grid — any move from a non-wall
+cell is guaranteed to land on another valid cell.
+
+<GoldMineGridOverlay client:only="react" rawMap={mediumMap} />
+
+For simplicity, we will assume that every walkable cell contains the same amount
+of gold. The ideas in this article can be easily extended to the more general
+case where each cell contains a different amount. In that version of the
+problem, the goal is no longer to find the longest path, but the one that
+maximizes the total amount of gold collected.
+
+In Python, we can represent the mine as a list of strings. Each string
+corresponds to a row in the grid, and all rows must have the same length. The
+character `#` represents a wall, while `.` represents an open path. We also need
+to specify the starting and ending positions, which we can do with the
+characters `S` and `E` respectively.
+
+Feel free to modify the map as you like, either by editing the code or using the
+interactive editor. Changes in one representation (code or visual) will be
+automatically reflected in the other.
+
+<GoldMineMapCodeEditor client:only="react" rawMap={mediumMap} />
+
+# Finding All Paths
 
 TODO: explain the rules of the mine and why the objective is not the shortest
 path.
+
+## Finding Neighbors
+
+The first building block of any path-finding algorithm is the ability to find
+the neighbors of a given cell. A neighbor is any adjacent cell (up, down, left,
+or right) that is not a wall.
+
+Click any open cell on the map to see its neighbors highlighted. You can also
+edit the function on the left to experiment.
+
+<GoldMineNeighbors client:only="react" />
 
 TODO: show a first brute-force / DFS style solution.
 
