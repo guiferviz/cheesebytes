@@ -9,8 +9,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { posKey } from "../dungeon-escape/types";
 import pyodideWorkerContext from "../../../utils/pyodideWorkerContext";
+import { posKey } from "../dungeon-escape/types";
+import { GoldMineGridOverlay } from "./GoldMineGridOverlay";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
 import { useArticleMap, getArticleMapPython } from "./gold-mine-article";
 
@@ -57,120 +58,6 @@ def neighbors(grid, cell):
         nr, nc = r + dr, c + dc
         if grid[nr][nc] != '#':
             yield (nr, nc)`;
-
-// ── Grid overlay (click + hover + highlight) ─────────────────────
-
-const NeighborOverlay: React.FC<{
-  rows: number;
-  cols: number;
-  hover: Pos | null;
-  onHover: (pos: Pos | null) => void;
-  onClick: (pos: Pos) => void;
-  selected: Pos | null;
-  highlighted: Set<string>;
-}> = ({ rows, cols, hover, onHover, onClick, selected, highlighted }) => {
-  const cellFromEvent = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>): Pos | null => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const c = Math.floor((x / rect.width) * cols);
-      const r = Math.floor((y / rect.height) * rows);
-      if (r < 0 || r >= rows || c < 0 || c >= cols) return null;
-      return { r, c };
-    },
-    [rows, cols],
-  );
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 10,
-        cursor: "pointer",
-      }}
-      onMouseMove={(e) => onHover(cellFromEvent(e))}
-      onMouseDown={(e) => {
-        const cell = cellFromEvent(e);
-        if (cell) onClick(cell);
-      }}
-      onMouseLeave={() => onHover(null)}
-    >
-      {/* Grid lines + cell highlights */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "grid",
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
-          pointerEvents: "none",
-        }}
-      >
-        {Array.from({ length: rows * cols }, (_, i) => {
-          const r = Math.floor(i / cols);
-          const c = i % cols;
-          const key = posKey(r, c);
-          const isHovered = hover?.r === r && hover?.c === c;
-          const isSelected =
-            selected !== null && selected.r === r && selected.c === c;
-          const isHighlighted = highlighted.has(key);
-
-          let background: string | undefined;
-          if (isSelected) background = "rgba(76, 175, 80, 0.35)";
-          else if (isHighlighted) background = "rgba(246, 189, 96, 0.35)";
-          else if (isHovered) background = "rgba(246, 189, 96, 0.18)";
-
-          let boxShadow: string | undefined;
-          if (isSelected) boxShadow = "inset 0 0 0 2px rgba(76,175,80,0.7)";
-          else if (isHighlighted)
-            boxShadow = "inset 0 0 0 2px rgba(246,189,96,0.5)";
-          else if (isHovered)
-            boxShadow = "inset 0 0 0 2px rgba(246,189,96,0.5)";
-
-          return (
-            <div
-              key={i}
-              style={{
-                borderRight:
-                  c < cols - 1 ? "1px solid rgba(255,255,255,0.18)" : undefined,
-                borderBottom:
-                  r < rows - 1 ? "1px solid rgba(255,255,255,0.18)" : undefined,
-                background,
-                boxShadow,
-              }}
-            />
-          );
-        })}
-      </div>
-
-      {/* Coordinate tooltip */}
-      {hover && (
-        <div
-          style={{
-            position: "absolute",
-            left: `${((hover.c + 0.5) / cols) * 100}%`,
-            top: `${((hover.r + 0.5) / rows) * 100}%`,
-            transform: "translate(-50%, -140%)",
-            pointerEvents: "none",
-            background: "rgba(8,10,14,0.88)",
-            color: "#f6bd60",
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 13,
-            fontWeight: 700,
-            padding: "3px 10px",
-            borderRadius: 6,
-            border: "1px solid rgba(246,189,96,0.3)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          ({hover.r}, {hover.c})
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════════════
 // GoldMineNeighbors — exported component
@@ -394,14 +281,15 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
 
           <div style={{ position: "relative" }}>
             <GoldMineMapViewer mapState={mapState} joinHudBottom />
-            <NeighborOverlay
+            <GoldMineGridOverlay
               rows={mapState.rows}
               cols={mapState.cols}
               hover={hover}
               onHover={setHover}
               onClick={handleCellClick}
               selected={selected}
-              highlighted={highlighted}
+              highlightedKeys={highlighted}
+              cursor="pointer"
             />
           </div>
 

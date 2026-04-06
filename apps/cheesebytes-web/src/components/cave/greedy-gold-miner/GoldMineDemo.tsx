@@ -8,6 +8,7 @@
  */
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import type { VimModeAPI } from "../../../utils/vim-mode";
+import { GOLD_SPECKS } from "./gold-mine-viewer-shared";
 
 // ── Reveal.js global type ───────────────────────────────────────────
 interface RevealApi {
@@ -895,11 +896,15 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
               if (WALLS.has(k)) continue;
               const x = cellX(c),
                 y = cellY(r);
-              const specks = [
-                this.add.circle(x - 7, y - 4, 2.1, 0xffd166, 0.95),
-                this.add.circle(x + 5, y + 6, 1.8, 0xf4a261, 0.85),
-                this.add.circle(x + 1, y - 8, 1.5, 0xffe29a, 0.9),
-              ];
+              const specks = GOLD_SPECKS.map((speck) =>
+                this.add.circle(
+                  x + speck.dx,
+                  y + speck.dy,
+                  speck.radius,
+                  speck.color,
+                  speck.alpha,
+                ),
+              );
               specks.forEach((s: { setDepth: (d: number) => void }) =>
                 s.setDepth(3),
               );

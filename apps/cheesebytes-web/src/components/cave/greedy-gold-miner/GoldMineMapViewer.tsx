@@ -3,6 +3,7 @@ import type { Pos } from "../dungeon-escape/types";
 import type { GreedyMineMapState } from "./gold-mine-viewer-shared";
 import {
   ATLAS_SRC,
+  GOLD_SPECKS,
   TS,
   buildTilemapData,
   cellCenterX,
@@ -12,6 +13,7 @@ import {
 interface GoldMineMapViewerProps {
   mapState: GreedyMineMapState;
   pathCells?: Pos[];
+  showGoldSpecks?: boolean;
   width?: string | number;
   height?: string | number;
   maxWidth?: string | number;
@@ -26,6 +28,7 @@ interface SceneHandle {
 export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
   mapState,
   pathCells = [],
+  showGoldSpecks = true,
   width = "100%",
   height,
   maxWidth = "100%",
@@ -36,9 +39,11 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
   const sceneRef = useRef<SceneHandle | null>(null);
   const mapStateRef = useRef(mapState);
   const pathRef = useRef(pathCells);
+  const showGoldSpecksRef = useRef(showGoldSpecks);
 
   mapStateRef.current = mapState;
   pathRef.current = pathCells;
+  showGoldSpecksRef.current = showGoldSpecks;
 
   const worldWidth = useMemo(() => mapState.cols * 2 * TS, [mapState.cols]);
   const worldHeight = useMemo(() => mapState.rows * 2 * TS, [mapState.rows]);
@@ -62,6 +67,8 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
         floorLayer: any = null;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         floorMap: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        goldGraphics: any = null;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         startGraphics: any = null;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,6 +97,8 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
 
           this.pathGraphics = this.add.graphics();
           this.pathGraphics.setDepth(20);
+          this.goldGraphics = this.add.graphics();
+          this.goldGraphics.setDepth(3);
 
           this.renderMap(mapStateRef.current);
           this.drawPath(pathRef.current);
@@ -103,6 +112,7 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
         renderMap(nextMapState: GreedyMineMapState) {
           this.floorLayer?.destroy();
           this.floorMap?.destroy();
+          this.goldGraphics?.clear();
           this.startGraphics?.destroy();
           this.startLabel?.destroy();
           this.exitGraphics?.destroy();
@@ -120,6 +130,24 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
 
           this.floorLayer = this.floorMap.createLayer(0, tileset, 0, 0);
           this.floorLayer.setDepth(0);
+
+          if (showGoldSpecksRef.current) {
+            for (let r = 0; r < nextMapState.rows; r += 1) {
+              for (let c = 0; c < nextMapState.cols; c += 1) {
+                if (nextMapState.walls.has(`${r},${c}`)) continue;
+                const x = cellCenterX(c);
+                const y = cellCenterY(r);
+                for (const speck of GOLD_SPECKS) {
+                  this.goldGraphics.fillStyle(speck.color, speck.alpha);
+                  this.goldGraphics.fillCircle(
+                    x + speck.dx,
+                    y + speck.dy,
+                    speck.radius,
+                  );
+                }
+              }
+            }
+          }
 
           const sx = cellCenterX(nextMapState.start.c);
           const sy = cellCenterY(nextMapState.start.r);

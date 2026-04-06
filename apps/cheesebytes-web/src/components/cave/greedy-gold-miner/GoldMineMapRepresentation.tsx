@@ -24,6 +24,7 @@ import {
   generateGreedyMineDfsMaze,
 } from "./GreedyGoldMineMapEditor";
 import { setArticleMap } from "./gold-mine-article";
+import { GoldMineGridOverlay as GoldMineGridLayer } from "./GoldMineGridOverlay";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
 
 // ── Local map helpers (not tied to global singleton) ────────────────
@@ -187,125 +188,6 @@ function resizeMapState(
   };
 }
 
-// ── Shared: transparent grid + hover overlay on top of the viewer ───
-
-const GridOverlayLayer: React.FC<{
-  rows: number;
-  cols: number;
-  hover: Pos | null;
-  onHover: (pos: Pos | null) => void;
-  onClick?: (pos: Pos) => void;
-  onDrag?: (pos: Pos) => void;
-  onDragEnd?: () => void;
-  cursor?: string;
-}> = ({ rows, cols, hover, onHover, onClick, onDrag, onDragEnd, cursor }) => {
-  const [dragging, setDragging] = useState(false);
-
-  const cellFromEvent = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>): Pos | null => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const c = Math.floor((x / rect.width) * cols);
-      const r = Math.floor((y / rect.height) * rows);
-      if (r < 0 || r >= rows || c < 0 || c >= cols) return null;
-      return { r, c };
-    },
-    [rows, cols],
-  );
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 10,
-        cursor: cursor ?? "crosshair",
-      }}
-      onMouseMove={(e) => {
-        const cell = cellFromEvent(e);
-        onHover(cell);
-        if (dragging && cell && onDrag) onDrag(cell);
-      }}
-      onMouseDown={(e) => {
-        const cell = cellFromEvent(e);
-        if (cell) {
-          onClick?.(cell);
-          if (onDrag) {
-            setDragging(true);
-          }
-        }
-      }}
-      onMouseUp={() => {
-        setDragging(false);
-        onDragEnd?.();
-      }}
-      onMouseLeave={() => {
-        onHover(null);
-        setDragging(false);
-        onDragEnd?.();
-      }}
-    >
-      {/* CSS grid lines */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "grid",
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
-          pointerEvents: "none",
-        }}
-      >
-        {Array.from({ length: rows * cols }, (_, i) => {
-          const r = Math.floor(i / cols);
-          const c = i % cols;
-          const isHovered = hover?.r === r && hover?.c === c;
-          return (
-            <div
-              key={i}
-              style={{
-                borderRight:
-                  c < cols - 1 ? "1px solid rgba(255,255,255,0.10)" : undefined,
-                borderBottom:
-                  r < rows - 1 ? "1px solid rgba(255,255,255,0.10)" : undefined,
-                background: isHovered ? "rgba(246, 189, 96, 0.18)" : undefined,
-                boxShadow: isHovered
-                  ? "inset 0 0 0 2px rgba(246,189,96,0.5)"
-                  : undefined,
-              }}
-            />
-          );
-        })}
-      </div>
-
-      {/* Coordinate tooltip */}
-      {hover && (
-        <div
-          style={{
-            position: "absolute",
-            left: `${((hover.c + 0.5) / cols) * 100}%`,
-            top: `${((hover.r + 0.5) / rows) * 100}%`,
-            transform: "translate(-50%, -140%)",
-            pointerEvents: "none",
-            background: "rgba(8,10,14,0.88)",
-            color: "#f6bd60",
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 13,
-            fontWeight: 700,
-            padding: "3px 10px",
-            borderRadius: 6,
-            border: "1px solid rgba(246,189,96,0.3)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          ({hover.r}, {hover.c})
-        </div>
-      )}
-    </div>
-  );
-};
-
 // ═══════════════════════════════════════════════════════════════════
 // 1. GoldMineGridOverlay — read-only map + grid + hover coordinates
 // ═══════════════════════════════════════════════════════════════════
@@ -326,7 +208,7 @@ export const GoldMineGridOverlay: React.FC<GoldMineGridOverlayProps> = ({
     <div style={{ maxWidth, margin: "2rem auto", userSelect: "none" }}>
       <div style={{ position: "relative" }}>
         <GoldMineMapViewer mapState={mapState} maxWidth={maxWidth} />
-        <GridOverlayLayer
+        <GoldMineGridLayer
           rows={mapState.rows}
           cols={mapState.cols}
           hover={hover}
@@ -729,7 +611,7 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
 
           <div style={{ position: "relative" }}>
             <GoldMineMapViewer mapState={mapState} joinHudBottom />
-            <GridOverlayLayer
+            <GoldMineGridLayer
               rows={mapState.rows}
               cols={mapState.cols}
               hover={hover}

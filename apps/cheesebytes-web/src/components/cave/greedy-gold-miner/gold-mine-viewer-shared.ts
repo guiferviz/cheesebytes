@@ -1,6 +1,11 @@
 import type { Pos } from "../dungeon-escape/types";
 import { posKey } from "../dungeon-escape/types";
 
+export interface GridOverlayPos {
+  r: number;
+  c: number;
+}
+
 export interface GreedyMapPos {
   r: number;
   c: number;
@@ -50,6 +55,15 @@ export function buildGridFromGreedyMap(map: GreedyMineMapState): string[] {
 export const ATLAS_SRC = "/tiles/terrain_atlas.png";
 export const TS = 32;
 const ATLAS_COLS = 32;
+export const GRID_LINE_COLOR = "rgba(255,255,255,0.18)";
+export const GRID_HOVER_FILL = "rgba(246, 189, 96, 0.18)";
+export const GRID_HOVER_OUTLINE = "inset 0 0 0 2px rgba(246,189,96,0.5)";
+
+export const GOLD_SPECKS = [
+  { dx: -7, dy: -4, radius: 2.1, color: 0xffd166, alpha: 0.95 },
+  { dx: 5, dy: 6, radius: 1.8, color: 0xf4a261, alpha: 0.85 },
+  { dx: 1, dy: -8, radius: 1.5, color: 0xffe29a, alpha: 0.9 },
+] as const;
 
 function isWall(mapState: GreedyMineMapState, r: number, c: number): boolean {
   if (r < 0 || r >= mapState.rows || c < 0 || c >= mapState.cols) return true;
