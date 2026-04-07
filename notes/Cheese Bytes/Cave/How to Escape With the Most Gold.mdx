@@ -95,9 +95,16 @@ the neighbors of a given cell. A neighbor is any adjacent cell (up, down, left,
 or right) that is not a wall.
 
 Click any open cell on the map to see its neighbors highlighted. You can also
-edit the function on the left to experiment.
+edit the function on the left to experiment. If you really want to challenge
+yourself, try to implement the function without looking at the solution. Just
+remove the function implementation leaving the name as it is.
 
 <GoldMineNeighbors client:only="react" />
+
+> [!question]
+>
+> What happens if you replace the `grid[nr][nc] != '#'` condition with
+> `grid[nr][nc] == '.'`? Does it work in the same way? Why or why not?
 
 TODO: show a first brute-force / DFS style solution.
 
