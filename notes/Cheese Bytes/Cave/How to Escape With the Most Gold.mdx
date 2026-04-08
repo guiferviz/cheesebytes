@@ -1,5 +1,6 @@
 import {
   GoldMineDemo,
+  GoldMineDfsExplorer,
   GoldMineGridOverlay,
   GoldMineMapCodeEditor,
   GoldMineNeighbors,
@@ -99,14 +100,46 @@ edit the function on the left to experiment. If you really want to challenge
 yourself, try to implement the function without looking at the solution. Just
 remove the function implementation leaving the name as it is.
 
+The small numbers drawn on the highlighted cells show the order in which
+`neighbors(...)` returns them. That order is not an intrinsic property of the
+map, but it does matter for algorithms such as DFS, because DFS will normally
+explore neighbors in exactly that order.
+
 <GoldMineNeighbors client:only="react" />
 
-> [!question]
+> [!tip]
 >
-> What happens if you replace the `grid[nr][nc] != '#'` condition with
-> `grid[nr][nc] == '.'`? Does it work in the same way? Why or why not?
+> Useful experiments:
+>
+> - What happens if you replace the `grid[nr][nc] != '#'` condition with
+>   `grid[nr][nc] == '.'`? Does it work in the same way? Why or why not?
+> - Change the order of `MOVES`. How does that affect the numbering in the
+>   visual, and later the order in which DFS explores the mine?
+> - Return a list instead of yielding one neighbor at a time. Does it change the
+>   result, or only the style of the code?
 
-TODO: show a first brute-force / DFS style solution.
+## A First DFS
+
+Now that we can enumerate neighbors, a natural next step is depth-first search.
+The idea is simple: visit a cell, add it to the current path, recursively try
+all valid neighbors, and backtrack when a branch gets stuck.
+
+The visual below adds a small `show_state(...)` call at the key moments of the
+search so we can replay it step by step. That helper is only there to tell the
+visual what state to paint; the DFS logic itself stays the same.
+
+<GoldMineDfsExplorer client:only="react" />
+
+> [!tip]
+>
+> Ideas to explore in the DFS code:
+>
+> - What happens if you move the `if current == end` check before
+>   `path.append(current)`?
+> - What happens if you don't call `path.pop()`?
+> - What changes if you call `show_state(...)` only when entering a cell, but
+>   not when backtracking? What if you do the opposite and call it only when
+>   backtracking?
 
 TODO: explain pruning ideas and memoization opportunities.
 
