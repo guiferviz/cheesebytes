@@ -5,15 +5,27 @@
  * Right panel: Map viewer. Click any walkable cell → run Python → highlight
  *              the returned neighbors on the grid.
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
+import type { VimModeAPI } from "../../../utils/vim-mode";
 import pyodideWorkerContext from "../../../utils/pyodideWorkerContext";
 import { posKey } from "../dungeon-escape/types";
 import { GoldMineGridOverlay } from "./GoldMineGridOverlay";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
-import { useArticleMap, getArticleMapPython } from "./gold-mine-article";
+import {
+  getArticleMapPython,
+  getArticleNeighborsPython,
+  setArticleNeighborsPython,
+  useArticleMap,
+} from "./gold-mine-article";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -44,21 +56,6 @@ const cmSmallFont = EditorView.theme({
 
 const cmExtensions = [python(), cmSmallFont];
 
-// ── Default editable code ────────────────────────────────────────
-
-const INITIAL_CODE = `UP = (-1,0)
-RIGHT = (0,1)
-DOWN = (1,0)
-LEFT = (0,-1)
-MOVES = [RIGHT, UP, DOWN, LEFT]
-
-def neighbors(grid, cell):
-    r, c = cell
-    for dr, dc in MOVES:
-        nr, nc = r + dr, c + dc
-        if grid[nr][nc] != '#':
-            yield (nr, nc)`;
-
 // ═══════════════════════════════════════════════════════════════════
 // GoldMineNeighbors — exported component
 // ═══════════════════════════════════════════════════════════════════
@@ -71,10 +68,14 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
   maxWidth = 900,
 }) => {
   const mapState = useArticleMap();
-  const [code, setCode] = useState(INITIAL_CODE);
+  const [code, setCode] = useState(() => getArticleNeighborsPython());
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<Pos | null>(null);
   const [selected, setSelected] = useState<Pos | null>(null);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
+  const [neighborOrder, setNeighborOrder] = useState<string[]>([]);
+  const [showHoverCoords, setShowHoverCoords] = useState(true);
+  const [zeroIndexedLabels, setZeroIndexedLabels] = useState(false);
   const [stdout, setStdout] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -88,9 +89,20 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
   useEffect(() => {
     setSelected(null);
     setHighlighted(new Set());
+    setNeighborOrder([]);
     setStdout("");
     setError(null);
   }, [mapState]);
+
+  const highlightedLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const [index, key] of neighborOrder.entries()) {
+      if (!labels.has(key)) {
+        labels.set(key, String(zeroIndexedLabels ? index : index + 1));
+      }
+    }
+    return labels;
+  }, [neighborOrder, zeroIndexedLabels]);
 
   // Start loading Pyodide on mount so the first click has less latency.
   useEffect(() => {
@@ -117,6 +129,73 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
     return () => obs.disconnect();
   }, []);
 
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+
+    const getVimMode = (): VimModeAPI | undefined =>
+      (window as Window & { vimMode?: VimModeAPI }).vimMode;
+
+    const syncMode = () => {
+      requestAnimationFrame(() => {
+        const vm = getVimMode();
+        if (!vm) return;
+        if (root.contains(document.activeElement)) {
+          vm.pushMode("gold-mine-neighbors", {
+            label: "Neighbors",
+            extends: "normal",
+            commands: [
+              {
+                key: "c",
+                label: "Toggle hover coordinates",
+                run: () => setShowHoverCoords((current) => !current),
+              },
+              {
+                key: "z",
+                label: "Toggle zero-based neighbor labels",
+                run: () => setZeroIndexedLabels((current) => !current),
+              },
+              {
+                key: "escape",
+                label: "Exit neighbor controls",
+                run: () => root.blur(),
+                hidden: true,
+              },
+            ],
+          });
+        } else {
+          vm.popMode("gold-mine-neighbors");
+        }
+      });
+    };
+
+    const focusRoot = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.closest(".cm-editor"))
+      ) {
+        return;
+      }
+      root.focus({ preventScroll: true });
+      syncMode();
+    };
+
+    root.addEventListener("pointerdown", focusRoot, true);
+    root.addEventListener("focusin", syncMode);
+    root.addEventListener("focusout", syncMode);
+
+    return () => {
+      root.removeEventListener("pointerdown", focusRoot, true);
+      root.removeEventListener("focusin", syncMode);
+      root.removeEventListener("focusout", syncMode);
+      getVimMode()?.popMode("gold-mine-neighbors");
+    };
+  }, []);
+
   const handleCellClick = useCallback(
     async (cell: Pos) => {
       const isBorder =
@@ -128,6 +207,7 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
 
       setSelected(cell);
       setHighlighted(new Set());
+      setNeighborOrder([]);
       setStdout("");
       setError(null);
       setRunning(true);
@@ -158,16 +238,20 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
 
         const result = vars._result;
         const cells = new Set<string>();
+        const orderedKeys: string[] = [];
         if (Array.isArray(result)) {
           for (const pair of result) {
             const r = Array.isArray(pair) ? pair[0] : pair.get?.(0);
             const c = Array.isArray(pair) ? pair[1] : pair.get?.(1);
             if (typeof r === "number" && typeof c === "number") {
-              cells.add(posKey(r, c));
+              const key = posKey(r, c);
+              cells.add(key);
+              orderedKeys.push(key);
             }
           }
         }
         setHighlighted(cells);
+        setNeighborOrder(orderedKeys);
       } catch (err) {
         setError(String(err));
       } finally {
@@ -179,10 +263,15 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
 
   const handleCodeChange = useCallback((value: string) => {
     setCode(value);
+    setArticleNeighborsPython(value);
   }, []);
 
   return (
-    <div style={{ maxWidth, margin: "2rem auto" }}>
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      style={{ maxWidth, margin: "2rem auto", outline: "none" }}
+    >
       <div
         style={{
           display: "grid",
@@ -289,6 +378,8 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
               onClick={handleCellClick}
               selected={selected}
               highlightedKeys={highlighted}
+              cellLabels={highlightedLabels}
+              showHoverLabel={showHoverCoords}
               cursor="pointer"
             />
           </div>

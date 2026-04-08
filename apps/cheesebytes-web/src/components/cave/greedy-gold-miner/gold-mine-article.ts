@@ -13,11 +13,28 @@ import { parseRawMap } from "./gold-mine-viewer-shared";
 import type { GreedyMineMapState } from "./gold-mine-viewer-shared";
 import { mediumMap } from "./maps";
 
+export const DEFAULT_NEIGHBORS_PYTHON = `Cell = tuple[int, int]
+Move = tuple[int, int]
+
+UP: Move = (-1, 0)
+RIGHT: Move = (0, 1)
+DOWN: Move = (1, 0)
+LEFT: Move = (0, -1)
+MOVES: list[Move] = [RIGHT, UP, DOWN, LEFT]
+
+def neighbors(grid: list[str], cell: Cell):
+    r, c = cell
+    for dr, dc in MOVES:
+        nr, nc = r + dr, c + dc
+        if grid[nr][nc] != '#':
+            yield (nr, nc)`;
+
 // ── Store ────────────────────────────────────────────────────────
 
 let currentMapState: GreedyMineMapState = parseRawMap(mediumMap);
 let currentGrid: string[] = mediumMap;
 let currentPython: string = toPython(mediumMap);
+let currentNeighborsPython: string = DEFAULT_NEIGHBORS_PYTHON;
 
 const listeners = new Set<() => void>();
 function emit() {
@@ -49,6 +66,17 @@ export function getArticleGrid(): string[] {
 /** Current Python MINE_MAP source (readable without React). */
 export function getArticleMapPython(): string {
   return currentPython;
+}
+
+/** Current shared Python neighbors() definition. */
+export function getArticleNeighborsPython(): string {
+  return currentNeighborsPython;
+}
+
+/** Called by the neighbors visual when the user edits the function. */
+export function setArticleNeighborsPython(code: string): void {
+  currentNeighborsPython = code;
+  emit();
 }
 
 /** Called by the map editor when the user changes the map. */

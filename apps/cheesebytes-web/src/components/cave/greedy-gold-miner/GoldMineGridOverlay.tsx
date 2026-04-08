@@ -18,6 +18,8 @@ interface GoldMineGridOverlayProps {
   cursor?: string;
   selected?: GridOverlayPos | null;
   highlightedKeys?: Set<string>;
+  cellLabels?: Map<string, string>;
+  showHoverLabel?: boolean;
   selectedFill?: string;
   selectedOutline?: string;
   highlightedFill?: string;
@@ -35,6 +37,8 @@ export const GoldMineGridOverlay: React.FC<GoldMineGridOverlayProps> = ({
   cursor,
   selected = null,
   highlightedKeys = new Set<string>(),
+  cellLabels = new Map<string, string>(),
+  showHoverLabel = true,
   selectedFill = "rgba(76, 175, 80, 0.35)",
   selectedOutline = "inset 0 0 0 2px rgba(76,175,80,0.7)",
   highlightedFill = "rgba(246, 189, 96, 0.35)",
@@ -102,6 +106,7 @@ export const GoldMineGridOverlay: React.FC<GoldMineGridOverlayProps> = ({
           const isHovered = hover?.r === r && hover?.c === c;
           const isSelected = selected?.r === r && selected?.c === c;
           const isHighlighted = highlightedKeys.has(key);
+          const label = cellLabels.get(key);
 
           let background: string | undefined;
           let boxShadow: string | undefined;
@@ -120,19 +125,32 @@ export const GoldMineGridOverlay: React.FC<GoldMineGridOverlayProps> = ({
             <div
               key={i}
               style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRight:
                   c < cols - 1 ? `1px solid ${GRID_LINE_COLOR}` : undefined,
                 borderBottom:
                   r < rows - 1 ? `1px solid ${GRID_LINE_COLOR}` : undefined,
                 background,
                 boxShadow,
+                color: isSelected || isHighlighted ? "#fff5e6" : undefined,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11,
+                fontWeight: 700,
+                textShadow:
+                  isSelected || isHighlighted
+                    ? "0 1px 2px rgba(0,0,0,0.65)"
+                    : undefined,
               }}
-            />
+            >
+              {label ?? null}
+            </div>
           );
         })}
       </div>
 
-      {hover && (
+      {showHoverLabel && hover && (
         <div
           style={{
             position: "absolute",

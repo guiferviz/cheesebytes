@@ -264,6 +264,7 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
   const [mode, setMode] = useState<ClickMode>("wall");
   const [drawAction, setDrawAction] = useState<"add" | "remove">("add");
   const [hover, setHover] = useState<Pos | null>(null);
+  const [showHoverCoords, setShowHoverCoords] = useState(true);
   const [isDark, setIsDark] = useState(
     () =>
       typeof document !== "undefined" &&
@@ -458,6 +459,13 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
                 run: runAndKeepFocus(() => setMode("exit")),
               },
               {
+                key: "c",
+                label: "Toggle hover coordinates",
+                run: runAndKeepFocus(() =>
+                  setShowHoverCoords((current) => !current),
+                ),
+              },
+              {
                 key: "r",
                 label: "Generate random DFS maze",
                 run: runAndKeepFocus(applyRandomMaze),
@@ -507,7 +515,17 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
       keepRootFocus();
     };
 
-    const focusRoot = () => {
+    const focusRoot = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.closest(".cm-editor"))
+      ) {
+        return;
+      }
       root.focus({ preventScroll: true });
       syncMode();
     };
@@ -618,6 +636,7 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
               onHover={setHover}
               onClick={handleCellClick}
               onDrag={handleCellDrag}
+              showHoverLabel={showHoverCoords}
               cursor={mode === "wall" ? "pointer" : "crosshair"}
             />
           </div>
