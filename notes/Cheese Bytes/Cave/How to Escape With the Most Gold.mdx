@@ -1,7 +1,9 @@
 import {
   GoldMineDemo,
+  GoldMineDfsBacktrackingExplorer,
   GoldMineDfsExplorer,
   GoldMineGridOverlay,
+  GoldMineMarkers,
   GoldMineMapCodeEditor,
   GoldMineNeighbors,
   GoldMinePathGallery,
@@ -84,6 +86,15 @@ automatically reflected in the other.
 
 <GoldMineMapCodeEditor client:only="react" rawMap={mediumMap} />
 
+Before moving on, it is useful to promote the start and exit positions to named
+constants. We will also define a `Cell` type alias so the rest of the article
+can talk about positions in a compact way.
+
+The visual below computes `START` and `END` by executing the Python code on the
+left against the current map.
+
+<GoldMineMarkers client:only="react" />
+
 # Finding All Paths
 
 TODO: explain the rules of the mine and why the objective is not the shortest
@@ -140,6 +151,47 @@ visual what state to paint; the DFS logic itself stays the same.
 > - What changes if you call `show_state(...)` only when entering a cell, but
 >   not when backtracking? What if you do the opposite and call it only when
 >   backtracking?
+
+## DFS with Backtracking
+
+The first DFS stops as soon as it finds one route to the exit. To maximize the
+gold, we need to keep exploring and undo each choice when we return from a
+branch. That is exactly what backtracking does.
+
+This version returns the best path found below each recursive call. At the end,
+it paints only the final best path so the replay clearly separates exploration
+from the final answer.
+
+<GoldMineDfsBacktrackingExplorer client:only="react" />
+
+# Optimizations
+
+```python
+MINE_MAP = [
+    "#######################",
+    "#...#.........#.......#",
+    "###.#.#.#######.###.#.#",
+    "#.#.#S#.#.....#...#.#.#",
+    "#.#.#.###.###.###.#.###",
+    "#...#...#...#.#...#...#",
+    "#.###.#.###.#.#.#####.#",
+    "#...#.#...#.#.....#...#",
+    "###.#.#.###.#####.#.###",
+    "#.#.#.#.#.........#...#",
+    "#.#.#.#.#.#####.E.###.#",
+    "#...#.........#.#.....#",
+    "#.#########.#.#.#.###.#",
+    "#.#.....#...#.#.#.....#",
+    "#.#.###.#.###.###.#.###",
+    "#...#.............#...#",
+    "#######################",
+]
+```
+
+This map is very interesting because we can logically deduce the best path
+without having to explore all 116 possible routes. Computer takes around 10k
+steps to find the best path, but we, as a humans can also find it just by using
+some logic.
 
 TODO: explain pruning ideas and memoization opportunities.
 
