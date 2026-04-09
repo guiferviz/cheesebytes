@@ -13,8 +13,19 @@ import { parseRawMap } from "./gold-mine-viewer-shared";
 import type { GreedyMineMapState } from "./gold-mine-viewer-shared";
 import { mediumMap } from "./maps";
 
-export const DEFAULT_NEIGHBORS_PYTHON = `Cell = tuple[int, int]
-Move = tuple[int, int]
+export const DEFAULT_MARKERS_PYTHON = `type Cell = tuple[int, int]
+
+def find_marker(grid: list[str], marker: str) -> Cell:
+    for r, row in enumerate(grid):
+        for c, ch in enumerate(row):
+            if ch == marker:
+                return (r, c)
+    raise ValueError(f"marker {marker!r} not found")
+
+START = find_marker(MINE_MAP, "S")
+END = find_marker(MINE_MAP, "E")`;
+
+export const DEFAULT_NEIGHBORS_PYTHON = `type Move = tuple[int, int]
 
 UP: Move = (-1, 0)
 RIGHT: Move = (0, 1)
@@ -34,6 +45,7 @@ def neighbors(grid: list[str], cell: Cell):
 let currentMapState: GreedyMineMapState = parseRawMap(mediumMap);
 let currentGrid: string[] = mediumMap;
 let currentPython: string = toPython(mediumMap);
+let currentMarkersPython: string = DEFAULT_MARKERS_PYTHON;
 let currentNeighborsPython: string = DEFAULT_NEIGHBORS_PYTHON;
 
 const listeners = new Set<() => void>();
@@ -71,6 +83,17 @@ export function getArticleMapPython(): string {
 /** Current shared Python neighbors() definition. */
 export function getArticleNeighborsPython(): string {
   return currentNeighborsPython;
+}
+
+/** Current shared Python Cell/find_markers/START/END definition. */
+export function getArticleMarkersPython(): string {
+  return currentMarkersPython;
+}
+
+/** Called by the markers visual when the user edits the shared code. */
+export function setArticleMarkersPython(code: string): void {
+  currentMarkersPython = code;
+  emit();
 }
 
 /** Called by the neighbors visual when the user edits the function. */

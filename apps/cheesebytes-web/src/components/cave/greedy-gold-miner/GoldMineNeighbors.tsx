@@ -22,6 +22,7 @@ import { GoldMineGridOverlay } from "./GoldMineGridOverlay";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
 import {
   getArticleMapPython,
+  getArticleMarkersPython,
   getArticleNeighborsPython,
   setArticleNeighborsPython,
   useArticleMap,
@@ -215,6 +216,8 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
       try {
         const fullCode = [
           getArticleMapPython(),
+          "",
+          getArticleMarkersPython(),
           "",
           codeRef.current,
           "",
