@@ -132,7 +132,10 @@ function getDeepActiveElement(
 }
 
 function isMarimoIsland(el: Element | null): boolean {
-  return el instanceof HTMLElement && !!el.closest("marimo-island");
+  return (
+    el instanceof HTMLElement &&
+    (!!el.closest("marimo-island") || !!el.closest("pyodide-worker-node"))
+  );
 }
 
 function isIframe(el: Element | null): boolean {

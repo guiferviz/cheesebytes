@@ -1,8 +1,10 @@
-The `__closure__` attribute is a [[Python Dunder]] that has a value only when a function is implemented with a [[Closure]]. This attribute becomes particularly useful when you want to inspect the state of these enclosed variables.
+The `__closure__` attribute is a [[Python Dunder]] that has a value only when a
+function is implemented with a [[Closure]]. This attribute becomes particularly
+useful when you want to inspect the state of these enclosed variables.
 
 # Example
 
-```python
+```pyodide
 def cheese_counter(cheese_name, count=0):
     def taste_cheese():
         nonlocal count
@@ -18,4 +20,6 @@ assert gouda_counter.__closure__[0].cell_contents == "Gouda"
 assert gouda_counter.__closure__[1].cell_contents == 0
 print(gouda_counter())  # Output: Tasted Gouda 1 time(s)!
 assert gouda_counter.__closure__[1].cell_contents == 1
+gouda_counter.__closure__[1].cell_contents = 5
+print(gouda_counter())  # Output: Tasted Gouda 6 time(s)!
 ```

@@ -46,6 +46,10 @@ export type PyodideWorkerRunnerHandle = {
 export type PyodideWorkerRunnerProps = {
   /** Initial Python source shown in the editor. */
   initialCode?: string;
+  /** Initial editor height in pixels. If omitted, the component may auto-fit. */
+  initialEditorHeight?: number;
+  /** Grow the editor to fit its content until the user manually resizes it. */
+  fitToContent?: boolean;
   /** Kick off execution automatically whenever the code changes. */
   autoRun?: boolean;
   /** Debounce delay (ms) used together with `autoRun`. Default 500. */
@@ -351,6 +355,8 @@ const PyodideWorkerRunner = forwardRef<
   (
     {
       initialCode = "",
+      initialEditorHeight,
+      fitToContent = false,
       autoRun = false,
       runDelay = 500,
       context = {},
@@ -372,11 +378,14 @@ const PyodideWorkerRunner = forwardRef<
     const [status, setStatus] = useState<WorkerStatus>(() =>
       pyodideWorkerContext.isReady() ? "ready" : "loading",
     );
-    const [editorHeight, setEditorHeight] = useState(300);
+    const [editorHeight, setEditorHeight] = useState(
+      initialEditorHeight ?? 300,
+    );
     const rootRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
     const dragStartY = useRef(0);
     const dragStartH = useRef(0);
+    const hasManualEditorHeight = useRef(initialEditorHeight != null);
 
     // ── Cleanup RAF on unmount ──────────────────────────────────────────────
     useEffect(() => {
@@ -510,9 +519,25 @@ const PyodideWorkerRunner = forwardRef<
     const editorHeightRef = useRef(editorHeight);
     editorHeightRef.current = editorHeight;
 
+    const syncEditorHeightToContent = useCallback(() => {
+      if (!fitToContent || hasManualEditorHeight.current) return;
+
+      const container = editorContainerRef.current;
+      if (!container) return;
+
+      const scroller = container.querySelector(".cm-scroller");
+      if (!(scroller instanceof HTMLElement)) return;
+
+      const nextHeight = Math.max(80, Math.ceil(scroller.scrollHeight + 2));
+      if (Math.abs(nextHeight - editorHeightRef.current) > 1) {
+        setEditorHeight(nextHeight);
+      }
+    }, [fitToContent]);
+
     const onResizeMouseDown = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
       isDragging.current = true;
+      hasManualEditorHeight.current = true;
       dragStartY.current = e.clientY;
       const renderedHeight =
         editorContainerRef.current?.getBoundingClientRect().height;
@@ -558,17 +583,58 @@ const PyodideWorkerRunner = forwardRef<
       document.addEventListener("mouseup", onUp);
     }, []);
 
+    useEffect(() => {
+      if (!fitToContent || hasManualEditorHeight.current) return;
+
+      // Immediate attempt
+      syncEditorHeightToContent();
+
+      // Retry after rAF (CodeMirror may not have laid out yet)
+      const frame = requestAnimationFrame(() => {
+        syncEditorHeightToContent();
+      });
+
+      // Also observe the container for child-list changes so we catch
+      // CodeMirror mounting its DOM after the initial render.
+      const container = editorContainerRef.current;
+      let obs: MutationObserver | undefined;
+      if (container) {
+        obs = new MutationObserver(() => syncEditorHeightToContent());
+        obs.observe(container, { childList: true, subtree: true });
+      }
+
+      return () => {
+        cancelAnimationFrame(frame);
+        obs?.disconnect();
+      };
+    }, [code, fitToContent, syncEditorHeightToContent]);
+
     // ── Auto-run on code change ────────────────────────────────────────────
     const autoRunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const runCodeRef = useRef(runCode);
+    runCodeRef.current = runCode;
+    const autoRunFiredRef = useRef(false);
+
     useEffect(() => {
       if (!autoRun) return;
-      autoRunTimerRef.current = setTimeout(() => {
-        runCode().catch(() => {});
-      }, runDelay);
+
+      // On mount: fire once. On subsequent code changes: debounce.
+      if (!autoRunFiredRef.current) {
+        autoRunFiredRef.current = true;
+        autoRunTimerRef.current = setTimeout(() => {
+          runCodeRef.current().catch(() => {});
+        }, runDelay);
+      } else {
+        autoRunTimerRef.current = setTimeout(() => {
+          runCodeRef.current().catch(() => {});
+        }, runDelay);
+      }
+
       return () => {
         if (autoRunTimerRef.current) clearTimeout(autoRunTimerRef.current);
       };
-    }, [code, autoRun, runDelay, runCode]);
+      // Only re-trigger when the user actually changes code, not when runCode identity changes
+    }, [code, autoRun, runDelay]);
 
     // ── Ask Reveal to recompute slide layout when this runner resizes ─────
     useEffect(() => {
@@ -629,7 +695,7 @@ const PyodideWorkerRunner = forwardRef<
         {/* ── Code editor ─────────────────────────────────────────────── */}
         <div
           ref={editorContainerRef}
-          style={{ maxHeight: editorHeight, overflowY: "auto" }}
+          style={{ height: editorHeight, overflowY: "auto" }}
         >
           <CodeMirror
             value={code}

@@ -4,6 +4,7 @@ import extractLinksTags from './src/plugins/remark-links-tags.js';
 import rehypeExternalLinks from './src/plugins/rehype-external-links.js';
 import remarkStripDeadWikilinks from './src/plugins/remark-strip-dead-wikilinks.js';
 import remarkMarimoIsland from './src/plugins/remark-marimo-island.js';
+import remarkPyodideWorkerNode from './src/plugins/remark-pyodide-worker-node.js';
 import remarkObsidianCallout from 'remark-obsidian-callout';
 import { wikiLinkPlugin } from 'remark-wiki-link';
 import rehypeMermaid from 'rehype-mermaid';
@@ -138,6 +139,7 @@ export default defineConfig({
       extractLinksTags,
       remarkObsidianCallout,
       remarkMarimoIsland,
+      remarkPyodideWorkerNode,
     ],
     rehypePlugins: [rehypeExternalLinks, rehypeKatex, [rehypeMermaid, {strategy: 'img-svg'}]],
     syntaxHighlight: {

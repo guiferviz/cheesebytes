@@ -25,6 +25,9 @@ const Content = await render(note).then((result) => result.Content);
 const needsMarimo =
   note.rendered?.html.includes("<marimo-island") ||
   note.body?.includes("{.marimo}");
+const needsPyodideWorker =
+  note.rendered?.html.includes("<pyodide-worker-node") ||
+  note.body?.includes("```pyodide");
 ---
 
 <NoteLayout note={note.data}>
@@ -42,6 +45,11 @@ const needsMarimo =
         />
         <marimo-filename hidden />
       </>
+    )
+  }
+  {
+    needsPyodideWorker && (
+      <script>import "../scripts/registerPyodideWorkerNode";</script>
     )
   }
   <Content />
