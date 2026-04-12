@@ -40,7 +40,7 @@ export default function remarkPyodideWorkerNode() {
 
       const encodedCode = encodeURIComponent(node.value.replace(/\s+$/, ''));
       const props = {
-        autoRun: true,
+        autoRun: 'once',
         fitToContent: true,
         ...parseMeta(node.meta),
       };

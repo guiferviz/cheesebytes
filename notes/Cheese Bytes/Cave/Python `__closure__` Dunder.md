@@ -4,7 +4,7 @@ useful when you want to inspect the state of these enclosed variables.
 
 # Example
 
-```pyodide
+```pyodide auto-run=once
 def cheese_counter(cheese_name, count=0):
     def taste_cheese():
         nonlocal count

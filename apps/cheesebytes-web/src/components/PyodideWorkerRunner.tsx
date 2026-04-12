@@ -50,8 +50,13 @@ export type PyodideWorkerRunnerProps = {
   initialEditorHeight?: number;
   /** Grow the editor to fit its content until the user manually resizes it. */
   fitToContent?: boolean;
-  /** Kick off execution automatically whenever the code changes. */
-  autoRun?: boolean;
+  /**
+   * Kick off execution automatically.
+   * - `false` (default): manual only.
+   * - `true`: re-run on every code change.
+   * - `"once"`: run on mount, then manual.
+   */
+  autoRun?: boolean | "once";
   /** Debounce delay (ms) used together with `autoRun`. Default 500. */
   runDelay?: number;
   /**
@@ -618,17 +623,15 @@ const PyodideWorkerRunner = forwardRef<
     useEffect(() => {
       if (!autoRun) return;
 
-      // On mount: fire once. On subsequent code changes: debounce.
-      if (!autoRunFiredRef.current) {
+      // "once" mode: only fire on mount, skip subsequent code changes
+      if (autoRun === "once") {
+        if (autoRunFiredRef.current) return;
         autoRunFiredRef.current = true;
-        autoRunTimerRef.current = setTimeout(() => {
-          runCodeRef.current().catch(() => {});
-        }, runDelay);
-      } else {
-        autoRunTimerRef.current = setTimeout(() => {
-          runCodeRef.current().catch(() => {});
-        }, runDelay);
       }
+
+      autoRunTimerRef.current = setTimeout(() => {
+        runCodeRef.current().catch(() => {});
+      }, runDelay);
 
       return () => {
         if (autoRunTimerRef.current) clearTimeout(autoRunTimerRef.current);
@@ -702,6 +705,8 @@ const PyodideWorkerRunner = forwardRef<
             extensions={extensions}
             theme={theme}
             onChange={setCode}
+            indentWithTab
+            basicSetup={{ tabSize: 4 }}
           />
         </div>
 
@@ -724,7 +729,7 @@ const PyodideWorkerRunner = forwardRef<
         />
 
         {/* ── Toolbar: status + memory + clear + run ───────────────────── */}
-        {(!autoRun || showWorkerStatus) && (
+        {(autoRun !== true || showWorkerStatus) && (
           <div
             style={{
               display: "flex",
@@ -771,7 +776,7 @@ const PyodideWorkerRunner = forwardRef<
             {/* Clear only visible when there is output */}
             {output && <ClearButton isDark={isDark} onClick={clearOutput} />}
 
-            {!autoRun && showRunButton && (
+            {autoRun !== true && showRunButton && (
               <RunButton
                 status={status}
                 isDark={isDark}
