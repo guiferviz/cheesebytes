@@ -13,6 +13,24 @@ html.wide-layout main > footer {
 }
 
 @font-face {
+  font-family: 'BigBlueTerm437 Nerd Font Mono';
+  src: url('/fonts/BigBlueTerm437NerdFontMono-Regular.woff2') format('woff2'),
+    url('/fonts/BigBlueTerm437NerdFontMono-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BigBlueTerm437 Nerd Font Mono';
+  src: url('/fonts/BigBlueTerm437NerdFontMono-Regular.woff2') format('woff2'),
+    url('/fonts/BigBlueTerm437NerdFontMono-Regular.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'IosevkaTermSlab Nerd Font Mono';
   src: url('/fonts/IosevkaTermSlabNerdFontPropo-Regular.woff2') format('woff2'),
     url('/fonts/IosevkaTermSlabNerdFontPropo-Regular.woff') format('woff');

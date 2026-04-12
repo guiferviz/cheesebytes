@@ -17,19 +17,34 @@ const folderDisplayMapping: Record<string, string> = {
   cave: "The Cheese Cave",
 };
 
+// Explicit ordering for top-level sidebar items (by path).
+// Items not listed here sort alphabetically after the listed ones.
+const topLevelOrder: string[] = [
+  "", // Home
+  "projects",
+  "programming-problems",
+  "what-is-a-cheese-byte",
+  "cave-graph", // manual page (not a note)
+  "/cave", // The Cheese Cave folder
+];
+
 function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
-  // Añadir manualmente la página Home al inicio del árbol
   const tree: FileNode[] = [
     {
       name: "Home",
-      path: "", // La ruta raíz (/)
+      path: "",
+      type: "file",
+      cheeseImage: "/favicon.png",
+    },
+    {
+      name: "Cave Graph",
+      path: "cave-graph",
       type: "file",
       cheeseImage: "/favicon.png",
     },
   ];
 
   for (const node of nodes) {
-    // Los IDs ya deberían estar normalizados desde content.config.ts
     const parts = node.id.split("/").filter(Boolean);
     const fileName = parts[parts.length - 1];
     const cheeseImage = node.data.cheeseImage || "/favicon.png";
@@ -72,77 +87,106 @@ function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
     }
   }
 
+  // Sort top-level items by the explicit order
+  tree.sort((a, b) => {
+    const keyA = a.type === "folder" ? a.path : a.path; // path for files, path for folders
+    const idxA = topLevelOrder.indexOf(keyA);
+    const idxB = topLevelOrder.indexOf(b.type === "folder" ? b.path : b.path);
+    const orderA = idxA === -1 ? topLevelOrder.length : idxA;
+    const orderB = idxB === -1 ? topLevelOrder.length : idxB;
+    return orderA - orderB;
+  });
+
   return tree;
 }
 
 const nodes = await getCollection("notes");
 const tree = buildFileTree(nodes);
 
-function renderTree(files: FileNode[]): string[] {
-  return files.map((file) => {
-    // Manejar caso especial para Home
-    const filePath = file.path === "" ? "/" : "/" + file.path;
-    const isActive =
-      currentPath === filePath || (currentPath === "" && filePath === "/");
+// Split tree into pinned top items (non-folder) and the cave folder
+const topItems = tree.filter((n) => n.type === "file");
+const caveFolder = tree.find((n) => n.type === "folder");
 
-    // Clases base para el contenedor
-    const containerClass = `
-      w-full
-      block
-      rounded
-      transition-colors
-      duration-150
-      ${isActive ? "bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-300 font-medium" : "hover:bg-yellow-500/10 dark:hover:bg-yellow-500/20"}
-    `.trim();
+function renderItem(file: FileNode): string {
+  const filePath = file.path === "" ? "/" : "/" + file.path;
+  const isActive =
+    currentPath === filePath || (currentPath === "" && filePath === "/");
 
-    if (file.type === "folder") {
-      return `
-        <details class="group mb-1">
-          <summary class="${containerClass} cursor-pointer">
-            <div class="w-full flex items-center gap-2 py-1 px-2">
-              <svg class="w-4 h-4 shrink-0 text-yellow-500 transition-transform duration-200 group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-              <span class="whitespace-nowrap">${file.name}</span>
-            </div>
-          </summary>
-          <div class="border-l-2 border-yellow-500/60 dark:border-yellow-500/40 ml-[0.9375rem] pl-4">
-            ${renderTree(file.children!).join("")}
-          </div>
-        </details>
-      `;
-    } else {
-      return `
-        <a href="${filePath}" class="${containerClass}">
+  const containerClass = `
+    w-full
+    block
+    rounded
+    transition-colors
+    duration-150
+    ${isActive ? "bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-300 font-medium" : "hover:bg-yellow-500/10 dark:hover:bg-yellow-500/20"}
+  `.trim();
+
+  if (file.type === "folder") {
+    return `
+      <details class="group mb-1">
+        <summary class="${containerClass} cursor-pointer">
           <div class="w-full flex items-center gap-2 py-1 px-2">
-            <img src="${file.cheeseImage || "/favicon.png"}" alt="" class="w-4 h-4 shrink-0" />
+            <svg class="w-4 h-4 shrink-0 text-yellow-500 transition-transform duration-200 group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
             <span class="whitespace-nowrap">${file.name}</span>
           </div>
-        </a>
-      `;
-    }
-  });
+        </summary>
+        <div class="border-l-2 border-yellow-500/60 dark:border-yellow-500/40 ml-[0.9375rem] pl-4">
+          ${(file.children ?? []).map(renderItem).join("")}
+        </div>
+      </details>
+    `;
+  }
+
+  return `
+    <a href="${filePath}" class="${containerClass}">
+      <div class="w-full flex items-center gap-2 py-1 px-2">
+        <img src="${file.cheeseImage || "/favicon.png"}" alt="" class="w-4 h-4 shrink-0" />
+        <span class="whitespace-nowrap">${file.name}</span>
+      </div>
+    </a>
+  `;
 }
 
 const uniqueId = `file-tree-${Math.random().toString(36).substring(2, 8)}`;
+const topHtml = topItems.map(renderItem).join("");
+const caveHtml = caveFolder ? renderItem(caveFolder) : "";
 ---
 
+<!-- Pinned top-level pages: always visible (sticky inside scroll container) -->
 <nav
-  id={uniqueId}
-  class="w-full p-2 text-sm overflow-x-auto"
-  set:html={renderTree(tree).join("")}
+  id={`${uniqueId}-top`}
+  class="w-full p-2 text-sm shrink-0 sticky top-0 z-10 bg-yellow-50 dark:bg-black border-b border-gray-200 dark:border-gray-700"
+  set:html={topHtml}
+/>
+
+<!-- The Cheese Cave: scrollable -->
+<nav
+  id={`${uniqueId}-cave`}
+  class="w-full px-2 pb-2 text-sm overflow-x-auto"
+  set:html={caveHtml}
 />
 
 <script type="module" define:vars={{ uniqueId, currentPath }}>
   document.addEventListener("DOMContentLoaded", () => {
-    const container = document.getElementById(uniqueId);
-    if (!container) return;
+    // Search across both nav sections
+    const topNav = document.getElementById(`${uniqueId}-top`);
+    const caveNav = document.getElementById(`${uniqueId}-cave`);
+    if (!topNav && !caveNav) return;
 
     const normalizedPath = currentPath === "" ? "/" : currentPath;
-    const activeLink =
-      normalizedPath === "/"
-        ? container.querySelector('a[href="/"]')
-        : container.querySelector(`a[href="${normalizedPath}"]`);
+
+    // Try top nav first, then cave nav
+    let activeLink = null;
+    for (const container of [topNav, caveNav]) {
+      if (!container) continue;
+      activeLink =
+        normalizedPath === "/"
+          ? container.querySelector('a[href="/"]')
+          : container.querySelector(`a[href="${normalizedPath}"]`);
+      if (activeLink) break;
+    }
 
     if (activeLink) {
       let parentDetails = activeLink.closest("details");
