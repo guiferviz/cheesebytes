@@ -1092,18 +1092,13 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     : "0 8px 0 rgba(31,41,55,0.2)";
   const bubbleTransform =
     bubblePhase === "enter"
-      ? "translate(-50%, calc(-100% - 6px)) scale(0.7) rotate(-9deg)"
+      ? "translate(-50%, calc(-100% - 18px)) scale(0)"
       : bubblePhase === "exit"
-        ? "translate(-48%, calc(-100% - 30px)) scale(0.82) rotate(7deg)"
-        : "translate(-50%, calc(-100% - 18px)) scale(1) rotate(-2deg)";
+        ? "translate(-50%, calc(-100% - 18px)) scale(0)"
+        : "translate(-50%, calc(-100% - 18px)) scale(1)";
   const bubbleOpacity =
-    bubblePhase === "enter" ? 0.75 : bubblePhase === "exit" ? 0 : 1;
-  const bubbleFilter =
-    bubblePhase === "enter"
-      ? "blur(1px)"
-      : bubblePhase === "exit"
-        ? "blur(1.4px)"
-        : "blur(0px)";
+    bubblePhase === "enter" ? 0 : bubblePhase === "exit" ? 0 : 1;
+  const bubbleFilter = "none";
 
   return (
     <div
@@ -1184,7 +1179,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
           opacity: bubbleOpacity,
           filter: bubbleFilter,
           transition:
-            "transform 110ms cubic-bezier(0.2, 1.2, 0.4, 1), opacity 110ms ease-out, filter 110ms ease-out",
+            "transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 180ms ease-out",
           pointerEvents: "none",
           zIndex: 2,
           visibility: bubbleVisible ? "visible" : "hidden",
