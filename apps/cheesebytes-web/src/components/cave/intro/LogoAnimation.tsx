@@ -1179,7 +1179,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
           opacity: bubbleOpacity,
           filter: bubbleFilter,
           transition:
-            "transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 180ms ease-out",
+            "transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 280ms ease-out",
           pointerEvents: "none",
           zIndex: 2,
           visibility: bubbleVisible ? "visible" : "hidden",
