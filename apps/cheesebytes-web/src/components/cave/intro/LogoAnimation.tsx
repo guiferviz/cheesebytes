@@ -310,14 +310,14 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
 
   const clickMessages = [
     "Oops!",
-    "It\u2019s breaking\u2026",
+    "Did I fix it?",
+    "It's getting worse…",
     "Definitely broken.",
-    "Almost there\u2026",
-    "Pixel mode enabled!",
+    "Pixel mode unblocked! Press 'x' to toggle.",
   ];
 
   const showBubble = useCallback(
-    (clientX: number, clientY: number, text: string) => {
+    (clientX: number, clientY: number, text: string, durationMult = 1) => {
       updatePointerFromClient(clientX, clientY);
       clearBubbleTimers();
       setBubbleText(text);
@@ -328,10 +328,10 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
       }, 16);
       const exitTimer = window.setTimeout(() => {
         setBubblePhase("exit");
-      }, 1320);
+      }, 1320 * durationMult);
       const hideTimer = window.setTimeout(() => {
         setBubblePhase("hidden");
-      }, 1500);
+      }, 1500 * durationMult);
 
       bubbleTimersRef.current = [activateTimer, exitTimer, hideTimer];
     },
@@ -1129,10 +1129,12 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
                     clickMessages.length - 1,
                   );
                   if (currentCount < clickMessages.length) {
+                    const isLast = msgIndex === clickMessages.length - 1;
                     showBubble(
                       event.clientX,
                       event.clientY,
                       clickMessages[msgIndex],
+                      isLast ? 2 : 1,
                     );
                   }
                   const next = currentCount + 1;
