@@ -17,7 +17,7 @@ class PyodideWorkerNodeElement extends HTMLElement {
       : {};
 
     // Defaults for pyodide-worker-node elements (matches remark plugin defaults)
-    const defaults = { autoRun: "once" as const, fitToContent: true };
+    const defaults = { autoRun: false, fitToContent: true };
 
     this.style.display = "block";
     this.style.margin = "1.5rem 0";

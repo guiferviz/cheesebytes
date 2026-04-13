@@ -729,7 +729,7 @@ const PyodideWorkerRunner = forwardRef<
         />
 
         {/* ── Toolbar: status + memory + clear + run ───────────────────── */}
-        {(autoRun !== true || showWorkerStatus) && (
+        {(autoRun !== true || showRunButton || showWorkerStatus) && (
           <div
             style={{
               display: "flex",
@@ -776,7 +776,7 @@ const PyodideWorkerRunner = forwardRef<
             {/* Clear only visible when there is output */}
             {output && <ClearButton isDark={isDark} onClick={clearOutput} />}
 
-            {autoRun !== true && showRunButton && (
+            {showRunButton && (
               <RunButton
                 status={status}
                 isDark={isDark}

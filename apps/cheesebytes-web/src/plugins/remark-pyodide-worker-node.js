@@ -19,7 +19,7 @@ import { visit } from 'unist-util-visit';
  * - `true`, `false`, and integer literals are coerced from strings
  *
  * Defaults when omitted:
- * - `autoRun: "once"`
+ * - `autoRun: false`
  * - `fitToContent: true`
  *
  * Practical meta props for markdown fences:
@@ -37,9 +37,10 @@ import { visit } from 'unist-util-visit';
  * with the current parser.
  *
  * Run button behavior:
- * - `autoRun=true` hides the Run button because execution is fully automatic.
- * - `autoRun="once"` keeps the Run button visible after the initial run.
- * - omitting `autoRun` is equivalent to `autoRun="once"`.
+ * - `showRunButton=true` always shows the Run button, even with `autoRun=true`.
+ * - `showRunButton=false` always hides the Run button.
+ * - When `showRunButton` is not set, the Run button is shown by default.
+ * - omitting `autoRun` is equivalent to `autoRun=false`.
  */
 
 function toCamelCase(value) {
@@ -82,7 +83,7 @@ export default function remarkPyodideWorkerNode() {
 
       const encodedCode = encodeURIComponent(node.value.replace(/\s+$/, ''));
       const props = {
-        autoRun: 'once',
+        autoRun: false,
         fitToContent: true,
         ...parseMeta(node.meta),
       };
