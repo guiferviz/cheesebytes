@@ -141,7 +141,7 @@ export default defineConfig({
       remarkMarimoIsland,
       remarkPyodideWorkerNode,
     ],
-    rehypePlugins: [rehypeExternalLinks, rehypeKatex, [rehypeMermaid, {strategy: 'img-svg'}]],
+    rehypePlugins: [rehypeExternalLinks, rehypeKatex, [rehypeMermaid, {strategy: 'pre-mermaid'}]],
     syntaxHighlight: {
       type: 'shiki',
       excludeLangs: ['mermaid', 'math'],
