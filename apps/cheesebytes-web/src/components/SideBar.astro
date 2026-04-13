@@ -1,6 +1,9 @@
 ---
 import FileTree from "./FileTree.astro";
 import SearchButton from "./SearchButton.astro";
+
+const sidebarHdLogo = "/logo/hd_logo.png";
+const sidebarPixelLogo = "/logo/pixel_logo.png";
 ---
 
 <!-- Header móvil -->
@@ -13,7 +16,13 @@ import SearchButton from "./SearchButton.astro";
       href="/"
       class="flex items-center gap-2 text-left font-extrabold uppercase text-lg p-4 overflow-hidden whitespace-nowrap hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-200"
     >
-      Cheese <img src="/favicon.png" alt="" class="h-10 w-10 -m-1" /> Bytes
+      Cheese <img
+        src={sidebarHdLogo}
+        data-hd-src={sidebarHdLogo}
+        data-pixel-src={sidebarPixelLogo}
+        alt=""
+        class="sidebar-mode-logo h-10 w-10 -m-1 object-contain"
+      /> Bytes
     </a>
   </div>
   <div class="flex items-center">
@@ -100,9 +109,11 @@ import SearchButton from "./SearchButton.astro";
           class="flex items-center gap-2 text-left font-extrabold uppercase text-lg xs:text-sm sm:text-base md:text-xl lg:text-xl p-4 xs:p-2 sm:p-3 overflow-hidden whitespace-nowrap hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-200"
         >
           Cheese <img
-            src="/favicon.png"
+            src={sidebarHdLogo}
+            data-hd-src={sidebarHdLogo}
+            data-pixel-src={sidebarPixelLogo}
             alt=""
-            class="h-10 w-10 xs:h-6 xs:w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 -m-1"
+            class="sidebar-mode-logo h-10 w-10 xs:h-6 xs:w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 -m-1 object-contain"
           /> Bytes
         </a>
         <div class="flex items-center gap-1">
@@ -595,5 +606,30 @@ import SearchButton from "./SearchButton.astro";
         detail: { isDark: htmlElement.classList.contains("dark") },
       }),
     );
+  });
+</script>
+
+<script>
+  import pixelMode from "../utils/pixel-mode";
+
+  function syncSidebarLogos(active = pixelMode.isActive()) {
+    document.querySelectorAll(".sidebar-mode-logo").forEach((node) => {
+      if (!(node instanceof HTMLImageElement)) return;
+
+      const nextSrc = active ? node.dataset.pixelSrc : node.dataset.hdSrc;
+      if (!nextSrc || node.getAttribute("src") === nextSrc) return;
+
+      node.setAttribute("src", nextSrc);
+    });
+  }
+
+  syncSidebarLogos();
+
+  window.addEventListener("pixel-mode-change", (event) => {
+    const active =
+      event instanceof CustomEvent
+        ? Boolean(event.detail)
+        : pixelMode.isActive();
+    syncSidebarLogos(active);
   });
 </script>

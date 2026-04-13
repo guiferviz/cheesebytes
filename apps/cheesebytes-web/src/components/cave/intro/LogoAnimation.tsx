@@ -59,14 +59,20 @@ interface LogoAnimationProps {
   duration?: number;
   loop?: boolean;
   /** "auto" plays the full animation automatically (default).
-   *  "interactive" shows a static pixel logo; hover blurs, clicks advance to HD. */
+   *  "interactive" shows a static HD logo; hover blurs, clicks intensify glitches. */
   mode?: "auto" | "interactive";
+  /** Starting click count for interactive mode. Useful for restoring pixel mode state. */
+  initialClicks?: number;
+  /** Fired once when the user clicks through the final interactive glitch state. */
+  onPixelModeUnlocked?: () => void;
 }
 
 interface DrawOptions {
   glitchBoost?: number;
   glitchSeed?: number;
   glitchPhase?: number;
+  /** When set, overrides the timeline-computed HD opacity (0 = pixel, 1 = full HD). */
+  hdOpacityOverride?: number;
 }
 
 type BubblePhase = "hidden" | "enter" | "active" | "exit";
@@ -95,6 +101,8 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   duration = 2700,
   loop = true,
   mode = "auto",
+  initialClicks = 0,
+  onPixelModeUnlocked,
 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -107,29 +115,36 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   const bubbleTimersRef = useRef<number[]>([]);
 
   // Interactive mode state
-  const [clickCount, setClickCount] = useState(0);
+  const [clickCount, setClickCount] = useState(initialClicks);
   const [isHovering, setIsHovering] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
+  const [imageReady, setImageReady] = useState(false);
   const [isDark, setIsDark] = useState(
     () =>
       typeof document !== "undefined" &&
       document.documentElement.classList.contains("dark"),
   );
   const [interactiveIntroDone, setInteractiveIntroDone] = useState(false);
+
+  useEffect(() => {
+    setClickCount(initialClicks);
+  }, [initialClicks]);
+
   const [bubblePhase, setBubblePhase] = useState<BubblePhase>("hidden");
   const [bubbleText, setBubbleText] = useState("Oops!");
   const [pointerPos, setPointerPos] = useState({
     x: width / 2,
     y: height / 2,
   });
-  const clicksToReveal = 5; // clicks needed to fully reveal HD
+  const clicksToReveal = 5; // clicks needed to unlock the hidden mode
   const hoverSeedRef = useRef(Math.random() * 10_000);
 
   const logoRenderW = LOGO_W * pixelScale;
   const logoRenderH = LOGO_H * pixelScale;
   const logoOriginX = (width - logoRenderW) / 2;
   const logoOriginY = (height - logoRenderH) / 2;
-  const interactiveRestMs = 930;
+  const interactiveHdIntroMs = 560;
+  const interactiveRestMs = 2100; // start at HD
 
   // Load HD logo image
   useEffect(() => {
@@ -138,6 +153,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     // Pre-decode to avoid a first-frame hiccup during glitch transition
     const setReady = () => {
       hdImgRef.current = img;
+      setImageReady(true);
     };
     img.onload = () => {
       if (typeof img.decode === "function") {
@@ -145,6 +161,9 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
       } else {
         setReady();
       }
+    };
+    return () => {
+      hdImgRef.current = null;
     };
   }, []);
 
@@ -267,29 +286,6 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     [width, height, pixelScale],
   );
 
-  const getInteractiveMs = useCallback(
-    (progress: number) => {
-      // Smooth mapping from 0→1 progress to animation timeline.
-      // 0 clicks → rest state (930ms)
-      // early clicks → glitch1 zone (1350–1600)
-      // mid clicks → glitch2 zone (1800–2050)
-      // all clicks → fully HD (2100)
-      if (progress === 0) return interactiveRestMs;
-      if (progress <= 0.4) {
-        // 1–2 clicks: glitch1 (1375–1575 — stay inside the peak)
-        const t = progress / 0.4;
-        return 1375 + t * 200;
-      }
-      if (progress < 1) {
-        // 3–4 clicks: glitch2 (1825–2025 — stay inside the peak)
-        const t = (progress - 0.4) / 0.6;
-        return 1825 + t * 200;
-      }
-      return 2100;
-    },
-    [interactiveRestMs],
-  );
-
   const clearBubbleTimers = useCallback(() => {
     for (const timer of bubbleTimersRef.current) window.clearTimeout(timer);
     bubbleTimersRef.current = [];
@@ -309,11 +305,15 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     [],
   );
 
+  const onPixelModeUnlockedRef = useRef(onPixelModeUnlocked);
+  onPixelModeUnlockedRef.current = onPixelModeUnlocked;
+
   const clickMessages = [
     "Oops!",
-    "Did I fix it?",
-    "Definitely not.",
-    "Getting worse\u2026",
+    "It\u2019s breaking\u2026",
+    "Definitely broken.",
+    "Almost there\u2026",
+    "Pixel mode enabled!",
   ];
 
   const showBubble = useCallback(
@@ -388,7 +388,12 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
 
       // ── HD crossfade (starts DURING glitch2 for the desired look) ──
       const g2Mid = (glitch2Start + glitch2End) / 2;
-      const hdOpacity = ms > g2Mid ? clamp01((ms - g2Mid) / 90) : 0;
+      const hdOpacity =
+        options.hdOpacityOverride !== undefined
+          ? options.hdOpacityOverride
+          : ms > g2Mid
+            ? clamp01((ms - g2Mid) / 90)
+            : 0;
 
       // ── 1. Pixel logo (stays at FULL alpha — HD logo draws on top) ──
       if (hdOpacity < 0.99) {
@@ -657,9 +662,130 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     ],
   );
 
+  const drawInteractiveHdIntroFrame = useCallback(
+    (ctx: CanvasRenderingContext2D, ms: number) => {
+      ctx.clearRect(0, 0, width, height);
+
+      const introT = clamp01(ms / interactiveHdIntroMs);
+      const fontSize = Math.round(pixelScale * 24);
+      const textY = height / 2;
+      const textGap = pixelScale * 1.5;
+      const textColor = isDark ? "#ffffff" : "#111827";
+
+      if (hdImgRef.current) {
+        const sliceCount = 20;
+        const sliceW = logoRenderW / sliceCount;
+        const centerSlice = (sliceCount - 1) / 2;
+        const centerX = logoOriginX + logoRenderW / 2;
+        const centerY = logoOriginY + logoRenderH / 2;
+        const scale = 0.975 + easeOutCubic(introT) * 0.025;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(scale, scale);
+        ctx.translate(-centerX, -centerY);
+
+        for (let i = 0; i < sliceCount; i++) {
+          const distanceFromCenter = Math.abs(i - centerSlice) / centerSlice;
+          const sliceStart = 24 + distanceFromCenter * 150;
+          const sliceT = clamp01((ms - sliceStart) / 95);
+          if (sliceT <= 0) continue;
+
+          const reveal = easeOutCubic(sliceT);
+          const dx = logoOriginX + i * sliceW;
+          const revealH = Math.max(1, logoRenderH * reveal);
+
+          ctx.save();
+          ctx.globalAlpha = 0.28 + reveal * 0.72;
+          ctx.beginPath();
+          ctx.rect(
+            dx - 0.5,
+            logoOriginY + (logoRenderH - revealH) / 2,
+            sliceW + 1,
+            revealH,
+          );
+          ctx.clip();
+          ctx.drawImage(
+            hdImgRef.current,
+            logoOriginX,
+            logoOriginY,
+            logoRenderW,
+            logoRenderH,
+          );
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      const drawText = (font: string, alpha: number) => {
+        if (alpha < 0.01) return;
+        ctx.font = `bold ${fontSize}px '${font}', monospace`;
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        const cW = ctx.measureText("M").width;
+
+        const cheeseChars = ["C", "H", "E", "E", "S", "E"];
+        const cheeseRight = logoOriginX - textGap;
+        for (let i = 0; i < cheeseChars.length; i++) {
+          const letterMs = 42 + i * 38;
+          if (ms < letterMs) continue;
+
+          const pop = clamp01((ms - letterMs) / 78);
+          const sc = easeOutCubic(pop);
+          const lx = cheeseRight - (cheeseChars.length - i - 0.5) * cW;
+
+          ctx.save();
+          ctx.globalAlpha = sc * alpha;
+          ctx.translate(lx, textY);
+          ctx.scale(sc, sc);
+          ctx.fillStyle = textColor;
+          ctx.fillText(cheeseChars[i], 0, 0);
+          ctx.restore();
+        }
+
+        const bytesChars = ["B", "Y", "T", "E", "S"];
+        const bytesLeft = logoOriginX + logoRenderW + textGap * 3;
+        for (let i = 0; i < bytesChars.length; i++) {
+          const appearIdx = bytesChars.length - 1 - i;
+          const letterMs = 42 + appearIdx * 38;
+          if (ms < letterMs) continue;
+
+          const pop = clamp01((ms - letterMs) / 78);
+          const sc = easeOutCubic(pop);
+          const lx = bytesLeft + (i + 0.5) * cW;
+
+          ctx.save();
+          ctx.globalAlpha = sc * alpha;
+          ctx.translate(lx, textY);
+          ctx.scale(sc, sc);
+          ctx.fillStyle = textColor;
+          ctx.fillText(bytesChars[i], 0, 0);
+          ctx.restore();
+        }
+      };
+
+      drawText(
+        "IosevkaTermSlab Nerd Font Mono",
+        0.2 + easeOutCubic(introT) * 0.8,
+      );
+    },
+    [
+      height,
+      interactiveHdIntroMs,
+      isDark,
+      logoOriginX,
+      logoOriginY,
+      logoRenderH,
+      logoRenderW,
+      pixelScale,
+      width,
+    ],
+  );
+
   /* ── Animation loop ──────────────────────────────────────────────── */
   const startAnimation = useCallback(() => {
-    if (!fontsReady) return;
+    if (!fontsReady || !imageReady) return;
 
     const px = buildPixels();
     pixelsRef.current = px;
@@ -693,79 +819,107 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     };
 
     animRef.current = requestAnimationFrame(tick);
-  }, [buildPixels, buildShards, draw, duration, fontsReady, loop]);
+  }, [buildPixels, buildShards, draw, duration, fontsReady, imageReady, loop]);
+
+  const clickCountRef = useRef(clickCount);
+  clickCountRef.current = clickCount;
 
   const startInteractiveIntro = useCallback(() => {
-    if (!fontsReady) return;
+    if (!fontsReady || !imageReady) return;
 
     const px = buildPixels();
     pixelsRef.current = px;
     shardsRef.current = buildShards(px);
-    startRef.current = 0;
-    let lastTimestamp = 0;
-
-    const tick = (timestamp: number) => {
-      if (!startRef.current) {
-        startRef.current = timestamp;
-        lastTimestamp = timestamp;
-      }
-
-      const elapsed = Math.min(timestamp - startRef.current, interactiveRestMs);
-      const dtSec = (timestamp - lastTimestamp) / 1000;
-      lastTimestamp = timestamp;
-
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      draw(ctx, elapsed, dtSec);
-
-      if (elapsed < interactiveRestMs) {
-        animRef.current = requestAnimationFrame(tick);
-      } else {
-        setInteractiveIntroDone(true);
-      }
-    };
-
-    cancelAnimationFrame(animRef.current);
-    animRef.current = requestAnimationFrame(tick);
-  }, [buildPixels, buildShards, draw, fontsReady, interactiveRestMs]);
-
-  /* ── Interactive mode: draw a single static frame based on click progress ── */
-  const drawInteractiveFrame = useCallback(() => {
-    if (!fontsReady) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Build pixels on demand (they're stable so only rebuild if empty)
+    const startsPixelated = clickCountRef.current >= clicksToReveal;
+    const targetMs = startsPixelated ? 930 : interactiveHdIntroMs;
+    let startTimestamp = 0;
+    let lastTimestamp = 0;
+
+    const tick = (timestamp: number) => {
+      if (!startTimestamp) {
+        startTimestamp = timestamp;
+        lastTimestamp = timestamp;
+      }
+      const elapsed = timestamp - startTimestamp;
+      const dtSec = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0;
+      lastTimestamp = timestamp;
+
+      if (elapsed < targetMs) {
+        if (startsPixelated) {
+          draw(ctx, elapsed, dtSec, { hdOpacityOverride: 0 });
+        } else {
+          drawInteractiveHdIntroFrame(ctx, elapsed);
+        }
+        animRef.current = requestAnimationFrame(tick);
+      } else {
+        if (startsPixelated) {
+          draw(ctx, targetMs, 0, { hdOpacityOverride: 0 });
+        } else {
+          drawInteractiveHdIntroFrame(ctx, targetMs);
+        }
+        setInteractiveIntroDone(true);
+      }
+    };
+
+    cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(tick);
+  }, [
+    buildPixels,
+    buildShards,
+    draw,
+    drawInteractiveHdIntroFrame,
+    fontsReady,
+    interactiveHdIntroMs,
+    imageReady,
+  ]);
+
+  /* ── Interactive mode: draw a single static frame based on click progress ── */
+  const drawInteractiveFrame = useCallback(() => {
+    if (!fontsReady || !imageReady) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
     if (pixelsRef.current.length === 0) {
       pixelsRef.current = buildPixels();
       shardsRef.current = buildShards(pixelsRef.current);
     }
 
-    // Map click progress to animation timeline position
-    const progress = Math.min(clickCount / clicksToReveal, 1);
-    const ms = getInteractiveMs(progress);
+    if (clickCount >= clicksToReveal) {
+      draw(ctx, 930, 0, { hdOpacityOverride: 0 });
+    } else {
+      const stages = [0, 0.2, 0.45, 0.75, 1.0];
+      const glitchBoost = stages[Math.min(clickCount, stages.length - 1)];
 
-    draw(ctx, ms, 0);
+      draw(ctx, interactiveRestMs, 0, {
+        glitchBoost,
+        hdOpacityOverride: 1,
+        glitchSeed: clickCount * 1337,
+        glitchPhase: clickCount * 97,
+      });
+    }
   }, [
     buildPixels,
     buildShards,
     clickCount,
     draw,
     fontsReady,
-    getInteractiveMs,
+    imageReady,
+    interactiveRestMs,
   ]);
 
   useEffect(() => {
-    if (mode !== "interactive" || !fontsReady) return;
+    if (mode !== "interactive" || !fontsReady || !imageReady) return;
 
     setInteractiveIntroDone(false);
-    setClickCount(0);
     setIsHovering(false);
     setBubblePhase("hidden");
     clearBubbleTimers();
@@ -775,13 +929,14 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
       clearBubbleTimers();
       cancelAnimationFrame(animRef.current);
     };
-  }, [clearBubbleTimers, fontsReady, mode, startInteractiveIntro]);
+  }, [clearBubbleTimers, fontsReady, imageReady, mode, startInteractiveIntro]);
 
   // Interactive mode: redraw on state changes
   useEffect(() => {
     if (
       mode !== "interactive" ||
       !fontsReady ||
+      !imageReady ||
       !interactiveIntroDone ||
       isHovering
     ) {
@@ -791,6 +946,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   }, [
     drawInteractiveFrame,
     fontsReady,
+    imageReady,
     interactiveIntroDone,
     isHovering,
     mode,
@@ -800,6 +956,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     if (
       mode !== "interactive" ||
       !fontsReady ||
+      !imageReady ||
       !interactiveIntroDone ||
       !isHovering ||
       clickCount > 0
@@ -822,22 +979,18 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const progress = Math.min(clickCount / clicksToReveal, 1);
-      const ms = getInteractiveMs(progress);
       const dtSec = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0;
       lastTimestamp = timestamp;
       const elapsed = timestamp - startTimestamp;
       const burstT = Math.min(elapsed / hoverGlitchDurationMs, 1);
       const burstEnvelope = Math.sin(Math.PI * burstT);
-      const hoverGlitch = Math.min(
-        (0.28 + progress * 0.5) * burstEnvelope,
-        0.9,
-      );
+      const hoverGlitch = Math.min(0.28 * burstEnvelope, 0.9);
 
-      draw(ctx, ms, dtSec, {
+      draw(ctx, interactiveRestMs, dtSec, {
         glitchBoost: hoverGlitch,
         glitchSeed: hoverSeedRef.current,
         glitchPhase: timestamp,
+        hdOpacityOverride: 1,
       });
 
       if (burstT < 1) {
@@ -859,8 +1012,9 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
     clickCount,
     draw,
     fontsReady,
-    getInteractiveMs,
+    imageReady,
     interactiveIntroDone,
+    interactiveRestMs,
     isHovering,
     mode,
   ]);
@@ -885,7 +1039,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
   }, [clearBubbleTimers]);
 
   useEffect(() => {
-    if (mode === "interactive" || !fontsReady) return;
+    if (mode === "interactive" || !fontsReady || !imageReady) return;
 
     // Listen for Reveal.js slide changes to start/restart animation
     // only when this slide is visible. Falls back to IntersectionObserver.
@@ -927,7 +1081,7 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
       obs.disconnect();
       cancelAnimationFrame(animRef.current);
     };
-  }, [fontsReady, mode, startAnimation]);
+  }, [fontsReady, imageReady, mode, startAnimation]);
 
   const bubbleVisible = bubblePhase !== "hidden";
   const bubbleBackground = isDark ? "#fff8d6" : "#ffffff";
@@ -981,7 +1135,11 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
                       clickMessages[msgIndex],
                     );
                   }
-                  return currentCount + 1;
+                  const next = currentCount + 1;
+                  if (next === clicksToReveal) {
+                    onPixelModeUnlockedRef.current?.();
+                  }
+                  return Math.min(next, clicksToReveal);
                 });
               }
             : undefined
@@ -1013,10 +1171,6 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({
           width: "100%",
           height: "100%",
           display: "block",
-          cursor:
-            mode === "interactive" && interactiveIntroDone
-              ? "pointer"
-              : undefined,
         }}
       />
       <div

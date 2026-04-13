@@ -84,6 +84,11 @@ body {
   font-family: 'IosevkaTermSlab Nerd Font Mono', monospace;
 }
 
+/* --- Pixel mode (retro font override) --- */
+html.pixel-mode body {
+  font-family: 'BigBlueTerm437 Nerd Font Mono', monospace;
+}
+
 /* --- Scrollbars (theme-aware) --- */
 #sidebar-scroll,
 #content-scroll {

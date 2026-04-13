@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { LogoAnimation } from "../components/cave/intro";
+import HeroLogo from "../components/HeroLogo.tsx";
 import RandomBite from "../components/RandomBite.tsx";
 
 const allNotes = await getCollection("notes");
@@ -17,14 +17,12 @@ const noteSummaries = allNotes.map((n) => ({
   <div class="flex flex-col items-center px-6 text-center gap-8 py-12">
     {/* ── Hero: Interactive Logo Animation ── */}
     <div class="w-full max-w-4xl" style="aspect-ratio: 2080/600;">
-      <LogoAnimation
+      <HeroLogo
         client:load
         width={2080}
         height={600}
         pixelScale={8}
         duration={2700}
-        loop={false}
-        mode="interactive"
       />
     </div>
 
@@ -42,8 +40,24 @@ const noteSummaries = allNotes.map((n) => ({
 
     {/* ── Problems & Projects ── */}
     <div
-      class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl w-full text-left"
+      class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-5xl w-full text-left"
     >
+      <a
+        href="/projects"
+        class="block rounded-xl border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 p-6 transition-all hover:border-yellow-600/50 dark:hover:border-yellow-500/50 hover:bg-white dark:hover:bg-gray-900/70 no-underline group shadow-sm hover:shadow-md dark:shadow-none"
+      >
+        <h2
+          class="text-xl font-bold text-yellow-700 dark:text-yellow-400 group-hover:text-yellow-800 dark:group-hover:text-yellow-300 mb-3"
+        >
+          Projects
+        </h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed m-0">
+          Full journeys from an initial question to a working system —
+          experiments, ideas, and distilled knowledge that makes the effort
+          worthwhile.
+        </p>
+      </a>
+
       <a
         href="/programming-problems"
         class="block rounded-xl border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 p-6 transition-all hover:border-yellow-600/50 dark:hover:border-yellow-500/50 hover:bg-white dark:hover:bg-gray-900/70 no-underline group shadow-sm hover:shadow-md dark:shadow-none"
@@ -59,19 +73,19 @@ const noteSummaries = allNotes.map((n) => ({
           creations.
         </p>
       </a>
+
       <a
-        href="/projects"
+        href="/algorithms-and-concepts"
         class="block rounded-xl border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 p-6 transition-all hover:border-yellow-600/50 dark:hover:border-yellow-500/50 hover:bg-white dark:hover:bg-gray-900/70 no-underline group shadow-sm hover:shadow-md dark:shadow-none"
       >
         <h2
           class="text-xl font-bold text-yellow-700 dark:text-yellow-400 group-hover:text-yellow-800 dark:group-hover:text-yellow-300 mb-3"
         >
-          Projects
+          Algorithms and Concepts
         </h2>
         <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed m-0">
-          Full journeys from an initial question to a working system —
-          experiments, ideas, and distilled knowledge that makes the effort
-          worthwhile.
+          Foundational notes about algorithmic thinking, classic techniques, and
+          the ideas behind the puzzles and experiments across the cave.
         </p>
       </a>
     </div>

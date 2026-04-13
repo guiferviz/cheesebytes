@@ -42,6 +42,10 @@ const { title, description } = Astro.props;
     <!-- VimMode -->
     <script>
       import { createVimMode } from "../utils/vim-mode";
+      import pixelMode from "../utils/pixel-mode";
+
+      // Restore pixel mode from localStorage on every page load.
+      pixelMode.restore();
 
       const vimMedia = window.matchMedia(
         "(max-width: 900px), (pointer: coarse)",
@@ -89,6 +93,13 @@ const { title, description } = Astro.props;
           label: "Toggle wide layout",
           category: "General",
           run: () => document.documentElement.classList.toggle("wide-layout"),
+        });
+
+        vm.register("x", {
+          label: "Toggle pixel mode",
+          category: "General",
+          hidden: !pixelMode.isUnlocked(),
+          run: () => pixelMode.toggle(),
         });
       }
 

@@ -1,5 +1,47 @@
 import { visit } from 'unist-util-visit';
 
+/**
+ * Transform fenced `pyodide` code blocks into `<pyodide-worker-node>`.
+ *
+ * Usage:
+ * ```md
+ * ```pyodide auto-run=once height=220 show-run-button=false
+ * print("hello")
+ * ```
+ * ```
+ *
+ * Meta parsing rules:
+ * - `key` -> boolean `true`
+ * - `key=value`, `key="value"`, `key='value'`
+ * - kebab-case keys are converted to camelCase
+ * - `height` is aliased to `initialEditorHeight`
+ * - `autorun`, `auto-run`, and `autoRun` all map to `autoRun`
+ * - `true`, `false`, and integer literals are coerced from strings
+ *
+ * Defaults when omitted:
+ * - `autoRun: "once"`
+ * - `fitToContent: true`
+ *
+ * Practical meta props for markdown fences:
+ * - `auto-run=false|true|once`
+ * - `fit-to-content=true|false`
+ * - `height=240` or `initial-editor-height=240`
+ * - `run-delay=800`
+ * - `show-run-button=true|false`
+ * - `show-worker-status=true|false`
+ * - `show-memory=true|false`
+ *
+ * Note: the custom element forwards props directly to `PyodideWorkerRunner`,
+ * but fenced-code meta is only suitable for scalar values. Structured props
+ * such as `context` or `returnVars` are not practical to pass from markdown
+ * with the current parser.
+ *
+ * Run button behavior:
+ * - `autoRun=true` hides the Run button because execution is fully automatic.
+ * - `autoRun="once"` keeps the Run button visible after the initial run.
+ * - omitting `autoRun` is equivalent to `autoRun="once"`.
+ */
+
 function toCamelCase(value) {
   return value.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }
