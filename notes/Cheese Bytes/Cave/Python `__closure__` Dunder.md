@@ -15,11 +15,13 @@ def cheese_counter(cheese_name, count=0):
 
 
 gouda_counter = cheese_counter("Gouda")
+
 assert gouda_counter.__closure__ is not None
 assert gouda_counter.__closure__[0].cell_contents == "Gouda"
 assert gouda_counter.__closure__[1].cell_contents == 0
 print(gouda_counter())  # Output: Tasted Gouda 1 time(s)!
 assert gouda_counter.__closure__[1].cell_contents == 1
+
 gouda_counter.__closure__[1].cell_contents = 5
 print(gouda_counter())  # Output: Tasted Gouda 6 time(s)!
 ```
