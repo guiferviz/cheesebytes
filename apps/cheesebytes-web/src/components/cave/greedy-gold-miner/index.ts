@@ -1,5 +1,6 @@
 export { GoldMineSolver } from "./GoldMineSolver";
 export { GoldMineDemo } from "./GoldMineDemo";
+export { GoldMineArticleDemo } from "./GoldMineArticleDemo";
 export { GoldMineDfsBacktrackingExplorer } from "./GoldMineDfsBacktrackingExplorer";
 export { GoldMineDfsExplorer } from "./GoldMineDfsExplorer";
 export { GoldMineMarkers } from "./GoldMineMarkers";

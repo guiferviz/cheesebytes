@@ -1,0 +1,123 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+---
+
+<RevealLayout
+  title="How to Escape With the Most Gold"
+  description="Find the richest escape route: the path that collects the most gold before reaching the exit"
+  theme="dark"
+>
+  <section>
+    <aside class="notes">
+      <p>
+        You enter a gold mine with one mission: become filthy rich and make it
+        out alive. But there's a catch. Every step you take collects gold... and
+        collapses the tunnel behind you. There is no going back.
+      </p><p>
+        Luckily, there is another way out. So which route leaves you the richest
+        by the time you escape?
+      </p>
+    </aside>
+    <pre>
+      MINE_MAP = [
+        "###############",
+        "#.#.....#.....#",
+        "#.###.#.###.#.#",
+        "#.....#...#.#.#",
+        "####S####.#.#.#",
+        "#.......#.#.#.#",
+        "#.#.#.#.#...###",
+        "#.#.#.#...#...#",
+        "#.#.#.###.#.#.#",
+        "#.#.#.......#.#",
+        "###.###.#.###.#",
+        "#.....#.#.....#",
+        "#.#####.###.#.#",
+        "#.....#...#...#",
+        "#.###.###.#.#.#",
+        "#...#.....#.#.#",
+        "###.#.#####.###",
+        "#.#...#....E..#",
+        "#.###.#######.#",
+        "#.............#",
+        "###############",
+      ]
+    </pre>
+  </section>
+  <section>
+    <aside class="notes">
+      <p>
+        If we use BFS, we get the shortest path. But that is not what we want.
+      </p>
+    </aside>
+  </section>
+  <section>
+    <aside class="notes">
+      <p>
+        If we use DFS, we get one valid path. But not necessarily the one with
+        the most gold.
+      </p>
+    </aside>
+  </section>
+  <section>
+    <aside class="notes">
+      <p>
+        What should we do? We can slightly modify DFS to explore all possible
+        paths. This is DFS with backtracking.
+      </p>
+      <p>
+        When we find a path, we don't stop. We go back and try every other
+        option. Each time we find a path, we count the gold and keep the best
+        one so far.
+      </p><p>
+        This is hard because we must explore all paths. And believe it or not,
+        this becomes infeasible very quickly, even for small grids. For example,
+        this grid already has 106 possible paths.
+      </p>
+      <p>But how we can optimize this is a story for another video.</p>
+    </aside>
+  </section>
+  <!-- Full script:
+
+  You enter a gold mine with one mission: become filthy rich and make it out alive.
+
+  But there's a catch.
+
+  Every step you take collects gold… and collapses the tunnel behind you.
+
+  There is no going back.
+
+  Luckily, there is another way out.
+
+  So which route leaves you the richest by the time you escape?
+
+  If we use BFS, we get the shortest path.
+
+  But that is not what we want.
+
+  If we use DFS, we get one valid path.
+
+  But not necessarily the one with the most gold.
+
+  What should we do?
+
+  We can slightly modify DFS to explore all possible paths.
+
+  This is DFS with backtracking.
+
+  When we find a path, we don't stop.
+
+  We go back and try every other option.
+
+  Each time we find a path, we count the gold and keep the best one so far.
+
+  This is hard because we must explore all paths.
+
+  And believe it or not, this becomes infeasible very quickly, even for small grids.
+
+  For example, this grid already has 106 possible paths.
+
+  But how to optimize this… that's a story for another video.
+  
+  -->
+</RevealLayout>

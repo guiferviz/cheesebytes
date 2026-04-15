@@ -70,6 +70,17 @@ export function useArticleMap(): GreedyMineMapState {
   );
 }
 
+/** React hook — subscribe to the current article grid (raw string[]). */
+export function useArticleGrid(): string[] {
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    () => currentGrid,
+  );
+}
+
 /** Current grid as string[] (readable without React). */
 export function getArticleGrid(): string[] {
   return currentGrid;
