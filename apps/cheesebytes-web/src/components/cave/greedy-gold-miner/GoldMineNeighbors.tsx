@@ -21,6 +21,11 @@ import { posKey } from "../dungeon-escape/types";
 import { GoldMineGridOverlay } from "./GoldMineGridOverlay";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
 import {
+  useGoldMineFullscreen,
+  fullscreenRootStyle,
+  fullscreenInnerStyle,
+} from "./useGoldMineFullscreen";
+import {
   getArticleMapPython,
   getArticleMarkersPython,
   getArticleNeighborsPython,
@@ -71,6 +76,8 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
   const mapState = useArticleMap();
   const [code, setCode] = useState(() => getArticleNeighborsPython());
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isFullscreen, toggleFullscreen } =
+    useGoldMineFullscreen(containerRef);
   const [hover, setHover] = useState<Pos | null>(null);
   const [selected, setSelected] = useState<Pos | null>(null);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
@@ -157,6 +164,11 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
                 run: () => setZeroIndexedLabels((current) => !current),
               },
               {
+                key: "f",
+                label: "Toggle fullscreen",
+                run: () => toggleFullscreen(),
+              },
+              {
                 key: "escape",
                 label: "Exit neighbor controls",
                 run: () => root.blur(),
@@ -195,7 +207,7 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
       root.removeEventListener("focusout", syncMode);
       getVimMode()?.popMode("gold-mine-neighbors");
     };
-  }, []);
+  }, [toggleFullscreen]);
 
   const handleCellClick = useCallback(
     async (cell: Pos) => {
@@ -273,167 +285,176 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
     <div
       ref={containerRef}
       tabIndex={0}
-      style={{ maxWidth, margin: "2rem auto", outline: "none" }}
+      style={{ ...fullscreenRootStyle(isFullscreen), outline: "none" }}
     >
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          alignItems: "start",
+          ...fullscreenInnerStyle(isFullscreen, maxWidth),
+          margin: "2rem auto",
         }}
       >
-        {/* Left: CodeMirror editor */}
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--vim-palette-fg, #a08060)",
-              marginBottom: 6,
-              opacity: 0.7,
-            }}
-          >
-            Python
-          </div>
-          <div
-            style={{
-              borderRadius: 10,
-              overflow: "hidden",
-              border: `2px solid ${error ? "#c0392b" : "#5a422e"}`,
-              transition: "border-color 0.2s",
-            }}
-          >
-            <CodeMirror
-              value={code}
-              extensions={cmExtensions}
-              theme={isDark ? oneDark : undefined}
-              onChange={handleCodeChange}
-              indentWithTab
-              basicSetup={{
-                lineNumbers: true,
-                foldGutter: false,
-                tabSize: 4,
-              }}
-            />
-          </div>
-          {stdout && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            alignItems: "start",
+          }}
+        >
+          {/* Left: CodeMirror editor */}
+          <div>
             <div
               style={{
-                fontSize: 11,
-                color: "#d4b896",
-                marginTop: 8,
-                fontFamily: "monospace",
-                whiteSpace: "pre-wrap",
-                background: "rgba(8,10,14,0.78)",
-                border: "1px solid rgba(90,66,46,0.8)",
-                borderRadius: 8,
-                padding: "8px 10px",
-                maxHeight: 120,
-                overflowY: "auto",
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "var(--vim-palette-fg, #a08060)",
+                marginBottom: 6,
+                opacity: 0.7,
               }}
             >
-              {stdout}
+              Python
             </div>
-          )}
-          {error && (
             <div
               style={{
-                fontSize: 11,
-                color: "#ff6b6b",
-                marginTop: 4,
-                fontFamily: "monospace",
-                whiteSpace: "pre-wrap",
-                maxHeight: 80,
-                overflowY: "auto",
+                borderRadius: 10,
+                overflow: "hidden",
+                border: `2px solid ${error ? "#c0392b" : "#5a422e"}`,
+                transition: "border-color 0.2s",
               }}
             >
-              {error}
+              <CodeMirror
+                value={code}
+                extensions={cmExtensions}
+                theme={isDark ? oneDark : undefined}
+                onChange={handleCodeChange}
+                indentWithTab
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: false,
+                  tabSize: 4,
+                }}
+              />
             </div>
-          )}
-        </div>
-
-        {/* Right: Map viewer + overlay + HUD */}
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--vim-palette-fg, #a08060)",
-              marginBottom: 6,
-              opacity: 0.7,
-            }}
-          >
-            Click a cell to test
-          </div>
-
-          <div style={{ position: "relative" }}>
-            <GoldMineMapViewer mapState={mapState} joinHudBottom />
-            <GoldMineGridOverlay
-              rows={mapState.rows}
-              cols={mapState.cols}
-              hover={hover}
-              onHover={setHover}
-              onClick={handleCellClick}
-              selected={selected}
-              highlightedKeys={highlighted}
-              cellLabels={highlightedLabels}
-              showHoverLabel={showHoverCoords}
-              cursor="pointer"
-            />
-          </div>
-
-          {/* HUD bar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: HUD_THEME.bg,
-              border: `2px solid ${HUD_THEME.border}`,
-              borderTop: "none",
-              borderRadius: "0 0 10px 10px",
-              padding: "7px 12px",
-              fontFamily: "monospace",
-              fontSize: 11,
-              color: HUD_THEME.text,
-              userSelect: "none",
-              minHeight: 34,
-            }}
-          >
-            {selected ? (
-              <>
-                <span style={{ color: HUD_THEME.muted }}>Cell</span>
-                <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
-                  ({selected.r}, {selected.c})
-                </span>
-                <span style={{ color: HUD_THEME.muted, margin: "0 2px" }}>
-                  →
-                </span>
-                {running ? (
-                  <span style={{ color: HUD_THEME.muted, fontStyle: "italic" }}>
-                    running…
-                  </span>
-                ) : error ? (
-                  <span style={{ color: "#ff6b6b" }}>error</span>
-                ) : (
-                  <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
-                    {highlighted.size} neighbor
-                    {highlighted.size !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span style={{ color: HUD_THEME.muted, fontStyle: "italic" }}>
-                {engineReady
-                  ? "Click any open cell to run neighbors()"
-                  : "Warming up Python engine..."}
-              </span>
+            {stdout && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#d4b896",
+                  marginTop: 8,
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  background: "rgba(8,10,14,0.78)",
+                  border: "1px solid rgba(90,66,46,0.8)",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  maxHeight: 120,
+                  overflowY: "auto",
+                }}
+              >
+                {stdout}
+              </div>
             )}
+            {error && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#ff6b6b",
+                  marginTop: 4,
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  maxHeight: 80,
+                  overflowY: "auto",
+                }}
+              >
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Map viewer + overlay + HUD */}
+          <div>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "var(--vim-palette-fg, #a08060)",
+                marginBottom: 6,
+                opacity: 0.7,
+              }}
+            >
+              Click a cell to test
+            </div>
+
+            <div style={{ position: "relative" }}>
+              <GoldMineMapViewer mapState={mapState} joinHudBottom />
+              <GoldMineGridOverlay
+                rows={mapState.rows}
+                cols={mapState.cols}
+                hover={hover}
+                onHover={setHover}
+                onClick={handleCellClick}
+                selected={selected}
+                highlightedKeys={highlighted}
+                cellLabels={highlightedLabels}
+                showHoverLabel={showHoverCoords}
+                cursor="pointer"
+              />
+            </div>
+
+            {/* HUD bar */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: HUD_THEME.bg,
+                border: `2px solid ${HUD_THEME.border}`,
+                borderTop: "none",
+                borderRadius: "0 0 10px 10px",
+                padding: "7px 12px",
+                fontFamily: "monospace",
+                fontSize: 11,
+                color: HUD_THEME.text,
+                userSelect: "none",
+                minHeight: 34,
+              }}
+            >
+              {selected ? (
+                <>
+                  <span style={{ color: HUD_THEME.muted }}>Cell</span>
+                  <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
+                    ({selected.r}, {selected.c})
+                  </span>
+                  <span style={{ color: HUD_THEME.muted, margin: "0 2px" }}>
+                    →
+                  </span>
+                  {running ? (
+                    <span
+                      style={{ color: HUD_THEME.muted, fontStyle: "italic" }}
+                    >
+                      running…
+                    </span>
+                  ) : error ? (
+                    <span style={{ color: "#ff6b6b" }}>error</span>
+                  ) : (
+                    <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
+                      {highlighted.size} neighbor
+                      {highlighted.size !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span style={{ color: HUD_THEME.muted, fontStyle: "italic" }}>
+                  {engineReady
+                    ? "Click any open cell to run neighbors()"
+                    : "Warming up Python engine..."}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

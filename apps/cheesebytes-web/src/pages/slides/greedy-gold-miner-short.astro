@@ -1,5 +1,6 @@
 ---
 import RevealLayout from "../../layouts/PresentationLayout.astro";
+import { GoldMineSoundExporter } from "../../components/cave/greedy-gold-miner/GoldMineSoundExporter";
 ---
 
 <RevealLayout
@@ -7,6 +8,9 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
   description="Find the richest escape route: the path that collects the most gold before reaching the exit"
   theme="dark"
 >
+  <section>
+    <GoldMineSoundExporter client:only="react" />
+  </section>
   <section>
     <aside class="notes">
       <p>

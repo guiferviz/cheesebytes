@@ -20,6 +20,11 @@ import type { VimModeAPI } from "../../../utils/vim-mode";
 import { posKey } from "../dungeon-escape/types";
 import type { GreedyMineMapState } from "./gold-mine-viewer-shared";
 import {
+  useGoldMineFullscreen,
+  fullscreenRootStyle,
+  fullscreenInnerStyle,
+} from "./useGoldMineFullscreen";
+import {
   buildBorderWalls,
   generateGreedyMineDfsMaze,
 } from "./GreedyGoldMineMapEditor";
@@ -201,19 +206,42 @@ export const GoldMineGridOverlay: React.FC<GoldMineGridOverlayProps> = ({
   rawMap,
   maxWidth = 600,
 }) => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const mapState = useMemo(() => parseRawMap(rawMap), [rawMap]);
   const [hover, setHover] = useState<Pos | null>(null);
+  const { isFullscreen, toggleFullscreen } = useGoldMineFullscreen(rootRef);
 
   return (
-    <div style={{ maxWidth, margin: "2rem auto", userSelect: "none" }}>
-      <div style={{ position: "relative" }}>
-        <GoldMineMapViewer mapState={mapState} maxWidth={maxWidth} />
-        <GoldMineGridLayer
-          rows={mapState.rows}
-          cols={mapState.cols}
-          hover={hover}
-          onHover={setHover}
-        />
+    <div
+      ref={rootRef}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "f" && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          toggleFullscreen();
+        }
+      }}
+      style={{ ...fullscreenRootStyle(isFullscreen), outline: "none" }}
+    >
+      <div
+        style={{
+          ...fullscreenInnerStyle(isFullscreen, maxWidth),
+          margin: "2rem auto",
+          userSelect: "none",
+        }}
+      >
+        <div style={{ position: "relative" }}>
+          <GoldMineMapViewer
+            mapState={mapState}
+            maxWidth={isFullscreen ? undefined : maxWidth}
+          />
+          <GoldMineGridLayer
+            rows={mapState.rows}
+            cols={mapState.cols}
+            hover={hover}
+            onHover={setHover}
+          />
+        </div>
       </div>
     </div>
   );
@@ -256,7 +284,9 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
   rawMap,
   maxWidth = 900,
 }) => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const editorRootRef = useRef<HTMLDivElement>(null);
+  const { isFullscreen, toggleFullscreen } = useGoldMineFullscreen(rootRef);
   const [mapState, setMapState] = useState(() => parseRawMap(rawMap));
   const mapStateRef = useRef(mapState);
   const [code, setCode] = useState(() => toPythonCode(rawMap));
@@ -491,6 +521,11 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
                 run: runAndKeepFocus(() => resizeRows(1)),
               },
               {
+                key: "f",
+                label: "Toggle fullscreen",
+                run: runAndKeepFocus(() => toggleFullscreen()),
+              },
+              {
                 key: "escape",
                 label: "Exit map controls",
                 run: () => root.blur(),
@@ -541,150 +576,157 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
       root.removeEventListener("focusout", syncMode);
       getVimMode()?.popMode("gold-mine-map-editor");
     };
-  }, [applyRandomMaze, resizeCols, resizeRows]);
+  }, [applyRandomMaze, resizeCols, resizeRows, toggleFullscreen]);
 
   return (
-    <div style={{ maxWidth, margin: "2rem auto" }}>
+    <div ref={rootRef} style={{ ...fullscreenRootStyle(isFullscreen) }}>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          alignItems: "start",
+          ...fullscreenInnerStyle(isFullscreen, maxWidth),
+          margin: "2rem auto",
         }}
       >
-        {/* Left: CodeMirror editor */}
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--vim-palette-fg, #a08060)",
-              marginBottom: 6,
-              opacity: 0.7,
-            }}
-          >
-            Python representation
-          </div>
-          <div
-            style={{
-              borderRadius: 10,
-              overflow: "hidden",
-              border: `2px solid ${codeError ? "#c0392b" : "#5a422e"}`,
-              transition: "border-color 0.2s",
-            }}
-          >
-            <CodeMirror
-              value={code}
-              extensions={cmExtensions}
-              theme={isDark ? oneDark : undefined}
-              onChange={handleCodeChange}
-              indentWithTab
-              basicSetup={{
-                lineNumbers: true,
-                foldGutter: false,
-                tabSize: 4,
-              }}
-            />
-          </div>
-          {codeError && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            alignItems: "start",
+          }}
+        >
+          {/* Left: CodeMirror editor */}
+          <div>
             <div
-              style={{
-                fontSize: 11,
-                color: "#ff6b6b",
-                marginTop: 4,
-                fontFamily: "monospace",
-              }}
-            >
-              {codeError}
-            </div>
-          )}
-        </div>
-
-        {/* Right: visual editor */}
-        <div ref={editorRootRef} tabIndex={0} style={{ outline: "none" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 6,
-            }}
-          >
-            <span
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
                 color: "var(--vim-palette-fg, #a08060)",
+                marginBottom: 6,
                 opacity: 0.7,
               }}
             >
-              Visual representation
-            </span>
+              Python representation
+            </div>
+            <div
+              style={{
+                borderRadius: 10,
+                overflow: "hidden",
+                border: `2px solid ${codeError ? "#c0392b" : "#5a422e"}`,
+                transition: "border-color 0.2s",
+              }}
+            >
+              <CodeMirror
+                value={code}
+                extensions={cmExtensions}
+                theme={isDark ? oneDark : undefined}
+                onChange={handleCodeChange}
+                indentWithTab
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: false,
+                  tabSize: 4,
+                }}
+              />
+            </div>
+            {codeError && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#ff6b6b",
+                  marginTop: 4,
+                  fontFamily: "monospace",
+                }}
+              >
+                {codeError}
+              </div>
+            )}
           </div>
 
-          <div style={{ position: "relative" }}>
-            <GoldMineMapViewer mapState={mapState} joinHudBottom />
-            <GoldMineGridLayer
-              rows={mapState.rows}
-              cols={mapState.cols}
-              hover={hover}
-              onHover={setHover}
-              onClick={handleCellClick}
-              onDrag={handleCellDrag}
-              showHoverLabel={showHoverCoords}
-              cursor={mode === "wall" ? "pointer" : "crosshair"}
-            />
-          </div>
+          {/* Right: visual editor */}
+          <div ref={editorRootRef} tabIndex={0} style={{ outline: "none" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 6,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "var(--vim-palette-fg, #a08060)",
+                  opacity: 0.7,
+                }}
+              >
+                Visual representation
+              </span>
+            </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: HUD_THEME.bg,
-              border: `2px solid ${HUD_THEME.border}`,
-              borderTop: "none",
-              borderRadius: "0 0 10px 10px",
-              padding: "7px 12px",
-              fontFamily: "monospace",
-              fontSize: 11,
-              color: HUD_THEME.text,
-              userSelect: "none",
-              minHeight: 34,
-            }}
-          >
-            <EditorHudButton
-              active={mode === "wall"}
-              onClick={() => setMode("wall")}
-              title="Toggle walls mode [W]"
+            <div style={{ position: "relative" }}>
+              <GoldMineMapViewer mapState={mapState} joinHudBottom />
+              <GoldMineGridLayer
+                rows={mapState.rows}
+                cols={mapState.cols}
+                hover={hover}
+                onHover={setHover}
+                onClick={handleCellClick}
+                onDrag={handleCellDrag}
+                showHoverLabel={showHoverCoords}
+                cursor={mode === "wall" ? "pointer" : "crosshair"}
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: HUD_THEME.bg,
+                border: `2px solid ${HUD_THEME.border}`,
+                borderTop: "none",
+                borderRadius: "0 0 10px 10px",
+                padding: "7px 12px",
+                fontFamily: "monospace",
+                fontSize: 11,
+                color: HUD_THEME.text,
+                userSelect: "none",
+                minHeight: 34,
+              }}
             >
-              <ShortcutLabel hotkey="W" label="alls" />
-            </EditorHudButton>
-            <EditorHudButton
-              active={mode === "start"}
-              onClick={() => setMode("start")}
-              title="Place start mode [S]"
-            >
-              <ShortcutLabel hotkey="S" label="tart" />
-            </EditorHudButton>
-            <EditorHudButton
-              active={mode === "exit"}
-              onClick={() => setMode("exit")}
-              title="Place exit mode [E]"
-            >
-              <ShortcutLabel hotkey="E" label="xit" />
-            </EditorHudButton>
-            <EditorHudButton
-              onClick={applyRandomMaze}
-              title="Generate random DFS maze with 5% extra openings [R]"
-            >
-              <ShortcutLabel hotkey="R" label="andom" />
-            </EditorHudButton>
+              <EditorHudButton
+                active={mode === "wall"}
+                onClick={() => setMode("wall")}
+                title="Toggle walls mode [W]"
+              >
+                <ShortcutLabel hotkey="W" label="alls" />
+              </EditorHudButton>
+              <EditorHudButton
+                active={mode === "start"}
+                onClick={() => setMode("start")}
+                title="Place start mode [S]"
+              >
+                <ShortcutLabel hotkey="S" label="tart" />
+              </EditorHudButton>
+              <EditorHudButton
+                active={mode === "exit"}
+                onClick={() => setMode("exit")}
+                title="Place exit mode [E]"
+              >
+                <ShortcutLabel hotkey="E" label="xit" />
+              </EditorHudButton>
+              <EditorHudButton
+                onClick={applyRandomMaze}
+                title="Generate random DFS maze with 5% extra openings [R]"
+              >
+                <ShortcutLabel hotkey="R" label="andom" />
+              </EditorHudButton>
+            </div>
           </div>
         </div>
       </div>

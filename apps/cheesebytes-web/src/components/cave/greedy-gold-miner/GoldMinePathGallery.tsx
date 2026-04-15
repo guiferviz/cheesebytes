@@ -4,6 +4,7 @@ import { CheeseSlideContainer } from "../shared";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
 import { enumerateEscapePaths, parseRawMap } from "./gold-mine-viewer-shared";
 import { mediumMap } from "./maps";
+import { useGoldMineFullscreen } from "./useGoldMineFullscreen";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -23,6 +24,7 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const wheelAccum = useRef(0);
+  const { toggleFullscreen } = useGoldMineFullscreen(containerRef);
 
   useEffect(() => {
     setSelectedIndex((current) =>
@@ -85,6 +87,11 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
               run: () => moveSelection(-1),
             },
             {
+              key: "f",
+              label: "Toggle fullscreen",
+              run: () => toggleFullscreen(),
+            },
+            {
               key: "escape",
               label: "Exit path controls",
               run: () => root.blur(),
@@ -117,7 +124,7 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
       root.removeEventListener("focusout", syncMode);
       getVimMode()?.popMode("gold-mine-path-gallery");
     };
-  }, [paths.length]);
+  }, [paths.length, toggleFullscreen]);
 
   useEffect(() => {
     const mapArea = mapAreaRef.current;

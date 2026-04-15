@@ -10,6 +10,11 @@ import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
 import pyodideWorkerContext from "../../../utils/pyodideWorkerContext";
 import {
+  useGoldMineFullscreen,
+  fullscreenRootStyle,
+  fullscreenInnerStyle,
+} from "./useGoldMineFullscreen";
+import {
   getArticleMapPython,
   getArticleMarkersPython,
   setArticleMarkersPython,
@@ -62,7 +67,9 @@ export interface GoldMineMarkersProps {
 export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
   maxWidth = 900,
 }) => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const mapState = useArticleMap();
+  const { isFullscreen, toggleFullscreen } = useGoldMineFullscreen(rootRef);
   const [code, setCode] = useState(() => getArticleMarkersPython());
   const [stdout, setStdout] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -167,169 +174,193 @@ export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
   }, [end]);
 
   return (
-    <div style={{ maxWidth, margin: "2rem auto" }}>
+    <div
+      ref={rootRef}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (
+          e.key === "f" &&
+          !e.metaKey &&
+          !e.ctrlKey &&
+          !(e.target instanceof HTMLTextAreaElement) &&
+          !(e.target instanceof HTMLInputElement) &&
+          !(e.target as HTMLElement)?.closest?.(".cm-editor")
+        ) {
+          e.preventDefault();
+          toggleFullscreen();
+        }
+      }}
+      style={{ ...fullscreenRootStyle(isFullscreen), outline: "none" }}
+    >
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          alignItems: "start",
+          ...fullscreenInnerStyle(isFullscreen, maxWidth),
+          margin: "2rem auto",
         }}
       >
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--vim-palette-fg, #a08060)",
-              marginBottom: 6,
-              opacity: 0.7,
-            }}
-          >
-            Python
-          </div>
-          <div
-            style={{
-              borderRadius: 10,
-              overflow: "hidden",
-              border: `2px solid ${error ? "#c0392b" : "#5a422e"}`,
-              transition: "border-color 0.2s",
-            }}
-          >
-            <CodeMirror
-              value={code}
-              extensions={cmExtensions}
-              theme={isDark ? oneDark : undefined}
-              onChange={handleCodeChange}
-              indentWithTab
-              basicSetup={{
-                lineNumbers: true,
-                foldGutter: false,
-                tabSize: 4,
-              }}
-            />
-          </div>
-          {stdout && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            alignItems: "start",
+          }}
+        >
+          <div>
             <div
               style={{
-                fontSize: 11,
-                color: "#d4b896",
-                marginTop: 8,
-                fontFamily: "monospace",
-                whiteSpace: "pre-wrap",
-                background: "rgba(8,10,14,0.78)",
-                border: "1px solid rgba(90,66,46,0.8)",
-                borderRadius: 8,
-                padding: "8px 10px",
-                maxHeight: 120,
-                overflowY: "auto",
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "var(--vim-palette-fg, #a08060)",
+                marginBottom: 6,
+                opacity: 0.7,
               }}
             >
-              {stdout}
+              Python
             </div>
-          )}
-          {error && (
             <div
               style={{
-                fontSize: 11,
-                color: "#ff6b6b",
-                marginTop: 4,
-                fontFamily: "monospace",
-                whiteSpace: "pre-wrap",
-                maxHeight: 80,
-                overflowY: "auto",
+                borderRadius: 10,
+                overflow: "hidden",
+                border: `2px solid ${error ? "#c0392b" : "#5a422e"}`,
+                transition: "border-color 0.2s",
               }}
             >
-              {error}
+              <CodeMirror
+                value={code}
+                extensions={cmExtensions}
+                theme={isDark ? oneDark : undefined}
+                onChange={handleCodeChange}
+                indentWithTab
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: false,
+                  tabSize: 4,
+                }}
+              />
             </div>
-          )}
-        </div>
-
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--vim-palette-fg, #a08060)",
-              marginBottom: 6,
-              opacity: 0.7,
-            }}
-          >
-            Resolved constants
+            {stdout && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#d4b896",
+                  marginTop: 8,
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  background: "rgba(8,10,14,0.78)",
+                  border: "1px solid rgba(90,66,46,0.8)",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  maxHeight: 120,
+                  overflowY: "auto",
+                }}
+              >
+                {stdout}
+              </div>
+            )}
+            {error && (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#ff6b6b",
+                  marginTop: 4,
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  maxHeight: 80,
+                  overflowY: "auto",
+                }}
+              >
+                {error}
+              </div>
+            )}
           </div>
 
-          <div
-            style={{
-              borderRadius: "10px 10px 0 0",
-              border: `2px solid ${HUD_THEME.border}`,
-              background:
-                "radial-gradient(circle at top left, rgba(246,189,96,0.12), transparent 45%), rgba(20,14,10,0.85)",
-              padding: "18px 20px",
-              display: "grid",
-              gap: 12,
-              minHeight: 160,
-            }}
-          >
+          <div>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "var(--vim-palette-fg, #a08060)",
+                marginBottom: 6,
+                opacity: 0.7,
+              }}
+            >
+              Resolved constants
+            </div>
+
+            <div
+              style={{
+                borderRadius: "10px 10px 0 0",
+                border: `2px solid ${HUD_THEME.border}`,
+                background:
+                  "radial-gradient(circle at top left, rgba(246,189,96,0.12), transparent 45%), rgba(20,14,10,0.85)",
+                padding: "18px 20px",
+                display: "grid",
+                gap: 12,
+                minHeight: 160,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 10,
+                  fontFamily: "monospace",
+                  fontSize: 16,
+                }}
+              >
+                <span style={{ color: HUD_THEME.muted }}>START =</span>
+                <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
+                  {startLabel}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 10,
+                  fontFamily: "monospace",
+                  fontSize: 16,
+                }}
+              >
+                <span style={{ color: HUD_THEME.muted }}>END =</span>
+                <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
+                  {endLabel}
+                </span>
+              </div>
+            </div>
+
             <div
               style={{
                 display: "flex",
-                alignItems: "baseline",
+                alignItems: "center",
                 gap: 10,
+                background: HUD_THEME.bg,
+                border: `2px solid ${HUD_THEME.border}`,
+                borderTop: "none",
+                borderRadius: "0 0 10px 10px",
+                padding: "7px 12px",
                 fontFamily: "monospace",
-                fontSize: 16,
+                fontSize: 11,
+                color: HUD_THEME.text,
+                userSelect: "none",
+                minHeight: 34,
               }}
             >
-              <span style={{ color: HUD_THEME.muted }}>START =</span>
-              <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
-                {startLabel}
+              <span style={{ color: HUD_THEME.muted }}>
+                {!engineReady
+                  ? "Warming up Python engine..."
+                  : running
+                    ? "Running Python..."
+                    : error
+                      ? "Python returned an error"
+                      : "START and END are computed from the code on the left"}
               </span>
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 10,
-                fontFamily: "monospace",
-                fontSize: 16,
-              }}
-            >
-              <span style={{ color: HUD_THEME.muted }}>END =</span>
-              <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
-                {endLabel}
-              </span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: HUD_THEME.bg,
-              border: `2px solid ${HUD_THEME.border}`,
-              borderTop: "none",
-              borderRadius: "0 0 10px 10px",
-              padding: "7px 12px",
-              fontFamily: "monospace",
-              fontSize: 11,
-              color: HUD_THEME.text,
-              userSelect: "none",
-              minHeight: 34,
-            }}
-          >
-            <span style={{ color: HUD_THEME.muted }}>
-              {!engineReady
-                ? "Warming up Python engine..."
-                : running
-                  ? "Running Python..."
-                  : error
-                    ? "Python returned an error"
-                    : "START and END are computed from the code on the left"}
-            </span>
           </div>
         </div>
       </div>
