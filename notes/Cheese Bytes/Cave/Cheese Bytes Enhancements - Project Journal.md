@@ -1,4 +1,5 @@
-[[Cheese Bytes]] is already live! I just need to continue working on it to add the missing parts I want to include.
+[[Cheese Bytes]] is already live! I just need to continue working on it to add
+the missing parts I want to include.
 
 - [ ] Expandable callouts.
 - [ ] Ranking using fresh/medium/old cheeses.
