@@ -5,8 +5,8 @@ This page is a small map of that second layer.
 
 Start here if you want foundations:
 
-- [[Algorithm]]
 - [[Adaptive Sorting Algorithms]]
+- [[Algorithm]]
 - [[Brian Kernighan's Algorithm]]
 - [[Majority Vote Algorithm]]
 

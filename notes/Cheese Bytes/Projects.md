@@ -7,30 +7,22 @@ question unfolding into many ideas, ideas that lead to experiments, experiments
 that grow into a system that slowly gains shape and structure. In the end, every
 project yields distilled knowledge that makes the effort worthwhile.
 
-# Outgoing Projects
-
-- [[What Is a Cheese Byte|Cheese Bytes]]: My personal knowledge base of
-  programming notes, projects, and problems. Never complete, always evolving.
-- [[My Own Logical Computer]]: A simple, Turing-complete computer simulated on
-  [[My Own Logic Circuit Simulator]].
-
 # Completed Projects
 
 - April 2025 - [[Publishing Obsidian Notes in Astro]]: The birth of Cheese
   Bytes.
 
+# Outgoing Projects
+
+- [[How to Escape With the Most Gold]]: A path-finding problem with a twist.
+  Find the longest path in a grid, where every step collects gold and collapses
+  the tunnel behind you. The goal is to maximize the amount of gold collected
+  while escaping the mine.
+- [[What Is a Cheese Byte|Cheese Bytes]]: My personal knowledge base of
+  programming notes, projects, and problems. Never complete, always evolving.
+- [[My Own Logical Computer]]: A simple, Turing-complete computer simulated on
+  [[My Own Logic Circuit Simulator]].
+
 # Pending Projects and Ideas
 
-See [[The Three E's of Project Selection]] to better understand how I choose in
-which projects to invest my time.
-
-| Project                                                         | ✨ Excitement | 🌍 Effect | 💪 Effort |
-| --------------------------------------------------------------- | ------------- | --------- | --------- |
-| [[Solving Sudokus with Reasoning Networks]]                     | 3             | 3         | 2         |
-| Cheese Bytes YouTube channels                                   | 3             | 3         | 3         |
-| [[Simon Says Webcam Game]]                                      | 2             | 2         | 1         |
-| Solve exact cover problems using backtracking and dancing links | 3             | 2         | 3         |
-| Guiferviz monorepo with project templates                       | 1             | 1         | 1         |
-| Sisifo: A builder for my monorepo                               | 1             | 1         | 3         |
-| My own PKM implemented in a VSCode extension                    | 2             | 1         | 2         |
-| [[Automatic Video Editing with AI]]                             | 2             | 2         | 1         |
+Too many! I'm not going to list them here.
