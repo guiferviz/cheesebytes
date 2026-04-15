@@ -1,6 +1,5 @@
 ---
 import { getCollection } from "astro:content";
-import { normalizePathParts } from "../content.config";
 
 type FileNode = {
   name: string;
@@ -24,6 +23,7 @@ const topLevelOrder: string[] = [
   "projects",
   "programming-problems",
   "algorithms-and-concepts",
+  "tools-and-technologies",
   "what-is-a-cheese-byte",
   "cave-graph", // manual page (not a note)
   "/cave", // The Cheese Cave folder
