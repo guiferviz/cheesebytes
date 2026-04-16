@@ -80,6 +80,60 @@ html {
   text-size-adjust: none !important;
 }
 
+:root {
+  --goldmine-fullscreen-bg: #fefce8;
+  --goldmine-viewer-bg: #fff7ed;
+  --goldmine-viewer-border: #caa26b;
+  --goldmine-viewer-shadow: 0 12px 30px rgba(120, 84, 28, 0.12);
+  --goldmine-path-text: #9a6b2f;
+  --goldmine-path-strong: #7c4a03;
+  --goldmine-path-muted: rgba(124, 74, 3, 0.55);
+  --goldmine-chip-bg: rgba(255, 248, 235, 0.92);
+  --goldmine-chip-border: rgba(180, 120, 60, 0.22);
+  --goldmine-chip-text: #7c4a03;
+  /* HUD bar (buttons, speed, status) */
+  --goldmine-hud-bg: linear-gradient(180deg, #e8dfd2, #d8ccb8);
+  --goldmine-hud-border: #b8a88e;
+  --goldmine-hud-text: #4a3a28;
+  --goldmine-hud-muted: #8a7a60;
+  --goldmine-hud-accent: #996515;
+  --goldmine-hud-btn-bg: rgba(0, 0, 0, 0.06);
+  --goldmine-hud-active-bg: rgba(46, 139, 87, 0.15);
+  --goldmine-hud-active-text: #2e7d52;
+  /* Resolved-constants panel (markers) */
+  --goldmine-panel-bg: radial-gradient(circle at top left, rgba(180, 140, 60, 0.10), transparent 45%), rgba(245, 240, 230, 0.92);
+  --goldmine-label-fg: #6a5430;
+  --goldmine-error-fg: #c0392b;
+  --goldmine-stdout-fg: #5a4a30;
+}
+
+.dark {
+  --goldmine-fullscreen-bg: #000000;
+  --goldmine-viewer-bg: #05070a;
+  --goldmine-viewer-border: #5a422e;
+  --goldmine-viewer-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+  --goldmine-path-text: #c4a882;
+  --goldmine-path-strong: #e8d5b7;
+  --goldmine-path-muted: rgba(180, 160, 130, 0.5);
+  --goldmine-chip-bg: rgba(30, 27, 22, 0.7);
+  --goldmine-chip-border: rgba(180, 155, 120, 0.12);
+  --goldmine-chip-text: #dac9a8;
+  /* HUD bar */
+  --goldmine-hud-bg: linear-gradient(180deg, #3a2a1a, #2a1c10);
+  --goldmine-hud-border: #5a422e;
+  --goldmine-hud-text: #d4b896;
+  --goldmine-hud-muted: #a08060;
+  --goldmine-hud-accent: #f6bd60;
+  --goldmine-hud-btn-bg: rgba(0, 0, 0, 0.22);
+  --goldmine-hud-active-bg: rgba(128, 237, 153, 0.15);
+  --goldmine-hud-active-text: #b8d4a0;
+  /* Resolved-constants panel */
+  --goldmine-panel-bg: radial-gradient(circle at top left, rgba(246, 189, 96, 0.12), transparent 45%), rgba(20, 14, 10, 0.85);
+  --goldmine-label-fg: #a08060;
+  --goldmine-error-fg: #ff6b6b;
+  --goldmine-stdout-fg: #d4b896;
+}
+
 body {
   font-family: 'IosevkaTermSlab Nerd Font Mono', monospace;
 }

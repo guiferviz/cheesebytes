@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Pos } from "../dungeon-escape/types";
 import type { GreedyMineMapState } from "./gold-mine-viewer-shared";
 import {
@@ -40,10 +40,28 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
   const mapStateRef = useRef(mapState);
   const pathRef = useRef(pathCells);
   const showGoldSpecksRef = useRef(showGoldSpecks);
+  const [isDark, setIsDark] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      document.documentElement.classList.contains("dark"),
+  );
 
   mapStateRef.current = mapState;
   pathRef.current = pathCells;
   showGoldSpecksRef.current = showGoldSpecks;
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const worldWidth = useMemo(() => mapState.cols * 2 * TS, [mapState.cols]);
   const worldHeight = useMemo(() => mapState.rows * 2 * TS, [mapState.rows]);
@@ -51,6 +69,7 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
     () => mapState.cols / mapState.rows,
     [mapState.cols, mapState.rows],
   );
+  const viewerBackgroundColor = isDark ? "#05070a" : "#fff7ed";
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -212,7 +231,7 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
         parent: containerRef.current,
         width: worldWidth,
         height: worldHeight,
-        backgroundColor: "#05070a",
+        backgroundColor: viewerBackgroundColor,
         scene: MineMapScene,
         scale: { mode: Phaser.Scale.NONE },
         render: { pixelArt: true, antialias: false, roundPixels: true },
@@ -227,7 +246,7 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
       sceneRef.current = null;
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, [worldHeight, worldWidth]);
+  }, [viewerBackgroundColor, worldHeight, worldWidth]);
 
   useEffect(() => {
     sceneRef.current?.renderMap(mapState);
@@ -263,10 +282,13 @@ export const GoldMineMapViewer: React.FC<GoldMineMapViewerProps> = ({
             aspectRatio: height ? undefined : `${aspect}`,
             overflow: "hidden",
             borderRadius: joinHudBottom ? "10px 10px 0 0" : 12,
-            border: "2px solid #5a422e",
-            borderBottom: joinHudBottom ? "none" : "2px solid #5a422e",
-            background: "#05070a",
-            boxShadow: "0 12px 30px rgba(0, 0, 0, 0.28)",
+            border: "2px solid var(--goldmine-viewer-border, #5a422e)",
+            borderBottom: joinHudBottom
+              ? "none"
+              : "2px solid var(--goldmine-viewer-border, #5a422e)",
+            background: "var(--goldmine-viewer-bg, #05070a)",
+            boxShadow:
+              "var(--goldmine-viewer-shadow, 0 12px 30px rgba(0, 0, 0, 0.28))",
             boxSizing: "border-box",
             marginBottom: joinHudBottom ? 0 : 2,
           }}

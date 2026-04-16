@@ -38,14 +38,14 @@ interface ReplayFrame {
 }
 
 const HUD_THEME = {
-  bg: "linear-gradient(180deg,#3a2a1a,#2a1c10)",
-  border: "#5a422e",
-  text: "#d4b896",
-  muted: "#a08060",
-  accent: "#f6bd60",
-  activeBg: "rgba(128,237,153,0.15)",
-  activeText: "#b8d4a0",
-  btnBg: "rgba(0,0,0,0.22)",
+  bg: "var(--goldmine-hud-bg)",
+  border: "var(--goldmine-hud-border)",
+  text: "var(--goldmine-hud-text)",
+  muted: "var(--goldmine-hud-muted)",
+  accent: "var(--goldmine-hud-accent)",
+  activeBg: "var(--goldmine-hud-active-bg)",
+  activeText: "var(--goldmine-hud-active-text)",
+  btnBg: "var(--goldmine-hud-btn-bg)",
 };
 
 const cmSmallFont = EditorView.theme({
@@ -57,7 +57,7 @@ const cmSmallFont = EditorView.theme({
   ".cm-gutters": { fontSize: "10px" },
 });
 
-const cmExtensions = [python(), cmSmallFont];
+const cmExtensions = [python(), EditorView.lineWrapping, cmSmallFont];
 const DEFAULT_STEP_DELAY_MS = 220;
 const MIN_STEP_DELAY_MS = 1;
 const MAX_STEP_DELAY_MS = 1000;
@@ -772,19 +772,19 @@ export const GoldMineReplayExplorer: React.FC<GoldMineReplayExplorerProps> = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: 16,
             alignItems: "start",
           }}
         >
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                color: "var(--vim-palette-fg, #a08060)",
+                color: "var(--goldmine-label-fg)",
                 marginBottom: 6,
                 opacity: 0.7,
               }}
@@ -795,7 +795,7 @@ export const GoldMineReplayExplorer: React.FC<GoldMineReplayExplorerProps> = ({
               style={{
                 borderRadius: 10,
                 overflow: "hidden",
-                border: `2px solid ${error ? "#c0392b" : "#5a422e"}`,
+                border: `2px solid ${error ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
                 transition: "border-color 0.2s",
               }}
             >
@@ -816,12 +816,12 @@ export const GoldMineReplayExplorer: React.FC<GoldMineReplayExplorerProps> = ({
               <div
                 style={{
                   fontSize: 11,
-                  color: "#d4b896",
+                  color: "var(--goldmine-stdout-fg)",
                   marginTop: 8,
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
-                  background: "rgba(8,10,14,0.78)",
-                  border: "1px solid rgba(90,66,46,0.8)",
+                  background: "var(--goldmine-hud-btn-bg)",
+                  border: `1px solid var(--goldmine-hud-border)`,
                   borderRadius: 8,
                   padding: "8px 10px",
                   maxHeight: 140,
@@ -835,7 +835,7 @@ export const GoldMineReplayExplorer: React.FC<GoldMineReplayExplorerProps> = ({
               <div
                 style={{
                   fontSize: 11,
-                  color: "#ff6b6b",
+                  color: "var(--goldmine-error-fg)",
                   marginTop: 8,
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
@@ -848,14 +848,18 @@ export const GoldMineReplayExplorer: React.FC<GoldMineReplayExplorerProps> = ({
             )}
           </div>
 
-          <div ref={viewerRootRef} tabIndex={0} style={{ outline: "none" }}>
+          <div
+            ref={viewerRootRef}
+            tabIndex={0}
+            style={{ outline: "none", minWidth: 0 }}
+          >
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                color: "var(--vim-palette-fg, #a08060)",
+                color: "var(--goldmine-label-fg)",
                 marginBottom: 6,
                 opacity: 0.7,
               }}

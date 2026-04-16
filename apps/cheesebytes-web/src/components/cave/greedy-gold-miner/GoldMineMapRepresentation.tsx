@@ -259,14 +259,14 @@ export interface GoldMineMapCodeEditorProps {
 type ClickMode = "wall" | "start" | "exit";
 
 const HUD_THEME = {
-  bg: "linear-gradient(180deg,#3a2a1a,#2a1c10)",
-  border: "#5a422e",
-  text: "#d4b896",
-  muted: "#a08060",
-  accent: "#f6bd60",
-  activeBg: "rgba(128,237,153,0.15)",
-  activeText: "#b8d4a0",
-  btnBg: "rgba(0,0,0,0.22)",
+  bg: "var(--goldmine-hud-bg)",
+  border: "var(--goldmine-hud-border)",
+  text: "var(--goldmine-hud-text)",
+  muted: "var(--goldmine-hud-muted)",
+  accent: "var(--goldmine-hud-accent)",
+  activeBg: "var(--goldmine-hud-active-bg)",
+  activeText: "var(--goldmine-hud-active-text)",
+  btnBg: "var(--goldmine-hud-btn-bg)",
 };
 
 const cmSmallFont = EditorView.theme({
@@ -278,7 +278,7 @@ const cmSmallFont = EditorView.theme({
   ".cm-gutters": { fontSize: "10px" },
 });
 
-const cmExtensions = [python(), cmSmallFont];
+const cmExtensions = [python(), EditorView.lineWrapping, cmSmallFont];
 
 export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
   rawMap,
@@ -589,20 +589,20 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: 16,
             alignItems: "start",
           }}
         >
           {/* Left: CodeMirror editor */}
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                color: "var(--vim-palette-fg, #a08060)",
+                color: "var(--goldmine-label-fg)",
                 marginBottom: 6,
                 opacity: 0.7,
               }}
@@ -613,7 +613,7 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
               style={{
                 borderRadius: 10,
                 overflow: "hidden",
-                border: `2px solid ${codeError ? "#c0392b" : "#5a422e"}`,
+                border: `2px solid ${codeError ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
                 transition: "border-color 0.2s",
               }}
             >
@@ -634,7 +634,7 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
               <div
                 style={{
                   fontSize: 11,
-                  color: "#ff6b6b",
+                  color: "var(--goldmine-error-fg)",
                   marginTop: 4,
                   fontFamily: "monospace",
                 }}
@@ -645,7 +645,11 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
           </div>
 
           {/* Right: visual editor */}
-          <div ref={editorRootRef} tabIndex={0} style={{ outline: "none" }}>
+          <div
+            ref={editorRootRef}
+            tabIndex={0}
+            style={{ outline: "none", minWidth: 0 }}
+          >
             <div
               style={{
                 display: "flex",
@@ -660,7 +664,7 @@ export const GoldMineMapCodeEditor: React.FC<GoldMineMapCodeEditorProps> = ({
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.1em",
-                  color: "var(--vim-palette-fg, #a08060)",
+                  color: "var(--goldmine-label-fg)",
                   opacity: 0.7,
                 }}
               >

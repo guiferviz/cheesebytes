@@ -412,6 +412,8 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
   const moveRef = useRef<((d: Dir) => void) | null>(null);
   const zoomRef = useRef<(() => void) | null>(null);
   const undoRef = useRef<(() => void) | null>(null);
+  const isDarkRef = useRef(isDark);
+  isDarkRef.current = isDark;
   const armedRef = useRef(false);
   const viewportVisibleRef = useRef(true);
   const sfxRef = useRef(true);
@@ -814,7 +816,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         create() {
           const cam = this.cameras.main;
           cam.setBounds(0, 0, WW, WH);
-          cam.setBackgroundColor("#05070a");
+          cam.setBackgroundColor(isDarkRef.current ? "#05070a" : "#d0c8b8");
           cam.roundPixels = false;
           cam.centerOn(WW / 2, WH / 2);
 
@@ -881,7 +883,8 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         renderCell(r: number, c: number, b: Blocked) {
           const x = c * 2 * TS,
             y = r * 2 * TS;
-          this.ft.fill(0x05070a, 1, x, y, TS * 2, TS * 2);
+          const bgFill = isDarkRef.current ? 0x05070a : 0xd0c8b8;
+          this.ft.fill(bgFill, 1, x, y, TS * 2, TS * 2);
           if (WALLS.has(pk(r, c)) || this.collapsed.has(pk(r, c))) return;
           this.ft.drawFrame("terrain", tTL(r, c, b), x, y);
           this.ft.drawFrame("terrain", tTR(r, c, b), x + TS, y);
@@ -908,12 +911,13 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
               specks.forEach((s: { setDepth: (d: number) => void }) =>
                 s.setDepth(3),
               );
+              const overlayColor = isDarkRef.current ? 0x040608 : 0xa09080;
               const overlay = this.add.rectangle(
                 x,
                 y,
                 TS * 2,
                 TS * 2,
-                0x040608,
+                overlayColor,
                 0.92,
               );
               overlay.setDepth(4);
@@ -1207,8 +1211,9 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         collapse(pos: Pos) {
           const k = pk(pos.r, pos.c);
           this.collapsed.add(k);
+          const bgFill = isDarkRef.current ? 0x05070a : 0xd0c8b8;
           this.ft.fill(
-            0x05070a,
+            bgFill,
             1,
             pos.c * 2 * TS,
             pos.r * 2 * TS,
@@ -1278,7 +1283,7 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
         parent: containerRef.current,
         width: WW,
         height: WH,
-        backgroundColor: "#05070a",
+        backgroundColor: isDarkRef.current ? "#05070a" : "#d0c8b8",
         scene: Scene,
         scale: { mode: Phaser.Scale.NONE },
         render: { pixelArt: true, antialias: true, roundPixels: false },
@@ -1294,6 +1299,17 @@ export const GoldMineDemo: React.FC<GoldMineDemoProps> = ({
       gameRef.current = null;
     };
   }, [runId, ROWS, COLS, WALLS, START, EXIT, WW, WH]);
+
+  // Update Phaser camera background + re-render floor on theme change
+  useEffect(() => {
+    const scene = gameRef.current?.scene?.scenes?.[0];
+    if (scene) {
+      scene.cameras.main.setBackgroundColor(th.frameBg);
+      if (typeof scene.renderFloor === "function") {
+        scene.renderFloor();
+      }
+    }
+  }, [isDark, th.frameBg]);
 
   const statusText =
     status === "won"

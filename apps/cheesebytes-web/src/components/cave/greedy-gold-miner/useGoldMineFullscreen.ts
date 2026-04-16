@@ -69,11 +69,13 @@ export function fullscreenRootStyle(
 ): React.CSSProperties {
   if (!isFullscreen) return {};
   return {
-    background: "var(--color-bg, #1a1a2e)",
+    background: "var(--goldmine-fullscreen-bg, #fefce8)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
+    width: "100%",
+    height: "100%",
     boxSizing: "border-box" as const,
     overflow: "auto",
   };

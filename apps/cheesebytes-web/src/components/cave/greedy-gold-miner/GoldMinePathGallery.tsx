@@ -4,10 +4,28 @@ import { CheeseSlideContainer } from "../shared";
 import { GoldMineMapViewer } from "./GoldMineMapViewer";
 import { enumerateEscapePaths, parseRawMap } from "./gold-mine-viewer-shared";
 import { mediumMap } from "./maps";
-import { useGoldMineFullscreen } from "./useGoldMineFullscreen";
+import {
+  fullscreenInnerStyle,
+  fullscreenRootStyle,
+  useGoldMineFullscreen,
+} from "./useGoldMineFullscreen";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function arrowButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    background: "none",
+    border: "none",
+    padding: "0 2px",
+    cursor: disabled ? "default" : "pointer",
+    color: "var(--goldmine-path-muted)",
+    opacity: disabled ? 0.35 : 1,
+    fontSize: 11,
+    lineHeight: 1,
+    transition: "opacity 0.15s",
+  };
 }
 
 export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
@@ -24,7 +42,8 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const wheelAccum = useRef(0);
-  const { toggleFullscreen } = useGoldMineFullscreen(containerRef);
+  const { isFullscreen, toggleFullscreen } =
+    useGoldMineFullscreen(containerRef);
 
   useEffect(() => {
     setSelectedIndex((current) =>
@@ -43,22 +62,23 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
     );
   };
 
-  // Throttled wheel handler — accumulate delta, step every 80px
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const THRESHOLD = 80;
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      wheelAccum.current += e.deltaY;
-      if (Math.abs(wheelAccum.current) >= THRESHOLD) {
-        const steps = Math.sign(wheelAccum.current) < 0 ? 1 : -1;
-        moveSelection(steps);
-        wheelAccum.current = 0;
-      }
+    const root = containerRef.current;
+    if (!root) return;
+
+    const threshold = 80;
+    const handler = (event: WheelEvent) => {
+      event.preventDefault();
+      wheelAccum.current += event.deltaY;
+      if (Math.abs(wheelAccum.current) < threshold) return;
+
+      const step = Math.sign(wheelAccum.current) < 0 ? 1 : -1;
+      moveSelection(step);
+      wheelAccum.current = 0;
     };
-    el.addEventListener("wheel", handler, { passive: false });
-    return () => el.removeEventListener("wheel", handler);
+
+    root.addEventListener("wheel", handler, { passive: false });
+    return () => root.removeEventListener("wheel", handler);
   }, [paths.length]);
 
   useEffect(() => {
@@ -71,6 +91,7 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
     const setGalleryMode = (inside: boolean) => {
       const vm = getVimMode();
       if (!vm) return;
+
       if (inside) {
         vm.pushMode("gold-mine-path-gallery", {
           label: "Paths",
@@ -98,9 +119,10 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
             },
           ],
         });
-      } else {
-        vm.popMode("gold-mine-path-gallery");
+        return;
       }
+
+      vm.popMode("gold-mine-path-gallery");
     };
 
     const focusRoot = () => {
@@ -117,6 +139,7 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
     root.addEventListener("pointerdown", focusRoot, true);
     root.addEventListener("focusin", syncMode);
     root.addEventListener("focusout", syncMode);
+    syncMode();
 
     return () => {
       root.removeEventListener("pointerdown", focusRoot, true);
@@ -138,6 +161,7 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
       const widthFromHeight = availableHeight * aspect;
       const nextWidth = Math.min(availableWidth, widthFromHeight);
       const nextHeight = nextWidth / aspect;
+
       setViewerSize({
         width: Math.floor(nextWidth),
         height: Math.floor(nextHeight),
@@ -156,149 +180,133 @@ export const GoldMinePathGallery: React.FC<{ rawMap?: string[] }> = ({
       <div
         ref={containerRef}
         tabIndex={0}
-        style={{
-          width: "100%",
-          maxWidth: 1100,
-          height: "100%",
-          maxHeight: "100%",
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateRows: "auto 1fr",
-          gap: 10,
-          overflow: "hidden",
-          outline: "none",
-        }}
+        style={{ ...fullscreenRootStyle(isFullscreen), outline: "none" }}
       >
-        {/* ── Top bar: sentence + stats ── */}
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "clamp(120px, 14vw, 200px)",
-            flexWrap: "wrap",
+            ...fullscreenInnerStyle(isFullscreen, 1100),
             width: "100%",
+            height: "100%",
+            maxHeight: "100%",
             margin: "0 auto",
+            display: "grid",
+            gridTemplateRows: "auto 1fr",
+            gap: 10,
+            overflow: "hidden",
           }}
         >
-          {/* Path sentence with inline arrows */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              fontSize: 15,
-              color: "#c4a882",
-              fontWeight: 600,
+              justifyContent: "center",
+              gap: "clamp(120px, 14vw, 200px)",
+              flexWrap: "wrap",
+              width: "100%",
+              margin: "0 auto",
             }}
           >
-            <span>Path</span>
-            <span style={{ fontWeight: 800, fontSize: 18, color: "#e8d5b7" }}>
-              {paths.length === 0 ? 0 : selectedIndex + 1}
-            </span>
-            {/* Up/down arrows */}
-            <span
+            <div
               style={{
-                display: "inline-flex",
-                flexDirection: "column",
-                lineHeight: 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 15,
+                color: "var(--goldmine-path-text)",
+                fontWeight: 600,
               }}
             >
-              <button
-                onClick={() => moveSelection(1)}
-                disabled={selectedIndex >= paths.length - 1}
-                aria-label="Next path"
+              <span>Path</span>
+              <span
                 style={{
-                  background: "none",
-                  border: "none",
-                  padding: "0 2px",
-                  cursor:
-                    selectedIndex >= paths.length - 1 ? "default" : "pointer",
-                  color:
-                    selectedIndex >= paths.length - 1
-                      ? "rgba(180,160,130,0.2)"
-                      : "rgba(200,175,140,0.5)",
-                  fontSize: 11,
-                  lineHeight: 1,
-                  transition: "color 0.15s",
+                  fontWeight: 800,
+                  fontSize: 18,
+                  color: "var(--goldmine-path-strong)",
                 }}
               >
-                ▲
-              </button>
-              <button
-                onClick={() => moveSelection(-1)}
-                disabled={selectedIndex <= 0}
-                aria-label="Previous path"
+                {paths.length === 0 ? 0 : selectedIndex + 1}
+              </span>
+              <span
                 style={{
-                  background: "none",
-                  border: "none",
-                  padding: "0 2px",
-                  cursor: selectedIndex <= 0 ? "default" : "pointer",
-                  color:
-                    selectedIndex <= 0
-                      ? "rgba(180,160,130,0.2)"
-                      : "rgba(200,175,140,0.5)",
-                  fontSize: 11,
+                  display: "inline-flex",
+                  flexDirection: "column",
                   lineHeight: 1,
-                  transition: "color 0.15s",
                 }}
               >
-                ▼
-              </button>
-            </span>
-            <span
-              style={{
-                color: "rgba(180,160,130,0.4)",
-                fontWeight: 500,
-                fontSize: 14,
-              }}
-            >
-              /{paths.length}
-            </span>
-            <span
-              style={{
-                color: "rgba(180,160,130,0.5)",
-                fontWeight: 500,
-                fontSize: 14,
-                marginLeft: 4,
-              }}
-            >
-              has{" "}
-              <span style={{ fontWeight: 700, color: "#c4a882" }}>
-                {currentSteps}
-              </span>{" "}
-              steps
-            </span>
+                <button
+                  onClick={() => moveSelection(1)}
+                  disabled={selectedIndex >= paths.length - 1}
+                  aria-label="Next path"
+                  style={arrowButtonStyle(selectedIndex >= paths.length - 1)}
+                >
+                  ▲
+                </button>
+                <button
+                  onClick={() => moveSelection(-1)}
+                  disabled={selectedIndex <= 0}
+                  aria-label="Previous path"
+                  style={arrowButtonStyle(selectedIndex <= 0)}
+                >
+                  ▼
+                </button>
+              </span>
+              <span
+                style={{
+                  color: "var(--goldmine-path-muted)",
+                  fontWeight: 500,
+                  fontSize: 14,
+                }}
+              >
+                /{paths.length}
+              </span>
+              <span
+                style={{
+                  color: "var(--goldmine-path-muted)",
+                  fontWeight: 500,
+                  fontSize: 14,
+                  marginLeft: 4,
+                }}
+              >
+                has{" "}
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: "var(--goldmine-path-text)",
+                  }}
+                >
+                  {currentSteps}
+                </span>{" "}
+                steps
+              </span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <StatChip label="Shortest" value={shortest} />
+              <StatChip label="Longest" value={longest} />
+            </div>
           </div>
 
-          {/* Min/max stats */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <StatChip label="Shortest" value={shortest} />
-            <StatChip label="Longest" value={longest} />
+          <div
+            ref={mapAreaRef}
+            style={{
+              height: "100%",
+              minHeight: 0,
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "center",
+              paddingBottom: 10,
+              boxSizing: "border-box",
+            }}
+          >
+            <GoldMineMapViewer
+              mapState={mapState}
+              pathCells={currentPath}
+              width={viewerSize.width > 0 ? viewerSize.width : "100%"}
+              height={viewerSize.height > 0 ? viewerSize.height : undefined}
+              maxWidth={viewerSize.width > 0 ? viewerSize.width : "100%"}
+            />
           </div>
-        </div>
-
-        {/* ── Map viewer ── */}
-        <div
-          ref={mapAreaRef}
-          style={{
-            height: "100%",
-            minHeight: 0,
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            paddingBottom: 10,
-            boxSizing: "border-box",
-          }}
-        >
-          <GoldMineMapViewer
-            mapState={mapState}
-            pathCells={currentPath}
-            width={viewerSize.width > 0 ? viewerSize.width : "100%"}
-            height={viewerSize.height > 0 ? viewerSize.height : undefined}
-            maxWidth={viewerSize.width > 0 ? viewerSize.width : "100%"}
-          />
         </div>
       </div>
     </CheeseSlideContainer>
@@ -314,9 +322,9 @@ const StatChip: React.FC<{ label: string; value: number }> = ({
       minWidth: 70,
       padding: "5px 10px",
       borderRadius: 8,
-      background: "rgba(30, 27, 22, 0.7)",
-      border: "1px solid rgba(180, 155, 120, 0.12)",
-      color: "#dac9a8",
+      background: "var(--goldmine-chip-bg)",
+      border: "1px solid var(--goldmine-chip-border)",
+      color: "var(--goldmine-chip-text)",
     }}
   >
     <div

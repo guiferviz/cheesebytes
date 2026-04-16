@@ -43,12 +43,12 @@ interface Pos {
 // ── Theme (matches GoldMineMapCodeEditor) ────────────────────────
 
 const HUD_THEME = {
-  bg: "linear-gradient(180deg,#3a2a1a,#2a1c10)",
-  border: "#5a422e",
-  text: "#d4b896",
-  muted: "#a08060",
-  accent: "#f6bd60",
-  btnBg: "rgba(0,0,0,0.22)",
+  bg: "var(--goldmine-hud-bg)",
+  border: "var(--goldmine-hud-border)",
+  text: "var(--goldmine-hud-text)",
+  muted: "var(--goldmine-hud-muted)",
+  accent: "var(--goldmine-hud-accent)",
+  btnBg: "var(--goldmine-hud-btn-bg)",
 };
 
 const cmSmallFont = EditorView.theme({
@@ -60,7 +60,7 @@ const cmSmallFont = EditorView.theme({
   ".cm-gutters": { fontSize: "10px" },
 });
 
-const cmExtensions = [python(), cmSmallFont];
+const cmExtensions = [python(), EditorView.lineWrapping, cmSmallFont];
 
 // ═══════════════════════════════════════════════════════════════════
 // GoldMineNeighbors — exported component
@@ -296,20 +296,20 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: 16,
             alignItems: "start",
           }}
         >
           {/* Left: CodeMirror editor */}
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                color: "var(--vim-palette-fg, #a08060)",
+                color: "var(--goldmine-label-fg)",
                 marginBottom: 6,
                 opacity: 0.7,
               }}
@@ -320,7 +320,7 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
               style={{
                 borderRadius: 10,
                 overflow: "hidden",
-                border: `2px solid ${error ? "#c0392b" : "#5a422e"}`,
+                border: `2px solid ${error ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
                 transition: "border-color 0.2s",
               }}
             >
@@ -341,12 +341,12 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
               <div
                 style={{
                   fontSize: 11,
-                  color: "#d4b896",
+                  color: "var(--goldmine-stdout-fg)",
                   marginTop: 8,
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
-                  background: "rgba(8,10,14,0.78)",
-                  border: "1px solid rgba(90,66,46,0.8)",
+                  background: "var(--goldmine-hud-btn-bg)",
+                  border: `1px solid var(--goldmine-hud-border)`,
                   borderRadius: 8,
                   padding: "8px 10px",
                   maxHeight: 120,
@@ -360,7 +360,7 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
               <div
                 style={{
                   fontSize: 11,
-                  color: "#ff6b6b",
+                  color: "var(--goldmine-error-fg)",
                   marginTop: 4,
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
@@ -374,14 +374,14 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
           </div>
 
           {/* Right: Map viewer + overlay + HUD */}
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                color: "var(--vim-palette-fg, #a08060)",
+                color: "var(--goldmine-label-fg)",
                 marginBottom: 6,
                 opacity: 0.7,
               }}
@@ -439,7 +439,9 @@ export const GoldMineNeighbors: React.FC<GoldMineNeighborsProps> = ({
                       running…
                     </span>
                   ) : error ? (
-                    <span style={{ color: "#ff6b6b" }}>error</span>
+                    <span style={{ color: "var(--goldmine-error-fg)" }}>
+                      error
+                    </span>
                   ) : (
                     <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
                       {highlighted.size} neighbor

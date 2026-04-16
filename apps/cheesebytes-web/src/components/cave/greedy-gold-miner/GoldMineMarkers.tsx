@@ -27,11 +27,11 @@ interface Pos {
 }
 
 const HUD_THEME = {
-  bg: "linear-gradient(180deg,#3a2a1a,#2a1c10)",
-  border: "#5a422e",
-  text: "#d4b896",
-  muted: "#a08060",
-  accent: "#f6bd60",
+  bg: "var(--goldmine-hud-bg)",
+  border: "var(--goldmine-hud-border)",
+  text: "var(--goldmine-hud-text)",
+  muted: "var(--goldmine-hud-muted)",
+  accent: "var(--goldmine-hud-accent)",
 };
 
 const cmSmallFont = EditorView.theme({
@@ -43,7 +43,7 @@ const cmSmallFont = EditorView.theme({
   ".cm-gutters": { fontSize: "10px" },
 });
 
-const cmExtensions = [python(), cmSmallFont];
+const cmExtensions = [python(), EditorView.lineWrapping, cmSmallFont];
 
 function toPos(value: unknown): Pos | null {
   const tuple = Array.isArray(value)
@@ -201,19 +201,19 @@ export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: 16,
             alignItems: "start",
           }}
         >
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                color: "var(--vim-palette-fg, #a08060)",
+                color: "var(--goldmine-label-fg)",
                 marginBottom: 6,
                 opacity: 0.7,
               }}
@@ -224,7 +224,7 @@ export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
               style={{
                 borderRadius: 10,
                 overflow: "hidden",
-                border: `2px solid ${error ? "#c0392b" : "#5a422e"}`,
+                border: `2px solid ${error ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
                 transition: "border-color 0.2s",
               }}
             >
@@ -245,7 +245,7 @@ export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
               <div
                 style={{
                   fontSize: 11,
-                  color: "#d4b896",
+                  color: "var(--goldmine-stdout-fg)",
                   marginTop: 8,
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
@@ -264,7 +264,7 @@ export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
               <div
                 style={{
                   fontSize: 11,
-                  color: "#ff6b6b",
+                  color: "var(--goldmine-error-fg)",
                   marginTop: 4,
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
@@ -277,14 +277,14 @@ export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
             )}
           </div>
 
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.1em",
-                color: "var(--vim-palette-fg, #a08060)",
+                color: "var(--goldmine-label-fg)",
                 marginBottom: 6,
                 opacity: 0.7,
               }}
@@ -296,8 +296,7 @@ export const GoldMineMarkers: React.FC<GoldMineMarkersProps> = ({
               style={{
                 borderRadius: "10px 10px 0 0",
                 border: `2px solid ${HUD_THEME.border}`,
-                background:
-                  "radial-gradient(circle at top left, rgba(246,189,96,0.12), transparent 45%), rgba(20,14,10,0.85)",
+                background: "var(--goldmine-panel-bg)",
                 padding: "18px 20px",
                 display: "grid",
                 gap: 12,
