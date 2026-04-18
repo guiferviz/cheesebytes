@@ -42,8 +42,7 @@ flexibility of Obsidian plugin system and Marimo. It could work as a solution,
 but the effort does not worth it. I think it would be more wise to invest my
 time in other, more flexible approaches. Apart from that, it also have some
 downsides, like publishing the notes from my local computer, with the need of
-having obsidian open. Also it has some other complicate setup like several
-gitmodules (pointing to )
+having obsidian open.
 
 That's when I discovered [[Astro JS]]. The ability to publish my notes, extend
 them, and have complete control over the generated website was appealing. It
@@ -52,5 +51,11 @@ obsidian-webpage-export plugin, which is still in its early stages (changing a
 lot from one version to another). After trying Astro for a couple of days, I
 realized it's not difficult to use. Combined with the
 Astro [[Language Server Protocol (LSP)]] and my use of [[Helix]], I was able to
-integrate it in literally 2 minutes ([[Setup Astro JS LSP in Helix]]), making it
-very easy and comfortable to start with.
+integrate it in literally 2 minutes, making it very easy and comfortable to
+start with.
+
+**Update 2026**: Nowadays, I write my notes on Visual Studio Code instead of
+Obsidian or Helix. The main reason for this is Copilot, which is a game changer
+for me. I can write much faster and with better quality with Copilot. I also use
+a custom plugin that allows me to create tasks in markdown and to link notes
+using wikilinks.

@@ -40,6 +40,13 @@ Instead, they explain the cave itself:
 - [[Admonitions in Cheese Bytes]]
 - [[What Makes a Problem a Cheese Byte]]
 
+So far, the development of Cheese Bytes has been split into two main projects:
+
+- [[Publishing Obsidian Notes in Astro]]: The birth of Cheese Bytes, where I
+  published the initial version of the cave.
+- [[Cheese Bytes Enhancements 2026]]: Adding a bunch of new features and
+  improvements to Cheese Bytes during 2025 and 2026.
+
 <!--
 Imagina una antigua cueva de quesos. Antes incluso de cruzar el umbral, percibes la humedad en el aire, fresca y espesa, impregnada de un aroma terroso que se intensifica a cada paso. Entre las sombras, pequeños trozos de queso reposan con paciencia: algunos jóvenes, de textura lisa y delicada, otros añejos y complejos, con vetas que susurran historias.
 

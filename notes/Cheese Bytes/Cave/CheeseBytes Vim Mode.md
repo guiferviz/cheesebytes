@@ -1,9 +1,9 @@
-The CheeseBytes website offers more than you can see on the surface. Your
-keyboard is your best friend when it comes to navigating the depths of our
-content. And when it comes to using the keyboard, Vim is king. So at
-CheeseBytes, we took inspiration from Vim to create a navigation mode that lets
-you move around the site more easily and toggle features on or off without the
-need for cluttered interfaces.
+The [[What Is a Cheese Byte|Cheese Bytes]] website is full of content, and the
+best way to explore it is by keyboard is your best friend when it comes to
+navigating the depths of our content. And when it comes to using the keyboard,
+Vim is king. So at CheeseBytes, we took inspiration from Vim to create a
+navigation mode that lets you move around the site more easily and toggle
+features on or off without the need for cluttered interfaces.
 
 If you look at the bottom right of the page, you will see a small label that,
 most likely, says `NORMAL`. That means you are in the normal navigation mode.

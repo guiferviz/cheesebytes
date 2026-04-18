@@ -119,6 +119,6 @@ Here is a list of tasks to focus on in the next iterations of this project:
 - Improve content collection.
 - Wikilinks with aliases.
 
-I have created [[Cheese Bytes Enhancements - Project Journal]] to log progress
-on these tasks and more, aiming to improve the user experience and satisfy my
-new and whimsical ideas.
+I have created [[Cheese Bytes Enhancements 2026]] to log progress on these tasks
+and more, aiming to improve the user experience and satisfy my new and whimsical
+ideas.
