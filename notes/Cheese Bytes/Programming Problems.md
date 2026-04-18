@@ -23,6 +23,9 @@ original _Cheese Bytes_ creations.
   metaphor of dressing and undressing in a dressing room.
 - [[Median In Python With Bitwise Not]]
 - [[Reversing a Linked List]]
+- [[Buildings With an Ocean View]]
+
+# LeetCode Problems
 
 You can also find a curated list of
 [[LeetCode|programming problems from LeetCode that I have solved]] and written
