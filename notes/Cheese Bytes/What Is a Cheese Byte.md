@@ -29,12 +29,30 @@ Binary code artisan, step inside! Let curiosity guide you and savour each piece.
 In this cave, as with cheese, the beauty lies not in perfection but in the small
 nuances that give each byte its character.
 
+# Notes About the Cave
+
+These notes do not explore an algorithm, a puzzle, or a project directly.
+Instead, they explain the cave itself:
+
+- [[CheeseBytes Vim Mode]]: How to navigate the cave using Vim-like keybindings.
+- [[Cheese Bytes YouTube Channel]]
+- [[How Cheese Bytes is Organized]]
+
 <!--
 Imagina una antigua cueva de quesos. Antes incluso de cruzar el umbral, percibes la humedad en el aire, fresca y espesa, impregnada de un aroma terroso que se intensifica a cada paso. Entre las sombras, pequeños trozos de queso reposan con paciencia: algunos jóvenes, de textura lisa y delicada, otros añejos y complejos, con vetas que susurran historias.
 
-Del mismo modo, esta caverna virtual alberga no bites para el paladar, sino bites de conocimiento. Cada página de esta caverna es lo que llamo un **Cheese Byte**. No son necesariamente ensayos completos ni tratados exhaustivos, sino pequeños trozos de información, breves pero sabrosos, listos para ser explorados y saboreados con calma, acompañados quizás de un buen vino.
+Del mismo modo, esta caverna virtual alberga no bites para el paladar, sino
+bites de conocimiento. Cada página de esta caverna es lo que llamo un **Cheese
+Byte**. No son necesariamente ensayos completos ni tratados exhaustivos, sino
+pequeños trozos de información, breves pero sabrosos, listos para ser explorados
+y saboreados con calma, acompañados quizás de un buen vino.
 
-Como en una cueva de quesos, cada rincón guarda una pieza diferente. Algunas notas están aisladas, aún en proceso de fermentación, esperando mezclarse con nuevas ideas. Otras, aunque pequeñas, ya han alcanzado un sabor definido, una idea más sólida, capaz de sostenerse por sí misma. A pesar de sus diferencias, todas comparten un mismo propósito: compartir y saborear el aprendizaje.
+Como en una cueva de quesos, cada rincón guarda una pieza diferente. Algunas
+notas están aisladas, aún en proceso de fermentación, esperando mezclarse con
+nuevas ideas. Otras, aunque pequeñas, ya han alcanzado un sabor definido, una
+idea más sólida, capaz de sostenerse por sí misma. A pesar de sus diferencias,
+todas comparten un mismo propósito: compartir y saborear el aprendizaje.
 
-Artesano del código binario, ¡adéntrate! Deja que la curiosidad te guíe y saborea cada trozo. En esta caverna, como con el queso, la belleza no está en la perfección, sino en los pequeños matices que aportan carácter a cada byte.
--->
+Artesano del código binario, ¡adéntrate! Deja que la curiosidad te guíe y
+saborea cada trozo. En esta caverna, como con el queso, la belleza no está en la
+perfección, sino en los pequeños matices que aportan carácter a cada byte. -->

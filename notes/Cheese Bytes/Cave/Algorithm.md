@@ -9,8 +9,11 @@ complex the labyrinth, will always lead you to where you want to go.
 
 Some algorithms described in Cheese Bytes are:
 
-- [[Majority Vote Algorithm]]
+- [[Adaptive Sorting Algorithms]]
 - [[Brian Kernighan's Algorithm]]
+- [[Majority Vote Algorithm]]
+- [[Reservoir Sampling]]
+- [[Mulberry32]]
 
 <!--
 En la caverna del queso, moverse no siempre es fácil. Algunos caminos son rectos y otros parecen dar vueltas sin fin.

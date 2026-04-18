@@ -1,14 +1,15 @@
-Cheese Bytes has two complementary layers: programming problems you can solve,
-and concepts that explain why the solutions work.
+Foundations:
 
-This page is a small map of that second layer.
-
-Start here if you want foundations:
-
-- [[Adaptive Sorting Algorithms]]
 - [[Algorithm]]
-- [[Brian Kernighan's Algorithm]]
-- [[Majority Vote Algorithm]]
+
+Concepts:
+
+- [[One-Liner]]
+- [[Modifiable Areal Unit Problem (MAUP)]]
+- [[Entity Component Systems (ECS)]]
+- [[Duck Typing]]
+- [[CORS - How The Browser Protects You]]
+- [[Closure VS. Function]]
 
 Then jump into applied explorations:
 

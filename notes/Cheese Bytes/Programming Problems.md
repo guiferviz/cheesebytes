@@ -17,6 +17,8 @@ original _Cheese Bytes_ creations.
 - [[You Cannot Take Off a Jacket You Never Wore]]. This problem explores the
   concept of balanced parentheses with multiple types of brackets, using the
   metaphor of dressing and undressing in a dressing room.
+- [[Median In Python With Bitwise Not]]
+- [[Reversing a Linked List]]
 
 You can also find a curated list of
 [[LeetCode|programming problems from LeetCode that I have solved]] and written
