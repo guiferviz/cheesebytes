@@ -37,6 +37,7 @@ Instead, they explain the cave itself:
 - [[CheeseBytes Vim Mode]]: How to navigate the cave using Vim-like keybindings.
 - [[Cheese Bytes YouTube Channel]]
 - [[How Cheese Bytes is Organized]]
+- [[Admonitions in Cheese Bytes]]
 
 <!--
 Imagina una antigua cueva de quesos. Antes incluso de cruzar el umbral, percibes la humedad en el aire, fresca y espesa, impregnada de un aroma terroso que se intensifica a cada paso. Entre las sombras, pequeños trozos de queso reposan con paciencia: algunos jóvenes, de textura lisa y delicada, otros añejos y complejos, con vetas que susurran historias.

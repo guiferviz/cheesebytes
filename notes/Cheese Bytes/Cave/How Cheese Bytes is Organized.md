@@ -15,6 +15,54 @@ What I do not do is force a structure on myself before I know whether I actually
 need it. I prefer to let the organization emerge. The (link graph)[/cave-graph]
 is my compass. The connections show me how I think.
 
-> [!IMPORTANT]
+> [!IMPORTANT] Key Insight
+>
+> I organize by writing, not by planning.
+
+> [!note] note
+>
+> I organize by writing, not by planning.
+
+> [!tip]
+>
+> I organize by writing, not by planning.
+
+> [!example] example
+>
+> I organize by writing, not by planning.
+
+> [!abstract] abstract
+>
+> I organize by writing, not by planning.
+
+> [!info] info
+>
+> I organize by writing, not by planning.
+
+> [!success] success
+>
+> I organize by writing, not by planning.
+
+> [!question] question
+>
+> I organize by writing, not by planning.
+
+> [!warning] warning
+>
+> I organize by writing, not by planning.
+
+> [!failure] failure
+>
+> I organize by writing, not by planning.
+
+> [!danger] danger
+>
+> I organize by writing, not by planning.
+
+> [!bug] bug
+>
+> I organize by writing, not by planning.
+
+> [!quote] quote
 >
 > I organize by writing, not by planning.
