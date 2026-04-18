@@ -1,0 +1,1534 @@
+{
+  "meta": {
+    "image": "Pixel_art_sprite_of_a_cave_monster_for_a_2D_game_f.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 736,
+      "h": 644
+    },
+    "scale": 1,
+    "cell_size": {
+      "w": 92,
+      "h": 92
+    },
+    "padding": 0,
+    "columns": 8,
+    "rows": 7,
+    "frame_count": 52,
+    "generator": "pixellab_to_spritesheet.py"
+  },
+  "frames": {
+    "rotations/south": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 0,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/south.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "south",
+      "animation": null,
+      "direction": "south",
+      "frame_index": 0
+    },
+    "rotations/south-east": {
+      "frame": {
+        "x": 92,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 92,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/south-east.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "south-east",
+      "animation": null,
+      "direction": "south-east",
+      "frame_index": 0
+    },
+    "rotations/east": {
+      "frame": {
+        "x": 184,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 184,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/east.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "east",
+      "animation": null,
+      "direction": "east",
+      "frame_index": 0
+    },
+    "rotations/north-east": {
+      "frame": {
+        "x": 276,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 276,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/north-east.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "north-east",
+      "animation": null,
+      "direction": "north-east",
+      "frame_index": 0
+    },
+    "rotations/north": {
+      "frame": {
+        "x": 368,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 368,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/north.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "north",
+      "animation": null,
+      "direction": "north",
+      "frame_index": 0
+    },
+    "rotations/north-west": {
+      "frame": {
+        "x": 460,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 460,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/north-west.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "north-west",
+      "animation": null,
+      "direction": "north-west",
+      "frame_index": 0
+    },
+    "rotations/west": {
+      "frame": {
+        "x": 552,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 552,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/west.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "west",
+      "animation": null,
+      "direction": "west",
+      "frame_index": 0
+    },
+    "rotations/south-west": {
+      "frame": {
+        "x": 644,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 644,
+        "y": 0,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "rotations/south-west.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "rotation",
+      "pose": "south-west",
+      "animation": null,
+      "direction": "south-west",
+      "frame_index": 0
+    },
+    "animations/Scary_Walk-5faca324/south/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 0,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_000.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 0
+    },
+    "animations/Scary_Walk-5faca324/south/frame_001": {
+      "frame": {
+        "x": 92,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 92,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_001.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 1
+    },
+    "animations/Scary_Walk-5faca324/south/frame_002": {
+      "frame": {
+        "x": 184,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 184,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_002.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 2
+    },
+    "animations/Scary_Walk-5faca324/south/frame_003": {
+      "frame": {
+        "x": 276,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 276,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_003.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 3
+    },
+    "animations/Scary_Walk-5faca324/south/frame_004": {
+      "frame": {
+        "x": 368,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 368,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_004.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 4
+    },
+    "animations/Scary_Walk-5faca324/south/frame_005": {
+      "frame": {
+        "x": 460,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 460,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_005.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 5
+    },
+    "animations/Scary_Walk-5faca324/south/frame_006": {
+      "frame": {
+        "x": 552,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 552,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_006.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 6
+    },
+    "animations/Scary_Walk-5faca324/south/frame_007": {
+      "frame": {
+        "x": 644,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 644,
+        "y": 92,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/south/frame_007.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "south",
+      "frame_index": 7
+    },
+    "animations/Scary_Walk-5faca324/east/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 0,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_000.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 0
+    },
+    "animations/Scary_Walk-5faca324/east/frame_001": {
+      "frame": {
+        "x": 92,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 92,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_001.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 1
+    },
+    "animations/Scary_Walk-5faca324/east/frame_002": {
+      "frame": {
+        "x": 184,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 184,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_002.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 2
+    },
+    "animations/Scary_Walk-5faca324/east/frame_003": {
+      "frame": {
+        "x": 276,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 276,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_003.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 3
+    },
+    "animations/Scary_Walk-5faca324/east/frame_004": {
+      "frame": {
+        "x": 368,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 368,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_004.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 4
+    },
+    "animations/Scary_Walk-5faca324/east/frame_005": {
+      "frame": {
+        "x": 460,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 460,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_005.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 5
+    },
+    "animations/Scary_Walk-5faca324/east/frame_006": {
+      "frame": {
+        "x": 552,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 552,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_006.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 6
+    },
+    "animations/Scary_Walk-5faca324/east/frame_007": {
+      "frame": {
+        "x": 644,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 644,
+        "y": 184,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/east/frame_007.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "east",
+      "frame_index": 7
+    },
+    "animations/Scary_Walk-5faca324/west/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 0,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_000.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 0
+    },
+    "animations/Scary_Walk-5faca324/west/frame_001": {
+      "frame": {
+        "x": 92,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 92,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_001.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 1
+    },
+    "animations/Scary_Walk-5faca324/west/frame_002": {
+      "frame": {
+        "x": 184,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 184,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_002.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 2
+    },
+    "animations/Scary_Walk-5faca324/west/frame_003": {
+      "frame": {
+        "x": 276,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 276,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_003.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 3
+    },
+    "animations/Scary_Walk-5faca324/west/frame_004": {
+      "frame": {
+        "x": 368,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 368,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_004.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 4
+    },
+    "animations/Scary_Walk-5faca324/west/frame_005": {
+      "frame": {
+        "x": 460,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 460,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_005.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 5
+    },
+    "animations/Scary_Walk-5faca324/west/frame_006": {
+      "frame": {
+        "x": 552,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 552,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_006.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 6
+    },
+    "animations/Scary_Walk-5faca324/west/frame_007": {
+      "frame": {
+        "x": 644,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 644,
+        "y": 276,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/west/frame_007.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "west",
+      "frame_index": 7
+    },
+    "animations/Scary_Walk-5faca324/north/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 0,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_000.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 0
+    },
+    "animations/Scary_Walk-5faca324/north/frame_001": {
+      "frame": {
+        "x": 92,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 92,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_001.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 1
+    },
+    "animations/Scary_Walk-5faca324/north/frame_002": {
+      "frame": {
+        "x": 184,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 184,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_002.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 2
+    },
+    "animations/Scary_Walk-5faca324/north/frame_003": {
+      "frame": {
+        "x": 276,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 276,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_003.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 3
+    },
+    "animations/Scary_Walk-5faca324/north/frame_004": {
+      "frame": {
+        "x": 368,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 368,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_004.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 4
+    },
+    "animations/Scary_Walk-5faca324/north/frame_005": {
+      "frame": {
+        "x": 460,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 460,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_005.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 5
+    },
+    "animations/Scary_Walk-5faca324/north/frame_006": {
+      "frame": {
+        "x": 552,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 552,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_006.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 6
+    },
+    "animations/Scary_Walk-5faca324/north/frame_007": {
+      "frame": {
+        "x": 644,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 644,
+        "y": 368,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Scary_Walk-5faca324/north/frame_007.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Scary_Walk-5faca324",
+      "direction": "north",
+      "frame_index": 7
+    },
+    "animations/Breathing_Idle-806f3c48/east/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 0,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/east/frame_000.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "east",
+      "frame_index": 0
+    },
+    "animations/Breathing_Idle-806f3c48/east/frame_001": {
+      "frame": {
+        "x": 92,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 92,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/east/frame_001.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "east",
+      "frame_index": 1
+    },
+    "animations/Breathing_Idle-806f3c48/east/frame_002": {
+      "frame": {
+        "x": 184,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 184,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/east/frame_002.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "east",
+      "frame_index": 2
+    },
+    "animations/Breathing_Idle-806f3c48/east/frame_003": {
+      "frame": {
+        "x": 276,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 276,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/east/frame_003.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "east",
+      "frame_index": 3
+    },
+    "animations/Breathing_Idle-806f3c48/south/frame_000": {
+      "frame": {
+        "x": 368,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 368,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/south/frame_000.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "south",
+      "frame_index": 0
+    },
+    "animations/Breathing_Idle-806f3c48/south/frame_001": {
+      "frame": {
+        "x": 460,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 460,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/south/frame_001.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "south",
+      "frame_index": 1
+    },
+    "animations/Breathing_Idle-806f3c48/south/frame_002": {
+      "frame": {
+        "x": 552,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 552,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/south/frame_002.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "south",
+      "frame_index": 2
+    },
+    "animations/Breathing_Idle-806f3c48/south/frame_003": {
+      "frame": {
+        "x": 644,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 644,
+        "y": 460,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/south/frame_003.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "south",
+      "frame_index": 3
+    },
+    "animations/Breathing_Idle-806f3c48/north/frame_000": {
+      "frame": {
+        "x": 0,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 0,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/north/frame_000.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "north",
+      "frame_index": 0
+    },
+    "animations/Breathing_Idle-806f3c48/north/frame_001": {
+      "frame": {
+        "x": 92,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 92,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/north/frame_001.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "north",
+      "frame_index": 1
+    },
+    "animations/Breathing_Idle-806f3c48/north/frame_002": {
+      "frame": {
+        "x": 184,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 184,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/north/frame_002.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "north",
+      "frame_index": 2
+    },
+    "animations/Breathing_Idle-806f3c48/north/frame_003": {
+      "frame": {
+        "x": 276,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "sprite": {
+        "x": 276,
+        "y": 552,
+        "w": 92,
+        "h": 92
+      },
+      "source": {
+        "path": "animations/Breathing_Idle-806f3c48/north/frame_003.png",
+        "size": {
+          "w": 92,
+          "h": 92
+        }
+      },
+      "trimmed": false,
+      "kind": "animation",
+      "pose": null,
+      "animation": "Breathing_Idle-806f3c48",
+      "direction": "north",
+      "frame_index": 3
+    }
+  },
+  "clips": {
+    "rotations": {
+      "south": [
+        "rotations/south"
+      ],
+      "south-east": [
+        "rotations/south-east"
+      ],
+      "east": [
+        "rotations/east"
+      ],
+      "north-east": [
+        "rotations/north-east"
+      ],
+      "north": [
+        "rotations/north"
+      ],
+      "north-west": [
+        "rotations/north-west"
+      ],
+      "west": [
+        "rotations/west"
+      ],
+      "south-west": [
+        "rotations/south-west"
+      ]
+    },
+    "animations": {
+      "Scary_Walk-5faca324": {
+        "south": [
+          "animations/Scary_Walk-5faca324/south/frame_000",
+          "animations/Scary_Walk-5faca324/south/frame_001",
+          "animations/Scary_Walk-5faca324/south/frame_002",
+          "animations/Scary_Walk-5faca324/south/frame_003",
+          "animations/Scary_Walk-5faca324/south/frame_004",
+          "animations/Scary_Walk-5faca324/south/frame_005",
+          "animations/Scary_Walk-5faca324/south/frame_006",
+          "animations/Scary_Walk-5faca324/south/frame_007"
+        ],
+        "east": [
+          "animations/Scary_Walk-5faca324/east/frame_000",
+          "animations/Scary_Walk-5faca324/east/frame_001",
+          "animations/Scary_Walk-5faca324/east/frame_002",
+          "animations/Scary_Walk-5faca324/east/frame_003",
+          "animations/Scary_Walk-5faca324/east/frame_004",
+          "animations/Scary_Walk-5faca324/east/frame_005",
+          "animations/Scary_Walk-5faca324/east/frame_006",
+          "animations/Scary_Walk-5faca324/east/frame_007"
+        ],
+        "west": [
+          "animations/Scary_Walk-5faca324/west/frame_000",
+          "animations/Scary_Walk-5faca324/west/frame_001",
+          "animations/Scary_Walk-5faca324/west/frame_002",
+          "animations/Scary_Walk-5faca324/west/frame_003",
+          "animations/Scary_Walk-5faca324/west/frame_004",
+          "animations/Scary_Walk-5faca324/west/frame_005",
+          "animations/Scary_Walk-5faca324/west/frame_006",
+          "animations/Scary_Walk-5faca324/west/frame_007"
+        ],
+        "north": [
+          "animations/Scary_Walk-5faca324/north/frame_000",
+          "animations/Scary_Walk-5faca324/north/frame_001",
+          "animations/Scary_Walk-5faca324/north/frame_002",
+          "animations/Scary_Walk-5faca324/north/frame_003",
+          "animations/Scary_Walk-5faca324/north/frame_004",
+          "animations/Scary_Walk-5faca324/north/frame_005",
+          "animations/Scary_Walk-5faca324/north/frame_006",
+          "animations/Scary_Walk-5faca324/north/frame_007"
+        ]
+      },
+      "Breathing_Idle-806f3c48": {
+        "east": [
+          "animations/Breathing_Idle-806f3c48/east/frame_000",
+          "animations/Breathing_Idle-806f3c48/east/frame_001",
+          "animations/Breathing_Idle-806f3c48/east/frame_002",
+          "animations/Breathing_Idle-806f3c48/east/frame_003"
+        ],
+        "south": [
+          "animations/Breathing_Idle-806f3c48/south/frame_000",
+          "animations/Breathing_Idle-806f3c48/south/frame_001",
+          "animations/Breathing_Idle-806f3c48/south/frame_002",
+          "animations/Breathing_Idle-806f3c48/south/frame_003"
+        ],
+        "north": [
+          "animations/Breathing_Idle-806f3c48/north/frame_000",
+          "animations/Breathing_Idle-806f3c48/north/frame_001",
+          "animations/Breathing_Idle-806f3c48/north/frame_002",
+          "animations/Breathing_Idle-806f3c48/north/frame_003"
+        ]
+      }
+    }
+  },
+  "source": {
+    "character": {
+      "id": "f826a98a-9a81-453e-868f-fb1fde630b1e",
+      "name": "Pixel art sprite of a cave monster for a 2D game, front-facing, dark fantasy style, living deep inside an ancient underground cavern. Small but menacing creature with rough stone-like skin, glowing eyes, sharp claws, uneven teeth, and a hunched posture. Its body should feel damp, earthy, and adapted to darkness, with bits of moss, mud, or tiny cave crystals stuck to it. Game-ready sprite, clean silhouette, readable design, expressive face, simple but memorable. Retro 16-bit style, transparent background, centered character, full body, suitable for a side project or indie game.",
+      "prompt": "Pixel art sprite of a cave monster for a 2D game, front-facing, dark fantasy style, living deep inside an ancient underground cavern. Small but menacing creature with rough stone-like skin, glowing eyes, sharp claws, uneven teeth, and a hunched posture. Its body should feel damp, earthy, and adapted to darkness, with bits of moss, mud, or tiny cave crystals stuck to it. Game-ready sprite, clean silhouette, readable design, expressive face, simple but memorable. Retro 16-bit style, transparent background, centered character, full body, suitable for a side project or indie game.",
+      "size": {
+        "width": 92,
+        "height": 92
+      },
+      "template_id": "mannequin",
+      "directions": 8,
+      "view": "low top-down",
+      "created_at": "2026-04-18T10:51:35.348128+00:00"
+    },
+    "metadata_file": "metadata.json"
+  }
+}
