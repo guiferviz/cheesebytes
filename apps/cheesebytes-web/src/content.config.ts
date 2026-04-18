@@ -139,8 +139,6 @@ function calculateNoteType(
   content: string,
   filePath: string,
   wikiLinks: string[],
-  created: string | null,
-  modified: string | null,
   editCount: number,
 ): string {
   try {
@@ -199,44 +197,6 @@ function calculateNoteType(
     else if (editCount < 15) gitEditsScore = 3;
     else gitEditsScore = 4;
 
-    // Factor 8: Días desde la última edición
-    let daysSinceModified = 0;
-    let stabilityScore = 2; // Valor por defecto
-    if (modified) {
-      const modifiedDate = new Date(modified);
-      const now = new Date();
-      daysSinceModified = Math.floor(
-        (now.getTime() - modifiedDate.getTime()) / (1000 * 60 * 60 * 24),
-      );
-
-      if (daysSinceModified < 7)
-        stabilityScore = 1; // Muy reciente
-      else if (daysSinceModified < 30)
-        stabilityScore = 2; // Reciente
-      else if (daysSinceModified < 90)
-        stabilityScore = 3; // Algo estable
-      else stabilityScore = 4; // Muy estable
-    }
-
-    // Factor 9: Antigüedad de la nota (días desde creación)
-    let daysSinceCreated = 0;
-    let ageScore = 2; // Valor por defecto
-    if (created) {
-      const createdDate = new Date(created);
-      const now = new Date();
-      daysSinceCreated = Math.floor(
-        (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24),
-      );
-
-      if (daysSinceCreated < 30)
-        ageScore = 1; // Nueva
-      else if (daysSinceCreated < 90)
-        ageScore = 2; // Algo madura
-      else if (daysSinceCreated < 365)
-        ageScore = 3; // Madura
-      else ageScore = 4; // Muy madura
-    }
-
     // Calcular puntuación de profundidad (complejidad del contenido)
     const depthScore = Math.round(
       lengthScore * 0.25 +
@@ -246,11 +206,6 @@ function calculateNoteType(
         fileTypeScore * 0.1 +
         mdxTagsScore * 0.1 +
         gitEditsScore * 0.05,
-    );
-
-    // Calcular puntuación de estabilidad
-    const finalStabilityScore = Math.round(
-      stabilityScore * 0.6 + ageScore * 0.4,
     );
 
     // Mapear puntuaciones a tipos de queso
@@ -263,11 +218,9 @@ function calculateNoteType(
       cheeseType = "parmigiano"; // Parmesano (curado)
     else cheeseType = "cabrales"; // Cabrales (azul)
 
-    // Determinar forma basada en estabilidad
-    const isStable = finalStabilityScore >= 3;
-    const shape = isStable ? "full" : "wedge";
-
-    return `${cheeseType}-${shape}`;
+    // Las notas asignadas automaticamente siempre usan wedge.
+    // El formato full queda reservado para un noteType manual en frontmatter.
+    return `${cheeseType}-wedge`;
   } catch (error) {
     console.error("Error calculating note type:", error);
     // Valor por defecto en caso de error
@@ -405,8 +358,6 @@ const customLoader: Loader = {
               content,
               item.filePath || "",
               validWikiLinks,
-              created,
-              modified,
               editCount,
             );
 
