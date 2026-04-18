@@ -287,13 +287,19 @@ const customLoader: Loader = {
         pattern: notesPattern,
         base: notesBase,
       });
-      const notesBasePath = nodePath.resolve(fileURLToPath(config.root), notesBase);
+      const notesBasePath = nodePath.resolve(
+        fileURLToPath(config.root),
+        notesBase,
+      );
 
       const rebuildStore = async () => {
         normalizedIdMap.clear();
         store.clear();
 
-        await baseLoader.load.call(this, { ...loaderParams, watcher: undefined });
+        await baseLoader.load.call(this, {
+          ...loaderParams,
+          watcher: undefined,
+        });
 
         let items = [...store.entries()].map(([_, item]) => item);
 
@@ -496,7 +502,8 @@ const customLoader: Loader = {
 
         const reloadNotes = async (changedPath: string) => {
           if (!/\.(md|mdx)$/i.test(changedPath)) return;
-          if (nodePath.relative(notesBasePath, changedPath).startsWith("..")) return;
+          if (nodePath.relative(notesBasePath, changedPath).startsWith(".."))
+            return;
 
           await rebuildStore();
           logger.info(`Reloaded data from ${nodePath.basename(changedPath)}`);
