@@ -11,6 +11,7 @@ Some algorithms described in Cheese Bytes are:
 
 - [[Adaptive Sorting Algorithms]]
 - [[Brian Kernighan's Algorithm]]
+- [[Gödel's Prime Number Encoding]]
 - [[Majority Vote Algorithm]]
 - [[Reservoir Sampling]]
 - [[Mulberry32]]
