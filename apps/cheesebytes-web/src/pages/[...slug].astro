@@ -1,25 +1,27 @@
 ---
 import NoteLayout from "../layouts/NoteLayout.astro";
-import { type CollectionEntry, getCollection } from "astro:content";
-import { render } from "astro:content";
-import { normalizePathParts } from "../content.config";
-import fs from "fs";
-import path from "path";
+import { getCollection, getEntry, render } from "astro:content";
 
 export async function getStaticPaths() {
   const notes = await getCollection("notes");
 
   return notes.map((note) => ({
     params: { slug: note.id },
-    props: { note },
   }));
 }
 
-type Props = {
-  note: CollectionEntry<"notes">;
-};
+const slug = Astro.params.slug;
 
-const { note } = Astro.props;
+if (!slug) {
+  throw new Error("Missing note slug");
+}
+
+const note = await getEntry("notes", slug);
+
+if (!note) {
+  throw new Error(`Note not found for slug: ${slug}`);
+}
+
 const Content = await render(note).then((result) => result.Content);
 // Note that rendered is undefined when using MDX files, so marimo won't be inyected on MDX if we don't include the second condition.
 const needsMarimo =

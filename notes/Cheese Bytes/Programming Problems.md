@@ -1,3 +1,7 @@
+---
+noteType: "parmigiano-wedge"
+---
+
 In the beginning, all was chaos: convoluted statements, entangled conditions,
 undefined variables, disconnected ideas... But like an artist chiselling stone,
 **The Programmer** strips away the superfluous, connects the essential, and

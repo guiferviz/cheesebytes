@@ -2,6 +2,7 @@
 aliases:
   - Cheese Bytes
   - Cheese Byte
+noteType: "parmigiano-wedge"
 ---
 
 Imagine an ancient cheese cave. Even before crossing the threshold, you can

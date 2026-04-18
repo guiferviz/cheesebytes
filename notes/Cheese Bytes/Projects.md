@@ -1,3 +1,7 @@
+---
+noteType: "parmigiano-wedge"
+---
+
 A project starts as an inner pull I cannot ignore; sometimes a clear gap wanting
 a solution, other times sheer curiosity about how something truly behaves
 beneath the surface.
@@ -21,8 +25,6 @@ project yields distilled knowledge that makes the effort worthwhile.
 | [[Pathfinding in the Gold Mine]]   | Several pathfinding algorithms implemented in a grid-based gold mine environment.   |
 | [[Building a Rubik's Cube Solver]] | A Rubik's Cube solver that uses a combination of algorithms and heuristics.         |
 | [[My Own Logical Computer]]        | A simple, Turing-complete computer simulated on [[My Own Logic Circuit Simulator]]. |
-
-deleteme.
 
 # Pending Projects and Ideas
 

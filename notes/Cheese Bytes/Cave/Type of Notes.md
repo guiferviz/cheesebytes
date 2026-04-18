@@ -21,14 +21,30 @@ its **stability** and **depth**.
 <text x="120" y="285" text-anchor="end" font-family="Arial, sans-serif" font-size="11" fill="rgb(102 102 102)" class="fill-gray-600 dark:fill-gray-400">Likely to change</text>
 <line x1="125" y1="120" x2="130" y2="120" stroke="rgb(102 102 102)" class="stroke-gray-600 dark:stroke-gray-400" stroke-width="1"/>
 <text x="120" y="125" text-anchor="end" font-family="Arial, sans-serif" font-size="11" fill="rgb(102 102 102)" class="fill-gray-600 dark:fill-gray-400">Unlikely to change</text>
-<image x="175" y="255" width="50" height="50" href="/note-logos/512/burgos-wedge.png"/>
-<image x="175" y="95" width="50" height="50" href="/note-logos/512/burgos-full.png"/>
-<image x="265" y="255" width="50" height="50" href="/note-logos/512/emmental-wedge.png"/>
-<image x="265" y="95" width="50" height="50" href="/note-logos/512/emmental-full.png"/>
-<image x="375" y="255" width="50" height="50" href="/note-logos/512/parmigiano-reggiano-wedge.png"/>
-<image x="375" y="95" width="50" height="50" href="/note-logos/512/parmigiano-reggiano-full.png"/>
-<image x="485" y="255" width="50" height="50" href="/note-logos/512/cabrales-wedge.png"/>
-<image x="485" y="95" width="50" height="50" href="/note-logos/512/cabrales-full.png"/>
+<image x="175" y="255" width="50" height="50" href="/note-logos/512/burgos-wedge.png">
+  <title>white-wedge</title>
+</image>
+<image x="175" y="95" width="50" height="50" href="/note-logos/512/burgos-full.png">
+  <title>white-full</title>
+</image>
+<image x="265" y="255" width="50" height="50" href="/note-logos/512/emmental-wedge.png">
+  <title>emmental-wedge</title>
+</image>
+<image x="265" y="95" width="50" height="50" href="/note-logos/512/emmental-full.png">
+  <title>emmental-full</title>
+</image>
+<image x="375" y="255" width="50" height="50" href="/note-logos/512/parmigiano-reggiano-wedge.png">
+  <title>parmigiano-wedge</title>
+</image>
+<image x="375" y="95" width="50" height="50" href="/note-logos/512/parmigiano-reggiano-full.png">
+  <title>parmigiano-full</title>
+</image>
+<image x="485" y="255" width="50" height="50" href="/note-logos/512/cabrales-wedge.png">
+  <title>cabrales-wedge</title>
+</image>
+<image x="485" y="95" width="50" height="50" href="/note-logos/512/cabrales-full.png">
+  <title>cabrales-full</title>
+</image>
 <line x1="130" y1="200" x2="600" y2="200" stroke="rgb(204 204 204)" class="stroke-gray-300 dark:stroke-gray-600" stroke-width="1" stroke-dasharray="5,5"/>
 </svg>
 </div>

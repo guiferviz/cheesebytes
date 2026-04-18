@@ -2,6 +2,11 @@ import { defineCollection, z } from "astro:content";
 import { glob, type Loader } from "astro/loaders";
 import * as nodePath from "path";
 import { spawnSync } from "child_process";
+import { fileURLToPath } from "url";
+
+const notesPattern = "**/*.{md,mdx}";
+const notesBase = "../../notes/Cheese Bytes";
+const registeredWatchers = new WeakSet<object>();
 
 // Función para normalizar URLs
 function normalizeUrl(path: string): string {
@@ -275,208 +280,233 @@ const customLoader: Loader = {
   ...glob,
   name: "CustomLoader",
   load: async function (loaderParams) {
-    const { store } = loaderParams;
+    const { store, watcher, logger, config } = loaderParams;
 
     try {
       const baseLoader = glob({
-        pattern: "**/*.{md,mdx}",
-        base: "../../notes/Cheese Bytes",
+        pattern: notesPattern,
+        base: notesBase,
       });
+      const notesBasePath = nodePath.resolve(fileURLToPath(config.root), notesBase);
 
-      await baseLoader.load.call(this, loaderParams);
+      const rebuildStore = async () => {
+        normalizedIdMap.clear();
+        store.clear();
 
-      let items = [...store.entries()].map(([_, item]) => item);
+        await baseLoader.load.call(this, { ...loaderParams, watcher: undefined });
 
-      console.log(`Loaded ${items.length} items from the store`);
+        let items = [...store.entries()].map(([_, item]) => item);
 
-      // Crear mapas para wikilinks
-      const allNoteIds = new Set<string>();
-      const titleToIdMap = new Map<string, string>();
+        console.log(`Loaded ${items.length} items from the store`);
 
-      // Paso 1: Normalizar IDs y construir mapas
-      items.forEach((item) => {
-        const id = item.id || "";
-        const normalizedId = normalizePathParts(id);
-        allNoteIds.add(normalizedId);
+        // Crear mapas para wikilinks
+        const allNoteIds = new Set<string>();
+        const titleToIdMap = new Map<string, string>();
 
-        if (item.filePath) {
-          const fileName = nodePath.parse(item.filePath).name;
-          titleToIdMap.set(fileName.toLowerCase(), normalizedId);
-        }
-        titleToIdMap.set(normalizedId, normalizedId);
-      });
+        // Paso 1: Normalizar IDs y construir mapas
+        items.forEach((item) => {
+          const id = item.id || "";
+          const normalizedId = normalizePathParts(id);
+          allNoteIds.add(normalizedId);
 
-      console.log(`Created a set of ${allNoteIds.size} note IDs`);
-
-      // --- 🔥 ORDENAR ITEMS: folders always at the end ---
-      items.sort((a, b) => {
-        const aIsFolder = a.id.includes("/");
-        const bIsFolder = b.id.includes("/");
-        if (!aIsFolder && bIsFolder) return -1;
-        if (aIsFolder && !bIsFolder) return 1;
-        return a.id.toLowerCase().localeCompare(b.id.toLowerCase());
-      });
-
-      // --- 🚀 Batch git data (2 calls instead of 378) ---
-      const allFilePaths = items
-        .map((item) => item.filePath)
-        .filter((fp): fp is string => typeof fp === "string");
-      const gitDataMap = batchGitData(allFilePaths);
-
-      // Paso 2: Procesar cada item
-      items = items.map((item) => {
-        const originalId = item.id || "";
-        const normalizedId = normalizePathParts(originalId);
-        normalizedIdMap.set(originalId, normalizedId);
-
-        let fileName = "";
-        let title = "";
-
-        if (item.filePath) {
-          fileName = nodePath.parse(item.filePath).name;
-          title = fileName;
-        } else if (typeof item.id === "string") {
-          fileName = nodePath.basename(item.id, ".md");
-          title = fileName;
-        } else {
-          fileName = "unknown";
-          title = "Unknown";
-        }
-
-        let description = "";
-        let content = "";
-
-        if (typeof item.body === "string") {
-          content = item.body;
-          description = content.slice(0, 200);
-        } else {
-          description = `Note about ${title}`;
-          content = description;
-        }
-
-        const allWikiLinks = extractWikiLinks(content);
-
-        const validWikiLinks = allWikiLinks
-          .map((link) => {
-            return (
-              titleToIdMap.get(link.toLowerCase()) ||
-              titleToIdMap.get(normalizeUrl(link))
-            );
-          })
-          .filter((id) => id && allNoteIds.has(id)) as string[];
-
-        let created = null;
-        let modified = null;
-
-        if (item.filePath) {
-          const gitData = gitDataMap.get(item.filePath);
-          if (gitData) {
-            created = gitData.created;
-            modified = gitData.modified;
+          if (item.filePath) {
+            const fileName = nodePath.parse(item.filePath).name;
+            titleToIdMap.set(fileName.toLowerCase(), normalizedId);
           }
-        }
-
-        // Verificar si hay un noteType manual en el frontmatter
-        const manualNoteType =
-          typeof item.data?.noteType === "string" ? item.data.noteType : null;
-
-        // Calcular el tipo de nota automáticamente solo si no hay uno manual
-        const editCount = item.filePath
-          ? (gitDataMap.get(item.filePath)?.editCount ?? 1)
-          : 1;
-        const noteType =
-          manualNoteType ||
-          calculateNoteType(
-            content,
-            item.filePath || "",
-            validWikiLinks,
-            created,
-            modified,
-            editCount,
-          );
-
-        // Asignar imagen basada en el tipo de nota (manual o automático)
-        const cheeseImage = assignCheeseImage(noteType);
-
-        return {
-          ...item,
-          id: normalizedId,
-          data: {
-            ...item.data,
-            title: title,
-            description: description,
-            created,
-            modified,
-            wikiLinks: validWikiLinks,
-            originalId: originalId,
-            cheeseImage: cheeseImage,
-            noteType: noteType,
-          },
-        };
-      });
-
-      // Paso 3: Calcular enlaces entrantes y salientes
-      const inboundLinksMap = new Map<
-        string,
-        Array<{ id: string; title: string }>
-      >();
-
-      // Inicializar el mapa para todos los items
-      items.forEach((item) => {
-        inboundLinksMap.set(item.id, []);
-      });
-
-      // Construir enlaces entrantes basados en los wikiLinks de cada nota
-      items.forEach((item) => {
-        const wikiLinks = (item.data.wikiLinks as string[]) || [];
-        wikiLinks.forEach((linkedId: string) => {
-          if (inboundLinksMap.has(linkedId)) {
-            inboundLinksMap.get(linkedId)!.push({
-              id: item.id,
-              title: (item.data.title as string) || item.id,
-            });
-          }
+          titleToIdMap.set(normalizedId, normalizedId);
         });
-      });
 
-      // Paso 4: Añadir enlaces entrantes y salientes a cada item
-      items = items.map((item) => {
-        const wikiLinks = (item.data.wikiLinks as string[]) || [];
-        const outboundLinks = wikiLinks.map((linkedId: string) => {
-          const linkedItem = items.find((i) => i.id === linkedId);
+        console.log(`Created a set of ${allNoteIds.size} note IDs`);
+
+        // --- 🔥 ORDENAR ITEMS: folders always at the end ---
+        items.sort((a, b) => {
+          const aIsFolder = a.id.includes("/");
+          const bIsFolder = b.id.includes("/");
+          if (!aIsFolder && bIsFolder) return -1;
+          if (aIsFolder && !bIsFolder) return 1;
+          return a.id.toLowerCase().localeCompare(b.id.toLowerCase());
+        });
+
+        // --- 🚀 Batch git data (2 calls instead of 378) ---
+        const allFilePaths = items
+          .map((item) => item.filePath)
+          .filter((fp): fp is string => typeof fp === "string");
+        const gitDataMap = batchGitData(allFilePaths);
+
+        // Paso 2: Procesar cada item
+        items = items.map((item) => {
+          const originalId = item.id || "";
+          const normalizedId = normalizePathParts(originalId);
+          normalizedIdMap.set(originalId, normalizedId);
+
+          let fileName = "";
+          let title = "";
+
+          if (item.filePath) {
+            fileName = nodePath.parse(item.filePath).name;
+            title = fileName;
+          } else if (typeof item.id === "string") {
+            fileName = nodePath.basename(item.id, ".md");
+            title = fileName;
+          } else {
+            fileName = "unknown";
+            title = "Unknown";
+          }
+
+          let description = "";
+          let content = "";
+
+          if (typeof item.body === "string") {
+            content = item.body;
+            description = content.slice(0, 200);
+          } else {
+            description = `Note about ${title}`;
+            content = description;
+          }
+
+          const allWikiLinks = extractWikiLinks(content);
+
+          const validWikiLinks = allWikiLinks
+            .map((link) => {
+              return (
+                titleToIdMap.get(link.toLowerCase()) ||
+                titleToIdMap.get(normalizeUrl(link))
+              );
+            })
+            .filter((id) => id && allNoteIds.has(id)) as string[];
+
+          let created = null;
+          let modified = null;
+
+          if (item.filePath) {
+            const gitData = gitDataMap.get(item.filePath);
+            if (gitData) {
+              created = gitData.created;
+              modified = gitData.modified;
+            }
+          }
+
+          // Verificar si hay un noteType manual en el frontmatter
+          const manualNoteType =
+            typeof item.data?.noteType === "string" ? item.data.noteType : null;
+
+          // Calcular el tipo de nota automáticamente solo si no hay uno manual
+          const editCount = item.filePath
+            ? (gitDataMap.get(item.filePath)?.editCount ?? 1)
+            : 1;
+          const noteType =
+            manualNoteType ||
+            calculateNoteType(
+              content,
+              item.filePath || "",
+              validWikiLinks,
+              created,
+              modified,
+              editCount,
+            );
+
+          // Asignar imagen basada en el tipo de nota (manual o automático)
+          const cheeseImage = assignCheeseImage(noteType);
+
           return {
-            id: linkedId,
-            title: (linkedItem?.data.title as string) || linkedId,
+            ...item,
+            id: normalizedId,
+            data: {
+              ...item.data,
+              title: title,
+              description: description,
+              created,
+              modified,
+              wikiLinks: validWikiLinks,
+              originalId: originalId,
+              cheeseImage: cheeseImage,
+              noteType: noteType,
+            },
           };
         });
 
-        const inboundLinks = inboundLinksMap.get(item.id) || [];
+        // Paso 3: Calcular enlaces entrantes y salientes
+        const inboundLinksMap = new Map<
+          string,
+          Array<{ id: string; title: string }>
+        >();
 
-        return {
-          ...item,
-          data: {
-            ...item.data,
-            outboundLinks,
-            inboundLinks,
-          },
-        };
-      });
+        // Inicializar el mapa para todos los items
+        items.forEach((item) => {
+          inboundLinksMap.set(item.id, []);
+        });
 
-      // Limpiar y reinsertar en el store
-      store.clear();
-      for (const item of items) {
-        try {
-          store.set(item);
-        } catch (error) {
-          console.error(`Error adding item ${item.id} to store:`, error);
+        // Construir enlaces entrantes basados en los wikiLinks de cada nota
+        items.forEach((item) => {
+          const wikiLinks = (item.data.wikiLinks as string[]) || [];
+          wikiLinks.forEach((linkedId: string) => {
+            if (inboundLinksMap.has(linkedId)) {
+              inboundLinksMap.get(linkedId)!.push({
+                id: item.id,
+                title: (item.data.title as string) || item.id,
+              });
+            }
+          });
+        });
+
+        // Paso 4: Añadir enlaces entrantes y salientes a cada item
+        items = items.map((item) => {
+          const wikiLinks = (item.data.wikiLinks as string[]) || [];
+          const outboundLinks = wikiLinks.map((linkedId: string) => {
+            const linkedItem = items.find((i) => i.id === linkedId);
+            return {
+              id: linkedId,
+              title: (linkedItem?.data.title as string) || linkedId,
+            };
+          });
+
+          const inboundLinks = inboundLinksMap.get(item.id) || [];
+
+          return {
+            ...item,
+            data: {
+              ...item.data,
+              outboundLinks,
+              inboundLinks,
+            },
+          };
+        });
+
+        // Limpiar y reinsertar en el store
+        store.clear();
+        for (const item of items) {
+          try {
+            store.set(item);
+          } catch (error) {
+            console.error(`Error adding item ${item.id} to store:`, error);
+          }
         }
-      }
 
-      console.log(`Added ${items.length} processed items back to the store`);
-      console.log(
-        "Mapa de IDs normalizados:",
-        Object.fromEntries(normalizedIdMap),
-      );
+        console.log(`Added ${items.length} processed items back to the store`);
+        console.log(
+          "Mapa de IDs normalizados:",
+          Object.fromEntries(normalizedIdMap),
+        );
+      };
+
+      await rebuildStore();
+
+      if (watcher && !registeredWatchers.has(watcher)) {
+        watcher.add(notesBasePath);
+
+        const reloadNotes = async (changedPath: string) => {
+          if (!/\.(md|mdx)$/i.test(changedPath)) return;
+          if (nodePath.relative(notesBasePath, changedPath).startsWith("..")) return;
+
+          await rebuildStore();
+          logger.info(`Reloaded data from ${nodePath.basename(changedPath)}`);
+        };
+
+        watcher.on("change", reloadNotes);
+        watcher.on("add", reloadNotes);
+        watcher.on("unlink", reloadNotes);
+        registeredWatchers.add(watcher);
+      }
     } catch (error) {
       console.error("Error in customLoader:", error);
     }

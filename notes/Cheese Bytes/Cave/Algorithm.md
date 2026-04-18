@@ -1,3 +1,7 @@
+---
+noteType: "parmigiano-wedge"
+---
+
 In the cheese cave, moving around is not always easy. Some paths are straight,
 while others seem to twist endlessly.
 

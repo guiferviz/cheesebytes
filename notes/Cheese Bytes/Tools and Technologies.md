@@ -3,6 +3,7 @@ title: Tools & Technologies
 description:
   A curated map of languages, runtimes, and data-engineering tools across Cheese
   Bytes.
+noteType: "parmigiano-wedge"
 ---
 
 This page is a practical index of the languages, runtimes, platforms, and

@@ -1,3 +1,7 @@
+---
+noteType: "parmigiano-wedge"
+---
+
 Foundations:
 
 - [[Algorithm]]
