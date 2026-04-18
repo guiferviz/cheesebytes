@@ -14,13 +14,13 @@ const noteSummaries = allNotes.map((n) => ({
 ---
 
 <BaseLayout title="Cheese Bytes" description="Programming notes">
-  <div class="flex flex-col items-center px-6 text-center gap-8 py-12">
+  <div class="flex flex-col items-center px-6 text-center gap-8 py-4">
     {/* ── Hero: Interactive Logo Animation ── */}
-    <div class="w-full max-w-4xl" style="aspect-ratio: 2080/600;">
+    <div class="w-full max-w-4xl" style="aspect-ratio: 2080/390;">
       <HeroLogo
         client:load
         width={2080}
-        height={600}
+        height={390}
         pixelScale={8}
         duration={2700}
       />
@@ -28,17 +28,8 @@ const noteSummaries = allNotes.map((n) => ({
 
     {/* ── Taglines ── */}
     <div class="flex flex-col gap-4">
-      <p
-        class="text-lg sm:text-xl text-gray-600 dark:text-gray-300 leading-relaxed"
-      >
-        A cave of programming puzzles, experiments, and projects.
-      </p>
       <p class="text-base sm:text-lg text-gray-500 dark:text-gray-400 italic">
-        This is not a feed to scroll mindlessly. <a
-          href="/what-is-a-cheese-byte"
-          class="underline"
-          title="What is Cheese Bytes?">It is</a
-        > a place to explore.
+        A place to experience algorithms, not just read about them.
       </p>
     </div>
 
