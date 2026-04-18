@@ -35,20 +35,22 @@ function buildFileTree(nodes: { id: string; data: any }[]): FileNode[] {
       name: "Home",
       path: "",
       type: "file",
-      cheeseImage: "/favicon.png",
     },
     {
       name: "Cave Graph",
       path: "cave-graph",
       type: "file",
-      cheeseImage: "/favicon.png",
     },
   ];
 
   for (const node of nodes) {
     const parts = node.id.split("/").filter(Boolean);
     const fileName = parts[parts.length - 1];
-    const cheeseImage = node.data.cheeseImage || "/favicon.png";
+    const cheeseImage =
+      typeof node.data.cheeseImage === "string" &&
+      node.data.cheeseImage.length > 0
+        ? node.data.cheeseImage
+        : undefined;
 
     if (parts.length === 1) {
       tree.push({
@@ -112,6 +114,9 @@ function renderItem(file: FileNode): string {
   const filePath = file.path === "" ? "/" : "/" + file.path;
   const isActive =
     currentPath === filePath || (currentPath === "" && filePath === "/");
+  const iconHtml = file.cheeseImage
+    ? `<img src="${file.cheeseImage}" alt="" class="w-4 h-4 shrink-0" />`
+    : '<span class="w-4 h-4 shrink-0" aria-hidden="true"></span>';
 
   const containerClass = `
     w-full
@@ -143,7 +148,7 @@ function renderItem(file: FileNode): string {
   return `
     <a href="${filePath}" class="${containerClass}">
       <div class="w-full flex items-center gap-2 py-1 px-2">
-        <img src="${file.cheeseImage || "/favicon.png"}" alt="" class="w-4 h-4 shrink-0" />
+        ${iconHtml}
         <span class="whitespace-nowrap">${file.name}</span>
       </div>
     </a>

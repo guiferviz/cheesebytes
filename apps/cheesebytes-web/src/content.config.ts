@@ -110,7 +110,7 @@ function extractWikiLinks(content: string): string[] {
 const normalizedIdMap = new Map<string, string>();
 
 // Asignar imagen de queso basada en el tipo de nota
-function assignCheeseImage(noteType: string): string {
+function assignCheeseImage(noteType: string): string | undefined {
   // Mapear el noteType al icono correspondiente
   switch (noteType) {
     case "white-full":
@@ -130,8 +130,7 @@ function assignCheeseImage(noteType: string): string {
     case "cabrales-wedge":
       return "/note-logos/64/cabrales-wedge.png";
     default:
-      // Valor por defecto para tipos no reconocidos
-      return "/note-logos/64/burgos-wedge.png";
+      return undefined;
   }
 }
 

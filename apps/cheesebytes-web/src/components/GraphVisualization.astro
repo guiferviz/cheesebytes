@@ -2,6 +2,17 @@
 import { getCollection } from "astro:content";
 import { normalizeUrl, normalizePathParts } from "../content.config";
 
+type GraphNode = {
+  id: string;
+  label: string;
+  cheeseImage?: string;
+};
+
+type GraphLink = {
+  source: string;
+  target: string;
+};
+
 // Configuración del grafo
 const config = {
   isDirected: true, // Flag para activar/desactivar las flechas direccionales
@@ -66,15 +77,19 @@ const config = {
 const notes = await getCollection("notes");
 
 // Preparar los datos para el grafo
-const nodes = [];
-const links = [];
+const nodes: GraphNode[] = [];
+const links: GraphLink[] = [];
 const nodeConnections = new Map();
 
 // Crear nodos para cada nota
 notes.forEach((note) => {
   const id = note.id;
   const title = note.data.title;
-  const cheeseImage = note.data.cheeseImage || "/favicon.png"; // Usar imagen de queso asignada o favicon por defecto
+  const cheeseImage =
+    typeof note.data.cheeseImage === "string" &&
+    note.data.cheeseImage.length > 0
+      ? note.data.cheeseImage
+      : undefined;
   nodes.push({ id, label: title, cheeseImage });
 
   // Inicializar contador de conexiones
@@ -92,12 +107,12 @@ notes.forEach((note) => {
   const sourceId = note.id;
 
   // Usar los WikiLinks ya normalizados que vienen del parser
-  const wikiLinks = note.data.wikiLinks || [];
+  const wikiLinks: string[] = note.data.wikiLinks || [];
 
   if (wikiLinks.length > 0) {
     console.log(`Nota ${sourceId} tiene WikiLinks:`, wikiLinks);
 
-    wikiLinks.forEach((targetId) => {
+    wikiLinks.forEach((targetId: string) => {
       // Verificar que el targetId exista en los nodos
       const targetNode = nodes.find((node) => node.id === targetId);
 
@@ -490,12 +505,12 @@ const graphId = `graph-${Math.random().toString(36).substring(2, 9)}`; // ID ún
     // Agregar íconos a los nodos con tamaño adaptado al tamaño de pantalla
     const nodeImage = node
       .append("image")
-      .attr("xlink:href", (d) => d.cheeseImage) // Usar la imagen de queso específica
+      .attr("xlink:href", (d) => d.cheeseImage || null)
       .attr("width", (d) => getNodeImageSize(d))
       .attr("height", (d) => getNodeImageSize(d))
       .attr("x", (d) => -getNodeRadius(d))
       .attr("y", (d) => -getNodeRadius(d))
-      .style("opacity", 1)
+      .style("opacity", (d) => (d.cheeseImage ? 1 : 0))
       .attr("cursor", "pointer")
       .on("mouseover", (event, d) => {
         event.stopPropagation();
