@@ -63,7 +63,7 @@ const HUD = {
 };
 
 /** Duration of one cell-to-cell move (sprite slide + walk animation). */
-const MOVE_DURATION_MS = 180;
+const MOVE_DURATION_MS = 380;
 /** How long the camera-shake animation runs after a wall bump. */
 const SHAKE_DURATION_MS = 220;
 /** Match the original GoldMineDemo zoom factor on the player. */
@@ -133,11 +133,7 @@ function bfsDistances(
 }
 
 /** BFS first-step toward `target` (or null if unreachable). */
-function bfsNextStep(
-  map: MineMapState,
-  start: Pos,
-  target: Pos,
-): Pos | null {
+function bfsNextStep(map: MineMapState, start: Pos, target: Pos): Pos | null {
   if (start.r === target.r && start.c === target.c) return null;
   const tk = posKey(target.r, target.c);
   const parent = new Map<string, Pos | null>();
@@ -221,7 +217,10 @@ function shortestExitSteps(map: MineMapState): number | null {
  * Returns the minimum number of player steps to reach the exit without
  * being caught, or null if no escape exists.
  */
-function jointStateBfsSteps(map: MineMapState, monsterStart: Pos): number | null {
+function jointStateBfsSteps(
+  map: MineMapState,
+  monsterStart: Pos,
+): number | null {
   const startKey = `${posKey(map.start.r, map.start.c)}|${posKey(monsterStart.r, monsterStart.c)}`;
   const exitKey = posKey(map.exit.r, map.exit.c);
   const dist = new Map<string, number>();
@@ -610,16 +609,40 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
           label: vimModeLabel,
           extends: "normal",
           commands: [
-            { key: "w", label: "Move north", run: move(-1, 0), altKeys: ["\u2191"] },
-            { key: "a", label: "Move west", run: move(0, -1), altKeys: ["\u2190"] },
-            { key: "s", label: "Move south", run: move(1, 0), altKeys: ["\u2193"] },
-            { key: "d", label: "Move east", run: move(0, 1), altKeys: ["\u2192"] },
+            {
+              key: "w",
+              label: "Move north",
+              run: move(-1, 0),
+              altKeys: ["\u2191"],
+            },
+            {
+              key: "a",
+              label: "Move west",
+              run: move(0, -1),
+              altKeys: ["\u2190"],
+            },
+            {
+              key: "s",
+              label: "Move south",
+              run: move(1, 0),
+              altKeys: ["\u2193"],
+            },
+            {
+              key: "d",
+              label: "Move east",
+              run: move(0, 1),
+              altKeys: ["\u2192"],
+            },
             { key: "h", label: "Move west", run: move(0, -1), hidden: true },
             { key: "j", label: "Move south", run: move(1, 0), hidden: true },
             { key: "k", label: "Move north", run: move(-1, 0), hidden: true },
             { key: "l", label: "Move east", run: move(0, 1), hidden: true },
             { key: "z", label: "Zoom on player", run: () => toggleZoom() },
-            { key: "m", label: "Toggle music", run: () => setMusicOn((v) => !v) },
+            {
+              key: "m",
+              label: "Toggle music",
+              run: () => setMusicOn((v) => !v),
+            },
             { key: "x", label: "Toggle SFX", run: () => setSfxOn((v) => !v) },
             {
               key: "f",
@@ -630,7 +653,12 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
               ? [{ key: "u", label: "Undo last move", run: () => tryUndo() }]
               : []),
             { key: "r", label: "Restart", run: () => reset() },
-            { key: "escape", label: "Exit game", run: () => root.blur(), hidden: true },
+            {
+              key: "escape",
+              label: "Exit game",
+              run: () => root.blur(),
+              hidden: true,
+            },
           ],
         });
       } else {
@@ -643,7 +671,9 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
       setMode(true);
     };
     const sync = () => {
-      requestAnimationFrame(() => setMode(root.contains(document.activeElement)));
+      requestAnimationFrame(() =>
+        setMode(root.contains(document.activeElement)),
+      );
     };
 
     root.addEventListener("pointerdown", focusRoot, true);
@@ -688,8 +718,14 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
     const px = ((state.player.c + 0.5) / map.cols) * 100;
     const py = ((state.player.r + 0.5) / map.rows) * 100;
     const minOffset = 100 * (1 - PLAYER_ZOOM_SCALE);
-    const offsetX = Math.min(0, Math.max(minOffset, 50 - PLAYER_ZOOM_SCALE * px));
-    const offsetY = Math.min(0, Math.max(minOffset, 50 - PLAYER_ZOOM_SCALE * py));
+    const offsetX = Math.min(
+      0,
+      Math.max(minOffset, 50 - PLAYER_ZOOM_SCALE * px),
+    );
+    const offsetY = Math.min(
+      0,
+      Math.max(minOffset, 50 - PLAYER_ZOOM_SCALE * py),
+    );
 
     return `translate(${offsetX}%, ${offsetY}%) scale(${PLAYER_ZOOM_SCALE})`;
   }, [zoomed, state.player.c, state.player.r, map.cols, map.rows]);
@@ -716,7 +752,8 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
     }
     // Won.
     if (mode === "collapse") {
-      if (optimum == null || optimum < 0) return `ESCAPED WITH ${goldCount} GOLD`;
+      if (optimum == null || optimum < 0)
+        return `ESCAPED WITH ${goldCount} GOLD`;
       return optimalAchieved
         ? `★ OPTIMAL! ${goldCount} / ${optimum} GOLD ★`
         : `ESCAPED WITH ${goldCount} GOLD — best possible is ${optimum}`;
@@ -799,7 +836,10 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
                 willChange: "transform",
               }}
             >
-              <MineMapViewer mapState={displayMap} showMonsterMarker={mode === "monster"} />
+              <MineMapViewer
+                mapState={displayMap}
+                showMonsterMarker={mode === "monster"}
+              />
 
               {/* Player sprite. */}
               <MineGameSprite
@@ -820,7 +860,9 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
                   kind="monster"
                   facing={state.monsterFacing}
                   anim={
-                    monsterMoving && state.status === "playing" ? "walk" : "idle"
+                    monsterMoving && state.status === "playing"
+                      ? "walk"
+                      : "idle"
                   }
                   row={state.monster.r}
                   col={state.monster.c}
@@ -887,10 +929,21 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "clamp(16px, 4vmin, 26px)", fontWeight: 800 }}>
+                  <div
+                    style={{
+                      fontSize: "clamp(16px, 4vmin, 26px)",
+                      fontWeight: 800,
+                    }}
+                  >
                     {state.status === "won" ? "✦ ESCAPED ✦" : "✦ CAUGHT ✦"}
                   </div>
-                  <div style={{ marginTop: 8, fontSize: "clamp(11px, 2.4vmin, 15px)", opacity: 0.92 }}>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: "clamp(11px, 2.4vmin, 15px)",
+                      opacity: 0.92,
+                    }}
+                  >
                     {statusText}
                   </div>
                   <div style={{ marginTop: 10, fontSize: 11, opacity: 0.75 }}>
@@ -950,10 +1003,7 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
               <span style={{ textDecoration: "underline" }}>F</span>ull
             </HudBtn>
             {mode === "collapse" && (
-              <HudBtn
-                onClick={() => tryUndo()}
-                title="Undo last move [U]"
-              >
+              <HudBtn onClick={() => tryUndo()} title="Undo last move [U]">
                 <span style={{ textDecoration: "underline" }}>U</span>ndo
               </HudBtn>
             )}
@@ -979,7 +1029,14 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
             {statusText}
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexShrink: 0, color: HUD.muted }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexShrink: 0,
+              color: HUD.muted,
+            }}
+          >
             {bestSoFar != null && (
               <span title="Your best on this map this session">
                 BEST {bestSoFar}
