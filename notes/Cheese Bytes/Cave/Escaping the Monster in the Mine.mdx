@@ -1,0 +1,130 @@
+import {
+  MineGameVisual,
+  MinePreludeEditor,
+  MonsterPlanVisual,
+} from "../../../apps/cheesebytes-web/src/components/pathfinding-gold-mine";
+
+You step back into the mine, and this time you are not alone. Somewhere in the
+dark there is a **monster**, and it can hear every step you take. Each time you
+move, it moves. If the monster ever catches up to you, the game is over.
+
+How do you escape a maze when the maze itself is hunting you?
+
+# Try It Yourself First
+
+Use the arrow keys (or `hjkl`) to walk. The monster takes one step toward you on
+every move you make, always picking the shortest route through the walkable
+cells. There is no time pressure: you can think for as long as you like between
+moves. Reach the red `E` to escape.
+
+<MineGameVisual client:only="react" mode="monster" />
+
+You will probably get caught a few times before you find the trick. Most mazes
+have at least one route the monster cannot cut you off on, but finding it
+requires thinking **two players ahead**.
+
+# Setup From the Previous Notes
+
+If you want to experiment with a different cave layout — moving walls, shifting
+the start, or changing the monster's spawn — edit the prelude below. Besides
+`S` and `E`, the map may also contain an optional `M` marker for the monster's
+initial cell. If you place `M` inside `MINE_MAP`, the game and visuals use that
+exact spawn. If you leave `M` out, the monster spawns at the farthest cell from
+the player. The dark-violet `M` circle on the map marks the spawn.
+
+<MinePreludeEditor client:only="react" />
+
+# Why This Is Harder Than Shortest Path
+
+In [[The Shortest Path Out of the Mine]] the only thing that mattered was how
+far each cell was from the start. Here, every cell has **two** distances that
+matter:
+
+- $d_S(\text{cell})$ — the number of steps from the player's start.
+- $d_M(\text{cell})$ — the number of steps from the monster's start.
+
+The player can only safely walk through cells where they arrive **strictly
+before** the monster could:
+
+$$
+d_S(\text{cell}) < d_M(\text{cell})
+$$
+
+Anything else is a trap: even if you can reach the cell, the monster will be
+sitting on it (or one step away) by the time you do.
+
+> [!tip]
+>
+> This is the same idea behind classic _multi-agent_ pathfinding problems in AI.
+> The shortest path for a single agent is rarely the safe path when other agents
+> are sharing the map.
+
+# A Two-Wave BFS
+
+Both distance maps are easy to compute: run a BFS from the player's start to get
+$d_S$ for every cell, then a second BFS from the monster's start to get $d_M$.
+The set of cells the player can safely walk on is then just
+
+$$
+S = \{c : d_S(c) < d_M(c)\}
+$$
+
+If the exit belongs to $S$, the player can escape: run a third BFS over $S$ to
+find the actual route. If it does not, **this analysis** says the map is a
+guaranteed loss. The replay below walks through every step:
+
+1. **Phase 1** — BFS from the player paints $d_S$ level by level (blue).
+2. **Phase 2** — BFS from the monster paints $d_M$ level by level (red).
+3. **Phase 3** — the safe set $S$ is highlighted in green.
+4. **Phase 4** — a third BFS, restricted to $S$, draws the route to the exit
+   (gold) and the miner walks it.
+
+<MonsterPlanVisual client:only="react" mode="twoWave" />
+
+> [!warning]
+>
+> **Two-Wave BFS is only a first approximation.** It treats the monster as a
+> static threat — as if its distance map never updated. But the monster moves
+> too! Whenever the exit cell satisfies $d_M(\text{exit}) \le d_S(\text{exit})$,
+> Two-Wave reports failure even on maps that have a perfectly fine
+> "lure-and-escape" solution: walk away from the exit so the monster follows
+> you, then double back and dash out. To find those plans we need something
+> stronger.
+
+# A Joint-State BFS
+
+The trick is to stop modelling the player and the monster as two separate
+puzzles. Instead, treat the **pair** $(\text{player}, \text{monster})$ as the
+state of a single, larger graph:
+
+- **Nodes** are pairs of positions $(p, m)$ with $p \neq m$.
+- **Edges** correspond to one player move in any of the four directions,
+  followed by one monster step (BFS-greedy toward the new player position).
+- **Goal** is any node where $p = \text{exit}$.
+
+Running BFS on this graph finds the shortest _plan_ — a sequence of player moves
+whose induced monster trajectory never catches up. Crucially, this graph
+contains the lure-and-escape sequences that Two-Wave can never see.
+
+<MonsterPlanVisual client:only="react" mode="jointState" />
+
+The cost of this power is space: the joint graph has up to $W \times W$ nodes
+(where $W$ is the number of walkable cells), so it scales worse than plain BFS.
+For the small caves in these notes, that is no problem; for huge mazes you would
+want pruning, symmetry breaking, or A\* with a tailored heuristic.
+
+# What Comes Next
+
+Once you can outrun a single, perfectly-informed monster, two natural follow-ups
+appear:
+
+- **Multiple monsters** with different start positions. The "safe set" $S$
+  becomes the intersection of one inequality per monster.
+- **Monsters with imperfect information** — for example, a monster that only
+  sees you when you are within a certain radius, or that wanders randomly until
+  it spots you. Suddenly the optimal player strategy is no longer deterministic.
+
+The next note in the series, [[Escaping with the Most Gold]], drops the monster
+but adds a different kind of pressure: every step you take **collapses the floor
+behind you**, so each cell can only be visited once. The goal is no longer to
+escape fast, it is to escape rich.

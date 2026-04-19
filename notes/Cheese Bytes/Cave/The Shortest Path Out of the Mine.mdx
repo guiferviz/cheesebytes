@@ -1,0 +1,135 @@
+import {
+  BfsShortestPathExplorer,
+  DfsFirstPathExplorer,
+} from "../../../apps/cheesebytes-web/src/components/cave/shortest-path-out-of-the-mine";
+import {
+  MineGameVisual,
+  MinePreludeEditor,
+} from "../../../apps/cheesebytes-web/src/components/pathfinding-gold-mine";
+
+You are deep inside a dark mine tunnel, working hard to extract some gold. Then
+one of your pickaxe blows breaks open a pocket of carbon monoxide gas. Your gas
+detectors start blaring, and you realize you have very little time to escape
+before the gas fills the tunnel and leaves you without air. How do you find the
+fastest way out before it is too late?
+
+Click the game and walk to the exit using the arrow keys. When you escape the
+game will tell you whether you actually found the shortest route.
+
+<MineGameVisual client:only="react" mode="shortest" />
+
+This note is part of the [[Pathfinding in the Gold Mine]] series.
+
+# Setup From the Previous Notes
+
+Every visual on this page builds on the same code we wrote in
+[[Representing a Gold Mine]]: the `MINE_MAP`, the `START` / `END` markers, and
+the `neighbors()` generator. The block below shows it in full, and you can edit
+it freely. Replacing the map, swapping the order of `MOVES`, or rewriting
+`neighbors()` is reflected immediately in the algorithms further down and in the
+game above.
+
+<MinePreludeEditor client:only="react" />
+
+# Two Strategies, Two Personalities
+
+There are many ways to explore a maze, but two of them show up everywhere:
+
+- **Depth-first search (DFS)**: pick a direction, follow it as deep as you can,
+  and only backtrack when you hit a dead end. DFS is what happens naturally when
+  you write a recursive function that calls itself on each neighbor.
+- **Breadth-first search (BFS)**: explore the mine in concentric rings. First
+  all cells one step away from the start, then all cells two steps away, then
+  three, and so on, until you find the exit.
+
+The mental picture is helpful: DFS is one curious explorer with a torch charging
+down corridors; BFS is a wave of water spreading out from the start in every
+direction at the same speed.
+
+That difference comes down to **one data structure**:
+
+| Algorithm | Where new cells are stored | Order they come out |
+| --------- | -------------------------- | ------------------- |
+| DFS       | A **stack** (or recursion) | Last in, first out  |
+| BFS       | A **queue**                | First in, first out |
+
+Swap the stack for a queue and DFS becomes BFS. That is essentially the only
+change.
+
+# DFS: The First Path We Find
+
+Let's start with DFS because it is the most natural to write. We walk into a
+cell, mark it as visited, recurse on each unvisited neighbor, and stop the
+moment we reach the exit.
+
+This implementation returns `True` as soon as it finds **any** path from start
+to exit. It does not care whether that path is short, it just commits to the
+first one it stumbles into.
+
+Press _Play_ to watch the explorer follow the corridors. The orange line is the
+current path it is holding on its stack; the highlighted cells are everything it
+has visited along the way.
+
+<DfsFirstPathExplorer client:only="react" />
+
+> [!warning]
+>
+> Look closely at the final orange path. Is it short? Probably not. DFS happily
+> follows long, winding corridors before considering shorter alternatives,
+> because it has no notion of distance — it only knows "go deeper, backtrack on
+> dead ends".
+
+# BFS: The Shortest Path, Guaranteed
+
+To find the **shortest** path we need to explore cells in order of distance from
+the start, not in order of how recently we discovered them.
+
+That is exactly what swapping the stack for a queue achieves. Each iteration of
+BFS pops the **oldest** unexplored cell and expands its neighbors. As a
+consequence, every cell is reached for the first time via a shortest path from
+the start.
+
+To actually return the path (and not just the distance) we keep a `parent`
+dictionary that remembers, for each cell, which neighbor discovered it. Once we
+hit the exit we walk that dictionary backwards to reconstruct the route.
+
+<BfsShortestPathExplorer client:only="react" />
+
+> [!tip]
+>
+> Things to notice in the replay:
+>
+> - The visited region grows as a roughly circular wave around the start. That
+>   is the BFS "expanding ring" in action.
+> - The current cell jumps around a lot, because the queue keeps mixing cells
+>   from different corridors. DFS, in contrast, marches in straight lines and
+>   only jumps when it backtracks.
+> - The final orange path is the shortest possible route between `S` and `E`. No
+>   other path on this map can have fewer steps.
+
+# Why BFS Wins Here
+
+Both algorithms eventually visit the same cells in the worst case, so they have
+the same big-O complexity: $O(R \cdot C)$ where $R$ and $C$ are the number of
+rows and columns of the grid. The difference is in **what each algorithm
+guarantees** when it stops:
+
+- DFS guarantees a path, if one exists.
+- BFS guarantees the **shortest** path, if one exists.
+
+If you only need _some_ path (for example, just to check whether the exit is
+reachable), DFS is great and uses very little memory. If you need the shortest,
+you almost always want BFS.
+
+There is also a more subtle point. BFS keeps a queue of "frontier" cells, which
+can grow large in open areas. DFS keeps only the current path on its recursion
+stack, which is at most $R \cdot C$ deep but is usually much shorter. So BFS
+trades a bit of memory for the shortest-path guarantee.
+
+# What Comes Next
+
+In [[Escaping the Monster in the Mine]] we add a moving threat that turns the
+shortest-path problem into something quite different: now the route also has to
+avoid being intercepted. After that, in [[Escaping with the Most Gold]], we flip
+the question on its head and look for the **longest** path the miner can take
+before escaping.

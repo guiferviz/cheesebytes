@@ -3,12 +3,16 @@ import {
   MineMapCodeEditor,
   MineMarkersVisual,
 } from "../../../apps/cheesebytes-web/src/components/cave/representing-a-gold-mine";
-import { mediumMap } from "../../../apps/cheesebytes-web/src/components/pathfinding-gold-mine";
+import {
+  MineNeighborsVisual,
+  mediumMap,
+} from "../../../apps/cheesebytes-web/src/components/pathfinding-gold-mine";
 
 Before we can search for paths, escape from monsters, or collect gold, we need a
 way to represent the mine itself. A visual map is great for humans, but
-algorithms need something more structured. In this first note of the series, we
-will build the data representation that every future algorithm will rely on.
+algorithms need something more structured. In this first note of the
+[[Pathfinding in the Gold Mine]] series, we will build the data representation
+that every future algorithm will rely on.
 
 # A Mine Is a Grid
 
@@ -73,12 +77,55 @@ one you may have edited above) and resolves `START` and `END` in real time.
 The `Cell` type alias `tuple[int, int]` is a compact way to refer to a position
 `(row, column)`. We will use it throughout the series.
 
+# Finding Neighbors
+
+Once we know where the explorer is, the next question every algorithm in this
+series will ask is: _which cells can I move to from here?_
+
+In our mine the rules are simple. From any open cell the miner can step **up,
+down, left, or right**, but never onto a wall. We capture those four directions
+as `Move` deltas and walk through them, yielding each neighbor that is not a
+wall.
+
+Click any open cell on the map below to see its neighbors highlighted. You can
+also edit the function on the left to experiment. If you really want to
+challenge yourself, try to implement the function without looking at the
+solution. Just remove the function body and keep the signature.
+
+The small numbers drawn on the highlighted cells show the order in which
+`neighbors(...)` returns them. That order is not an intrinsic property of the
+map, and it is usually not critical: a well-behaved exploration algorithm will
+still visit the same reachable cells in the end. What this order does control is
+the sequence in which that exploration happens.
+
+<MineNeighborsVisual client:only="react" />
+
+> [!tip] Experiment Tips
+>
+> Useful experiments:
+>
+> - What happens if you replace `grid[nr][nc] != '#'` with
+>   `grid[nr][nc] == '.'`? Does it still work? Why or why not? Hint: think about
+>   the start and exit cells.
+> - Change the order of `MOVES`. How does that affect the numbering on the
+>   visual? In later notes, this will also change the order in which algorithms
+>   like DFS explores the mine.
+> - Return a list instead of yielding one neighbor at a time. Does it change the
+>   result, or only the style of the code?
+
+> [!note]
+>
+> Notice that we never check whether `(nr, nc)` is inside the grid. We do not
+> need to: the border is always made of walls, so any move from an interior cell
+> lands on a valid cell inside the grid. This is the payoff of the design choice
+> we made earlier.
+
 # What Comes Next
 
 With the grid in place we have a foundation that every algorithm in the series
 can build on. The map knows where walls are, where the miner starts, and where
 the exit lies.
 
-In the next note, [[Escaping the Mine: The Shortest Path]], we will use this
+In the next note, [[The Shortest Path Out of the Mine]], we will use this
 representation to find the quickest way out. After that, things get
 progressively harder: a moving monster, and finally the quest for the most gold.

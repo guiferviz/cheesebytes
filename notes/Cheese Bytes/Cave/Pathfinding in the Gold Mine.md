@@ -12,6 +12,6 @@ more difficulty, with moving enemies and even the challenge of finding the
 longest possible escape route.
 
 1. [[Representing a Gold Mine]]
-2. [[Escaping the Mine: The Shortest Path]]
+2. [[The Shortest Path Out of the Mine]]
 3. [[Escaping the Monster in the Mine]]
 4. [[Escaping with the Most Gold]]
