@@ -22,6 +22,7 @@ export interface MineMapState {
   walls: Set<string>;
   start: Pos;
   exit: Pos;
+  monsterStart?: Pos | null;
   /** Bump to force re-renders after in-place mutations. */
   version: number;
 }
@@ -32,3 +33,4 @@ export const WALL_CHAR = "#";
 export const PATH_CHAR = ".";
 export const START_CHAR = "S";
 export const EXIT_CHAR = "E";
+export const MONSTER_CHAR = "M";

@@ -2,7 +2,15 @@
 
 // Types
 export type { Pos, MineMapState } from "./types";
-export { posKey, parseKey, WALL_CHAR, PATH_CHAR, START_CHAR, EXIT_CHAR } from "./types";
+export {
+  posKey,
+  parseKey,
+  WALL_CHAR,
+  PATH_CHAR,
+  START_CHAR,
+  EXIT_CHAR,
+  MONSTER_CHAR,
+} from "./types";
 
 // Map parsing & serialization
 export {
@@ -29,7 +37,7 @@ export {
 } from "./mine-viewer-shared";
 
 // Maps
-export { simpleMap, mediumMap } from "./maps";
+export { simpleMap, mediumMap, monsterMap } from "./maps";
 
 // React components
 export { MineMapViewer } from "./MineMapViewer";
@@ -49,5 +57,29 @@ export {
   getArticleGrid,
   getArticleMapPython,
   setArticleMap,
+  configureArticleDefaults,
+  resetArticleDefaults,
+  useArticleMarkersPython,
+  getArticleMarkersPython,
+  setArticleMarkersPython,
+  useArticleNeighborsPython,
+  getArticleNeighborsPython,
+  setArticleNeighborsPython,
+  useArticlePrelude,
+  getArticlePrelude,
+  setArticlePrelude,
+  resetArticlePrelude,
   ARTICLE_DEFAULT_MAP,
+  DEFAULT_MARKERS_PYTHON,
+  MONSTER_MARKERS_PYTHON,
+  DEFAULT_NEIGHBORS_PYTHON,
 } from "./article-store";
+
+// Interactive Python visuals shared across articles
+export { MineArticleDefaults } from "./MineArticleDefaults";
+export { MineNeighborsVisual } from "./MineNeighborsVisual";
+export { MineReplayExplorer } from "./MineReplayExplorer";
+export { MinePreludeEditor } from "./MinePreludeEditor";
+export { MineGameVisual } from "./MineGameVisual";
+export { MineGameSprite } from "./MineGameSprite";
+export { MonsterPlanVisual } from "./MonsterPlanVisual";

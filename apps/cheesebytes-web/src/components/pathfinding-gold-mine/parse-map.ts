@@ -1,5 +1,12 @@
 import type { MineMapState, Pos } from "./types";
-import { posKey, WALL_CHAR, START_CHAR, EXIT_CHAR, PATH_CHAR } from "./types";
+import {
+  posKey,
+  WALL_CHAR,
+  START_CHAR,
+  EXIT_CHAR,
+  PATH_CHAR,
+  MONSTER_CHAR,
+} from "./types";
 
 // ── Parsing ─────────────────────────────────────────────────────────────────
 
@@ -9,15 +16,17 @@ export function parseRawMap(raw: string[]): MineMapState {
   const walls = new Set<string>();
   let start: Pos = { r: 0, c: 0 };
   let exit: Pos = { r: 0, c: 0 };
+  let monsterStart: Pos | null = null;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < (raw[r]?.length ?? 0); c++) {
       const ch = raw[r][c];
       if (ch === WALL_CHAR) walls.add(posKey(r, c));
       if (ch === START_CHAR) start = { r, c };
       if (ch === EXIT_CHAR) exit = { r, c };
+      if (ch === MONSTER_CHAR) monsterStart = { r, c };
     }
   }
-  return { rows, cols, walls, start, exit, version: 0 };
+  return { rows, cols, walls, start, exit, monsterStart, version: 0 };
 }
 
 // ── Serialization ───────────────────────────────────────────────────────────
@@ -29,6 +38,7 @@ export function mapToStrings(map: MineMapState): string[] {
     for (let c = 0; c < map.cols; c++) {
       if (r === map.start.r && c === map.start.c) row += START_CHAR;
       else if (r === map.exit.r && c === map.exit.c) row += EXIT_CHAR;
+      else if (map.monsterStart && r === map.monsterStart.r && c === map.monsterStart.c) row += MONSTER_CHAR;
       else if (map.walls.has(posKey(r, c))) row += WALL_CHAR;
       else row += PATH_CHAR;
     }
@@ -65,18 +75,26 @@ export function validateRawMap(lines: string[]): string | null {
 
   const rows = lines.length;
   const cols = lines[0].length;
-  const validChars = new Set([WALL_CHAR, PATH_CHAR, START_CHAR, EXIT_CHAR]);
+  const validChars = new Set([
+    WALL_CHAR,
+    PATH_CHAR,
+    START_CHAR,
+    EXIT_CHAR,
+    MONSTER_CHAR,
+  ]);
   let startCount = 0;
   let exitCount = 0;
+  let monsterCount = 0;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const ch = lines[r][c];
       if (!validChars.has(ch)) {
-        return "Invalid map — use only #, ., S, and E";
+        return "Invalid map — use only #, ., S, E, and optional M";
       }
       if (ch === START_CHAR) startCount += 1;
       if (ch === EXIT_CHAR) exitCount += 1;
+      if (ch === MONSTER_CHAR) monsterCount += 1;
       const isBorder = r === 0 || r === rows - 1 || c === 0 || c === cols - 1;
       if (isBorder && ch !== WALL_CHAR) {
         return "Invalid map — the entire border must be walls (#)";
@@ -95,6 +113,9 @@ export function validateRawMap(lines: string[]): string | null {
   }
   if (exitCount > 1) {
     return "Invalid map — use exactly one exit marker (E)";
+  }
+  if (monsterCount > 1) {
+    return "Invalid map — use at most one monster marker (M)";
   }
 
   return null;

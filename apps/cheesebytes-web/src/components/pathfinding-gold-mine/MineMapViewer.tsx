@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import "./goldmine-theme.css";
 import type { Pos, MineMapState } from "./types";
 import {
   ATLAS_SRC,
@@ -13,6 +14,7 @@ interface MineMapViewerProps {
   mapState: MineMapState;
   pathCells?: Pos[];
   showGoldSpecks?: boolean;
+  showMonsterMarker?: boolean;
   width?: string | number;
   height?: string | number;
   maxWidth?: string | number;
@@ -29,6 +31,7 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
   mapState,
   pathCells = [],
   showGoldSpecks = true,
+  showMonsterMarker = false,
   width = "100%",
   height,
   maxWidth = "100%",
@@ -41,6 +44,7 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
   const mapStateRef = useRef(mapState);
   const pathRef = useRef(pathCells);
   const showGoldSpecksRef = useRef(showGoldSpecks);
+  const showMonsterMarkerRef = useRef(showMonsterMarker);
   const [isDark, setIsDark] = useState(
     () =>
       typeof document !== "undefined" &&
@@ -50,6 +54,7 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
   mapStateRef.current = mapState;
   pathRef.current = pathCells;
   showGoldSpecksRef.current = showGoldSpecks;
+  showMonsterMarkerRef.current = showMonsterMarker;
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -97,6 +102,10 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
         exitGraphics: any = null;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         exitLabel: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        monsterGraphics: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        monsterLabel: any = null;
 
         constructor() {
           super({ key: "MineMapViewerScene" });
@@ -137,6 +146,8 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
           this.startLabel?.destroy();
           this.exitGraphics?.destroy();
           this.exitLabel?.destroy();
+          this.monsterGraphics?.destroy();
+          this.monsterLabel?.destroy();
 
           const tileData = buildTilemapData(nextMapState);
           this.floorMap = this.make.tilemap({
@@ -198,6 +209,23 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
             })
             .setOrigin(0.5, 0.5)
             .setDepth(11);
+
+          if (showMonsterMarkerRef.current && nextMapState.monsterStart) {
+            const mx = cellCenterX(nextMapState.monsterStart.c);
+            const my = cellCenterY(nextMapState.monsterStart.r);
+            this.monsterGraphics = this.add.graphics().setDepth(10);
+            this.monsterGraphics.fillStyle(0x4b1d6b, 1);
+            this.monsterGraphics.fillCircle(mx, my, TS * 0.55);
+            this.monsterLabel = this.add
+              .text(mx, my, "M", {
+                fontFamily: "monospace",
+                fontSize: `${TS * 0.8}px`,
+                color: "#ffffff",
+                fontStyle: "bold",
+              })
+              .setOrigin(0.5, 0.5)
+              .setDepth(11);
+          }
         }
 
         drawPath(cells: Pos[]) {
@@ -258,9 +286,6 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
           aspectRatio: height ? undefined : `${aspect}`,
           height: height ?? "auto",
           border: "2px solid var(--goldmine-hud-border, #d4a574)",
-          borderBottom: joinHudBottom
-            ? "none"
-            : "2px solid var(--goldmine-hud-border, #d4a574)",
           background: viewerBackgroundColor,
           boxSizing: "border-box",
         }}

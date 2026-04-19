@@ -1,1 +1,5 @@
-export { simpleMap, mediumMap } from "../cave/greedy-gold-miner/maps";
+export {
+  simpleMap,
+  mediumMap,
+  monsterMap,
+} from "../cave/greedy-gold-miner/maps";

@@ -31,7 +31,7 @@ game above.
 
 <MinePreludeEditor client:only="react" />
 
-# Two Strategies, Two Personalities
+# Two Strategies
 
 There are many ways to explore a maze, but two of them show up everywhere:
 
@@ -42,19 +42,9 @@ There are many ways to explore a maze, but two of them show up everywhere:
   all cells one step away from the start, then all cells two steps away, then
   three, and so on, until you find the exit.
 
-The mental picture is helpful: DFS is one curious explorer with a torch charging
-down corridors; BFS is a wave of water spreading out from the start in every
-direction at the same speed.
-
-That difference comes down to **one data structure**:
-
-| Algorithm | Where new cells are stored | Order they come out |
-| --------- | -------------------------- | ------------------- |
-| DFS       | A **stack** (or recursion) | Last in, first out  |
-| BFS       | A **queue**                | First in, first out |
-
-Swap the stack for a queue and DFS becomes BFS. That is essentially the only
-change.
+The mental picture is helpful: DFS is one curious explorer that never hesitates;
+BFS is a wave of water spreading out from the start in every direction at the
+same speed.
 
 # DFS: The First Path We Find
 
@@ -72,12 +62,17 @@ has visited along the way.
 
 <DfsFirstPathExplorer client:only="react" />
 
-> [!warning]
+Look closely at the final orange path. Is it the shortest? Probably not. DFS
+happily follows long, winding corridors before considering shorter alternatives.
+It only knows "go deeper, backtrack on dead ends".
+
+> [!tip] Experiment Tips
 >
-> Look closely at the final orange path. Is it short? Probably not. DFS happily
-> follows long, winding corridors before considering shorter alternatives,
-> because it has no notion of distance — it only knows "go deeper, backtrack on
-> dead ends".
+> Change the order of `MOVES` in the `neighbors()` function. How does that
+> affect the path DFS finds? In general, it will bias the search toward certain
+> directions, and that can lead to much longer or shorter paths depending on the
+> layout of the mine. Can you find a layout where the order of `MOVES` finds the
+> shortest path?
 
 # BFS: The Shortest Path, Guaranteed
 
@@ -125,6 +120,15 @@ There is also a more subtle point. BFS keeps a queue of "frontier" cells, which
 can grow large in open areas. DFS keeps only the current path on its recursion
 stack, which is at most $R \cdot C$ deep but is usually much shorter. So BFS
 trades a bit of memory for the shortest-path guarantee.
+
+# Code Similarity
+
+Just for fun, look at the code for DFS and BFS above. They are almost identical.
+The only differences are:
+
+- The queue vs stack data structure. Swap the stack for a queue and DFS becomes
+  BFS.
+- The `parent` dictionary to reconstruct the path in BFS.
 
 # What Comes Next
 

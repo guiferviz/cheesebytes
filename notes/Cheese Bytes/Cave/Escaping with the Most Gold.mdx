@@ -7,33 +7,32 @@ import {
   MinePreludeEditor,
 } from "../../../apps/cheesebytes-web/src/components/pathfinding-gold-mine";
 
-You enter a gold mine with one goal: to become filthy rich. But there's a
-catch. Every step you take collects gold and **collapses the tunnel behind
-you**. There is no going back. Luckily, there is another way out. So which
-route leaves you the richest by the time you escape?
+You enter a gold mine with one goal: to become filthy rich. But there's a catch.
+Every step you take collects gold and **collapses the tunnel behind you**. There
+is no going back. Luckily, there is another way out. So which route leaves you
+the richest by the time you escape?
 
 In this final note of the [[Pathfinding in the Gold Mine]] series we flip the
-classic shortest-path question on its head. Instead of asking _how do I get
-out as fast as possible?_, we ask _how do I get out collecting as much gold
-as possible?_
+classic shortest-path question on its head. Instead of asking _how do I get out
+as fast as possible?_, we ask _how do I get out collecting as much gold as
+possible?_
 
-For simplicity we assume that every walkable cell contains the same amount
-of gold. The ideas in this note extend naturally to the more general case
-where each cell has a different value — the goal is then to maximise the
-total gold collected, which is no longer the same as finding the longest
-path, but the algorithm structure is identical.
+For simplicity we assume that every walkable cell contains the same amount of
+gold. The ideas in this note extend naturally to the more general case where
+each cell has a different value — the goal is then to maximise the total gold
+collected, which is no longer the same as finding the longest path, but the
+algorithm structure is identical.
 
 # The Challenge
 
-One might think the main challenge in a maze is to find the shortest path
-and get out quickly. In our case, things are very different. We do not want
-to escape **fast**, we want to escape **rich**.
+One might think the main challenge in a maze is to find the shortest path and
+get out quickly. In our case, things are very different. We do not want to
+escape **fast**, we want to escape **rich**.
 
-Finding **just any path** is easy. Finding the **shortest** one is also easy
-— we did exactly that with BFS in
-[[Escaping the Mine The Shortest Path]]. But finding the **longest** one,
-where we are not allowed to revisit any cell? That is a completely different
-beast.
+Finding **just any path** is easy. Finding the **shortest** one is also easy —
+we did exactly that with BFS in [[Escaping the Mine The Shortest Path]]. But
+finding the **longest** one, where we are not allowed to revisit any cell? That
+is a completely different beast.
 
 The reason this problem is so hard is that, in principle, we need to consider
 **every possible path** to make sure we are not missing one that yields more
@@ -45,33 +44,33 @@ best?
 
 # Try It Yourself First
 
-Before looking at any algorithm, give it a go. Use the arrow keys (or `hjkl`)
-to walk around. Every step collects gold from the cell you step into and
-**collapses the tunnel behind you** so you cannot turn back. Reach the red
-`E` to escape.
+Before looking at any algorithm, give it a go. Use the arrow keys (or `hjkl`) to
+walk around. Every step collects gold from the cell you step into and
+**collapses the tunnel behind you** so you cannot turn back. Reach the red `E`
+to escape.
 
 <MineGameVisual client:only="react" mode="collapse" />
 
-Did you collect every cell? Did you get stuck? It is surprisingly easy to
-trap yourself in a corner with no way to the exit, even on a map this small.
-That is exactly why the algorithms below have to work so hard.
+Did you collect every cell? Did you get stuck? It is surprisingly easy to trap
+yourself in a corner with no way to the exit, even on a map this small. That is
+exactly why the algorithms below have to work so hard.
 
 # Setup From the Previous Notes
 
 Every visual on this page builds on the same code we wrote in
-[[Representing a Gold Mine]] — the `MINE_MAP`, the `START` / `END` markers,
-and the `neighbors()` generator. The block below shows it in full, and you
-can edit it freely. Replacing the map, swapping the order of `MOVES`, or
-rewriting `neighbors()` is reflected immediately in the algorithms further
-down and in the game above.
+[[Representing a Gold Mine]] — the `MINE_MAP`, the `START` / `END` markers, and
+the `neighbors()` generator. The block below shows it in full, and you can edit
+it freely. Replacing the map, swapping the order of `MOVES`, or rewriting
+`neighbors()` is reflected immediately in the algorithms further down and in the
+game above.
 
 <MinePreludeEditor client:only="react" />
 
 # A First DFS: Stops Too Soon
 
 Let's start with the most natural recursive search. We visit the current cell,
-mark it as visited, and recurse on each unvisited neighbor. The moment we
-reach the exit, we return.
+mark it as visited, and recurse on each unvisited neighbor. The moment we reach
+the exit, we return.
 
 This is the same algorithm we already saw in
 [[Escaping the Mine The Shortest Path]]: it returns **the first path it can
@@ -82,22 +81,21 @@ the first one and stops.
 
 > [!warning]
 >
-> Look at the final orange path. It is **a** valid escape route, but very
-> rarely the longest one. To collect the most gold we need an algorithm that
-> keeps exploring even after it has found a working path, and only commits to
-> the best one it has seen so far.
+> Look at the final orange path. It is **a** valid escape route, but very rarely
+> the longest one. To collect the most gold we need an algorithm that keeps
+> exploring even after it has found a working path, and only commits to the best
+> one it has seen so far.
 
 # DFS with Backtracking: Try Every Path
 
-The fix is conceptually small but algorithmically powerful: when we return
-from a recursive call, we **undo** every change we made (we `pop` from the
-path and `remove` from `visited`). That way the next branch starts in a clean
-state and can try a completely different route.
+The fix is conceptually small but algorithmically powerful: when we return from
+a recursive call, we **undo** every change we made (we `pop` from the path and
+`remove` from `visited`). That way the next branch starts in a clean state and
+can try a completely different route.
 
-That is the essence of **backtracking**. We are still doing depth-first
-search, but instead of stopping at the first solution, we explore every
-possibility, and at each level we keep the **best path found so far** below
-this branch.
+That is the essence of **backtracking**. We are still doing depth-first search,
+but instead of stopping at the first solution, we explore every possibility, and
+at each level we keep the **best path found so far** below this branch.
 
 <MostGoldBacktrackingExplorer client:only="react" />
 
@@ -106,45 +104,43 @@ this branch.
 > Things to notice:
 >
 > - The visited cells expand and contract as the algorithm explores and
->   backtracks. This is very different from BFS, where the visited region
->   only ever grows.
-> - The orange line during the replay is the **path being explored right
->   now**, not the best one yet. The final frame paints the best path
->   discovered after exploring the full search tree.
-> - The number of steps the replay needs to find the best path grows
->   _extremely_ fast with the size of the map. Try shrinking or enlarging the
->   map above to see how dramatic this is.
+>   backtracks. This is very different from BFS, where the visited region only
+>   ever grows.
+> - The orange line during the replay is the **path being explored right now**,
+>   not the best one yet. The final frame paints the best path discovered after
+>   exploring the full search tree.
+> - The number of steps the replay needs to find the best path grows _extremely_
+>   fast with the size of the map. Try shrinking or enlarging the map above to
+>   see how dramatic this is.
 
 # Why This Is So Expensive
 
-Both BFS and "any DFS" run in $O(R \cdot C)$ on a grid: each cell is visited
-at most a constant number of times. Backtracking DFS is in a completely
-different league. In the worst case it explores **every simple path** from
-`S` to `E`, and the number of such paths can grow **exponentially** with the
-size of the map.
+Both BFS and "any DFS" run in $O(R \cdot C)$ on a grid: each cell is visited at
+most a constant number of times. Backtracking DFS is in a completely different
+league. In the worst case it explores **every simple path** from `S` to `E`, and
+the number of such paths can grow **exponentially** with the size of the map.
 
 This is not a quirk of our particular implementation — finding the longest
-simple path in a general graph is a known **NP-hard** problem. There is no
-known algorithm that solves it in polynomial time on arbitrary inputs.
+simple path in a general graph is a known **NP-hard** problem. There is no known
+algorithm that solves it in polynomial time on arbitrary inputs.
 
 In practice, what saves us is that the mines we draw are usually small enough
-that exhaustive search finishes in milliseconds. As the map grows, we would
-need to introduce smarter pruning rules: cutting off branches that cannot
-possibly beat the current best, exploiting symmetries, or relying on
-heuristics that give up on optimality in exchange for speed.
+that exhaustive search finishes in milliseconds. As the map grows, we would need
+to introduce smarter pruning rules: cutting off branches that cannot possibly
+beat the current best, exploiting symmetries, or relying on heuristics that give
+up on optimality in exchange for speed.
 
 # What Comes Next
 
-This is the last note of the [[Pathfinding in the Gold Mine]] series, but it
-is also the most open-ended one. There is so much more to explore on top of
-this code:
+This is the last note of the [[Pathfinding in the Gold Mine]] series, but it is
+also the most open-ended one. There is so much more to explore on top of this
+code:
 
 - Add **different gold values per cell** and maximise the sum, not the path
   length.
 - Allow **diagonal moves** by extending `MOVES`.
 - Combine the **monster-avoidance logic** from
   [[Escaping the Monster in the Mine]] with the gold-collection objective.
-- Try **iterative deepening** or **branch-and-bound** to scale to larger
-  mines.
+- Try **iterative deepening** or **branch-and-bound** to scale to larger mines.
 
 The mine is yours. Go get rich.
