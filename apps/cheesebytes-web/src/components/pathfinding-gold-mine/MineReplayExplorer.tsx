@@ -36,7 +36,7 @@ import { getArticlePrelude, useArticleMap } from "./article-store";
 
 interface ReplayFrame {
   step: number;
-  visited: Pos[];
+  visited: Pos[] | null;
   path: Pos[];
   current: Pos | null;
 }
@@ -77,7 +77,7 @@ _viz_step = 0
 def show_state(visited, path, current=None):
     global _viz_step
     _viz_step += 1
-    visible_visited = [] if visited is None else [list(cell) for cell in sorted(visited)]
+    visible_visited = None if visited is None else [list(cell) for cell in sorted(visited)]
     print("${VIZ_PREFIX}" + json.dumps({
         "step": _viz_step,
         "visited": visible_visited,
@@ -101,13 +101,15 @@ function parseFrame(line: string): ReplayFrame | null {
   try {
     const raw = JSON.parse(line.slice(VIZ_PREFIX.length)) as {
       step: number;
-      visited: unknown[];
+      visited: unknown[] | null;
       path: unknown[];
       current: unknown;
     };
     return {
       step: raw.step,
-      visited: raw.visited.map(toPos).filter(Boolean) as Pos[],
+      visited: raw.visited == null
+        ? null
+        : raw.visited.map(toPos).filter(Boolean) as Pos[],
       path: raw.path.map(toPos).filter(Boolean) as Pos[],
       current: toPos(raw.current),
     };
@@ -163,7 +165,7 @@ function addInitialFrame(frames: ReplayFrame[]): ReplayFrame[] {
   return [
     {
       step: 0,
-      visited: [],
+      visited: null,
       path: [],
       current: null,
     },
@@ -751,7 +753,7 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
   const visitedKeys = useMemo(() => {
     const keys = new Set<string>();
     if (!currentFrame) return keys;
-    for (const cell of currentFrame.visited) {
+    for (const cell of currentFrame.visited ?? []) {
       keys.add(posKey(cell.r, cell.c));
     }
     return keys;
@@ -1021,10 +1023,14 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
                 </span>
                 {currentFrame && (
                   <>
-                    <span style={{ color: HUD_THEME.muted }}>Visited</span>
-                    <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
-                      {currentFrame.visited.length}
-                    </span>
+                    {currentFrame.visited !== null && (
+                      <>
+                        <span style={{ color: HUD_THEME.muted }}>Visited</span>
+                        <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
+                          {currentFrame.visited.length}
+                        </span>
+                      </>
+                    )}
                     <span style={{ color: HUD_THEME.muted }}>Path</span>
                     <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
                       {currentFrame.path.length}
