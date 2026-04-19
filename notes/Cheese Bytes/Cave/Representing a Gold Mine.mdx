@@ -1,0 +1,84 @@
+import {
+  MineGridOverlayVisual,
+  MineMapCodeEditor,
+  MineMarkersVisual,
+} from "../../../apps/cheesebytes-web/src/components/cave/representing-a-gold-mine";
+import { mediumMap } from "../../../apps/cheesebytes-web/src/components/pathfinding-gold-mine";
+
+Before we can search for paths, escape from monsters, or collect gold, we need a
+way to represent the mine itself. A visual map is great for humans, but
+algorithms need something more structured. In this first note of the series, we
+will build the data representation that every future algorithm will rely on.
+
+# A Mine Is a Grid
+
+The simplest way to think about our mine is as a two-dimensional grid. Each cell
+in the grid is either **a wall** or **an open path**. Walls block movement;
+paths allow it.
+
+We also mark two special cells: the **start** (where the miner begins) and the
+**exit** (the target location). Every problem in this series will use these two
+landmarks.
+
+Hover over the map below to see the row and column coordinates of each cell.
+
+<MineGridOverlayVisual client:only="react" rawMap={mediumMap} />
+
+Notice how the entire border is made of walls. This is a deliberate design
+decision: by surrounding the grid with walls we never need to worry about
+stepping outside its bounds. Any move from a non-wall cell is guaranteed to land
+on another valid cell inside the grid. One less edge case to handle in every
+algorithm we write.
+
+# The Text Representation
+
+In Python, we can represent the mine as a list of strings. Each string is a row
+of the grid, and all rows share the same length. We use four characters:
+
+| Character | Meaning   |
+| --------- | --------- |
+| `#`       | Wall      |
+| `.`       | Open path |
+| `S`       | Start     |
+| `E`       | Exit      |
+
+This format is compact, human-readable, and easy to parse.
+
+Feel free to modify the map below. You can edit the Python code on the left, or
+click directly on the visual on the right to toggle walls and move the start and
+exit markers. Changes in one representation are automatically reflected in the
+other.
+
+<MineMapCodeEditor client:only="react" rawMap={mediumMap} />
+
+> [!info]
+>
+> You can use the **arrow keys** to **change the size of the map**, and the
+> **random button** to generate a more labyrinthine layout. It is not a maze in
+> the strict sense, where there is exactly one path between any two points, but
+> it does create a richer environment to explore, where the exit can usually be
+> reached through several different routes.
+
+# Locating Start and Exit
+
+The start marks where the explorer begins, and the exit marks the goal. Since
+those two positions play a special role in every pathfinding problem that
+follows, it is useful to identify them explicitly as soon as we read the map.
+
+The visual below runs the Python code on the left against the current map (the
+one you may have edited above) and resolves `START` and `END` in real time.
+
+<MineMarkersVisual client:only="react" />
+
+The `Cell` type alias `tuple[int, int]` is a compact way to refer to a position
+`(row, column)`. We will use it throughout the series.
+
+# What Comes Next
+
+With the grid in place we have a foundation that every algorithm in the series
+can build on. The map knows where walls are, where the miner starts, and where
+the exit lies.
+
+In the next note, [[Escaping the Mine: The Shortest Path]], we will use this
+representation to find the quickest way out. After that, things get
+progressively harder: a moving monster, and finally the quest for the most gold.
