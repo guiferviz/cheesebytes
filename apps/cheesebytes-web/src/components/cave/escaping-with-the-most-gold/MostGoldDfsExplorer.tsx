@@ -32,15 +32,8 @@ def solve() -> None:
     dfs(MINE_MAP, START, END, visited, path)
     show_state(None, path, None)`;
 
-export interface MostGoldDfsExplorerProps {
-  maxWidth?: number;
-}
-
-export const MostGoldDfsExplorer: React.FC<MostGoldDfsExplorerProps> = ({
-  maxWidth = 980,
-}) => (
+export const MostGoldDfsExplorer: React.FC = () => (
   <MineReplayExplorer
-    maxWidth={maxWidth}
     title="DFS (stops at the first path)"
     vimModeId="most-gold-dfs"
     vimModeLabel="DFS"

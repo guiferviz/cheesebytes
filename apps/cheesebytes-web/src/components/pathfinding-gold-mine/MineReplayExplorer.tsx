@@ -65,6 +65,7 @@ const cmExtensions = [python(), EditorView.lineWrapping, cmSmallFont];
 const DEFAULT_STEP_DELAY_MS = 220;
 const MIN_STEP_DELAY_MS = 1;
 const MAX_STEP_DELAY_MS = 1000;
+const DEFAULT_MAX_WIDTH_PX = 10_000;
 const VIZ_PREFIX = "__MINE_VIZ__";
 const PLAY_BUTTON_WIDTH_PX = 54;
 const SPEED_BUTTON_HOLD_DELAY_MS = 260;
@@ -107,9 +108,10 @@ function parseFrame(line: string): ReplayFrame | null {
     };
     return {
       step: raw.step,
-      visited: raw.visited == null
-        ? null
-        : raw.visited.map(toPos).filter(Boolean) as Pos[],
+      visited:
+        raw.visited == null
+          ? null
+          : (raw.visited.map(toPos).filter(Boolean) as Pos[]),
       path: raw.path.map(toPos).filter(Boolean) as Pos[],
       current: toPos(raw.current),
     };
@@ -309,7 +311,7 @@ export interface MineReplayExplorerProps {
 }
 
 export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
-  maxWidth = 980,
+  maxWidth = DEFAULT_MAX_WIDTH_PX,
   title,
   vimModeId,
   vimModeLabel,
@@ -1026,7 +1028,9 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
                     {currentFrame.visited !== null && (
                       <>
                         <span style={{ color: HUD_THEME.muted }}>Visited</span>
-                        <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
+                        <span
+                          style={{ color: HUD_THEME.accent, fontWeight: 700 }}
+                        >
                           {currentFrame.visited.length}
                         </span>
                       </>

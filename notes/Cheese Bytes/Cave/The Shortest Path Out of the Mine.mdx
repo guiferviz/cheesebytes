@@ -100,21 +100,29 @@ hit the exit we walk that dictionary backwards to reconstruct the route.
 >   from different corridors. DFS, in contrast, marches in straight lines and
 >   only jumps when it backtracks.
 > - The final orange path is the shortest possible route between `S` and `E`. No
->   other path on this map can have fewer steps.
+>   other path on this map can have fewer steps. However, depending on the map,
+>   there may be multiple shortest paths with the same length.
+
+> [!warning]
+>
+> We are calling the `reconstruct` function on every iteration of the loop
+> because it helps the replay show the path being explored at each step. In a
+> more optimized implementation, we would only reconstruct the path once we find
+> the exit, and that would save some time.
 
 # Why BFS Wins Here
 
 Both algorithms eventually visit the same cells in the worst case, so they have
-the same big-O complexity: $O(R \cdot C)$ where $R$ and $C$ are the number of
-rows and columns of the grid. The difference is in **what each algorithm
-guarantees** when it stops:
+the same big-O complexity: $\mathcal{O}(R \cdot C)$ where $R$ and $C$ are the
+number of rows and columns of the grid. The difference is in **what each
+algorithm guarantees** when it stops:
 
 - DFS guarantees a path, if one exists.
 - BFS guarantees the **shortest** path, if one exists.
 
 If you only need _some_ path (for example, just to check whether the exit is
-reachable), DFS is great and uses very little memory. If you need the shortest,
-you almost always want BFS.
+reachable), DFS is great and, in general, uses very little memory. If you need
+the shortest, you almost always want BFS.
 
 There is also a more subtle point. BFS keeps a queue of "frontier" cells, which
 can grow large in open areas. DFS keeps only the current path on its recursion
@@ -128,6 +136,9 @@ The only differences are:
 
 - The queue vs stack data structure. Swap the stack for a queue and DFS becomes
   BFS.
+  - **Stack**: last-in, first-out. The most recently discovered cell is explored
+    next.
+  - **Queue**: first-in, first-out. The oldest discovered cell is explored next.
 - The `parent` dictionary to reconstruct the path in BFS.
 
 # What Comes Next

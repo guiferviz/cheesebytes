@@ -30,7 +30,7 @@ get out quickly. In our case, things are very different. We do not want to
 escape **fast**, we want to escape **rich**.
 
 Finding **just any path** is easy. Finding the **shortest** one is also easy —
-we did exactly that with BFS in [[Escaping the Mine The Shortest Path]]. But
+we did exactly that with BFS in [[The Shortest Path Out of the Mine]]. But
 finding the **longest** one, where we are not allowed to revisit any cell? That
 is a completely different beast.
 
@@ -73,7 +73,7 @@ mark it as visited, and recurse on each unvisited neighbor. The moment we reach
 the exit, we return.
 
 This is the same algorithm we already saw in
-[[Escaping the Mine The Shortest Path]]: it returns **the first path it can
+[[The Shortest Path Out of the Mine]]: it returns **the first path it can
 find**. It does not care whether the path is short or long, it just commits to
 the first one and stops.
 

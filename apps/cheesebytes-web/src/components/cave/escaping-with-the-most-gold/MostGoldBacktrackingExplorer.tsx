@@ -36,15 +36,8 @@ def solve() -> None:
     best_path = dfs_backtracking(MINE_MAP, START, END, visited, path)
     show_state(None, best_path, None)`;
 
-export interface MostGoldBacktrackingExplorerProps {
-  maxWidth?: number;
-}
-
-export const MostGoldBacktrackingExplorer: React.FC<
-  MostGoldBacktrackingExplorerProps
-> = ({ maxWidth = 980 }) => (
+export const MostGoldBacktrackingExplorer: React.FC = () => (
   <MineReplayExplorer
-    maxWidth={maxWidth}
     title="DFS with backtracking (longest path)"
     vimModeId="most-gold-backtracking"
     vimModeLabel="DFS+BT"

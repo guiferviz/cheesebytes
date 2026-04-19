@@ -3,12 +3,11 @@ import { MineReplayExplorer } from "../../pathfinding-gold-mine";
 
 const INITIAL_CODE = `from collections import deque
 
-def bfs_shortest_path(
+def bfs(
     grid: list[str],
     start: Cell,
     end: Cell,
 ) -> list[Cell]:
-    """Return the shortest path from start to end (or [] if unreachable)."""
     queue: deque[Cell] = deque([start])
     visited: set[Cell] = {start}
     parent: dict[Cell, Cell] = {}
@@ -44,18 +43,11 @@ def reconstruct(
 
 
 def solve() -> None:
-    path = bfs_shortest_path(MINE_MAP, START, END)
+    path = bfs(MINE_MAP, START, END)
     show_state(None, path, None)`;
 
-export interface BfsShortestPathExplorerProps {
-  maxWidth?: number;
-}
-
-export const BfsShortestPathExplorer: React.FC<BfsShortestPathExplorerProps> = ({
-  maxWidth = 980,
-}) => (
+export const BfsShortestPathExplorer: React.FC = () => (
   <MineReplayExplorer
-    maxWidth={maxWidth}
     title="Breadth-first search (shortest path)"
     vimModeId="mine-bfs-shortest"
     vimModeLabel="BFS"

@@ -1,7 +1,7 @@
 import React from "react";
 import { MineReplayExplorer } from "../../pathfinding-gold-mine";
 
-const INITIAL_CODE = `def dfs_first_path(
+const INITIAL_CODE = `def dfs(
     grid: list[str],
     current: Cell,
     end: Cell,
@@ -18,7 +18,7 @@ const INITIAL_CODE = `def dfs_first_path(
     for nxt in neighbors(grid, current):
         if nxt in visited:
             continue
-        if dfs_first_path(grid, nxt, end, visited, path):
+        if dfs(grid, nxt, end, visited, path):
             return True
 
     path.pop()
@@ -29,18 +29,11 @@ const INITIAL_CODE = `def dfs_first_path(
 def solve() -> None:
     visited: set[Cell] = set()
     path: list[Cell] = []
-    dfs_first_path(MINE_MAP, START, END, visited, path)
+    dfs(MINE_MAP, START, END, visited, path)
     show_state(None, path, None)`;
 
-export interface DfsFirstPathExplorerProps {
-  maxWidth?: number;
-}
-
-export const DfsFirstPathExplorer: React.FC<DfsFirstPathExplorerProps> = ({
-  maxWidth = 980,
-}) => (
+export const DfsFirstPathExplorer: React.FC = () => (
   <MineReplayExplorer
-    maxWidth={maxWidth}
     title="Depth-first search (first path found)"
     vimModeId="mine-dfs-first-path"
     vimModeLabel="DFS"
