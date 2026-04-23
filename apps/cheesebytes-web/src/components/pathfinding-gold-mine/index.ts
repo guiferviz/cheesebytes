@@ -83,3 +83,4 @@ export { MinePreludeEditor } from "./MinePreludeEditor";
 export { MineGameVisual } from "./MineGameVisual";
 export { MineGameSprite } from "./MineGameSprite";
 export { MonsterPlanVisual } from "./MonsterPlanVisual";
+export { MineStateGraphVisual } from "./MineStateGraphVisual";

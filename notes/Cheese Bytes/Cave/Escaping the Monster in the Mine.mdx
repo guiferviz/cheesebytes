@@ -2,6 +2,7 @@ import {
   MineArticleDefaults,
   MineGameVisual,
   MinePreludeEditor,
+  MineStateGraphVisual,
   MONSTER_MARKERS_PYTHON,
   MonsterPlanVisual,
   monsterMap,
@@ -35,10 +36,10 @@ requires thinking **two players ahead**.
 # Setup From the Previous Notes
 
 If you want to experiment with a different cave layout — moving walls, shifting
-the start, or changing the monster's spawn — edit the prelude below. Besides
-`S` and `E`, the map uses an `M` marker for the monster's initial cell. The
-game, the replay, and the prelude all read that exact spawn from `MINE_MAP`.
-The dark-violet `M` circle on the map marks it.
+the start, or changing the monster's spawn — edit the prelude below. Besides `S`
+and `E`, the map uses an `M` marker for the monster's initial cell. The game,
+the replay, and the prelude all read that exact spawn from `MINE_MAP`. The
+dark-violet `M` circle on the map marks it.
 
 <MinePreludeEditor client:only="react" />
 
@@ -52,8 +53,8 @@ trajectory is fully determined. No randomness, no fog of war.
 
 This determinism is what makes the problem tractable. Instead of reasoning about
 probabilities or worst-case branches, we can search for the **optimal plan** —
-the shortest sequence of player moves that reaches the exit without ever
-landing on the same cell as the monster.
+the shortest sequence of player moves that reaches the exit without ever landing
+on the same cell as the monster.
 
 # Joint-State BFS
 
@@ -62,14 +63,31 @@ is a **pair** of positions — the player's and the monster's:
 
 - **Nodes** are pairs $(p, m)$ with $p \neq m$.
 - **Edges** correspond to one player move in any of the four directions,
-  followed by one deterministic monster step (BFS-shortest toward the new
-  player position).
+  followed by one deterministic monster step (BFS-shortest toward the new player
+  position).
 - **Goal** is any node where $p = \text{exit}$.
 
 Running BFS on this joint graph gives us the shortest plan — the fewest player
 moves that reach the exit alive. It naturally discovers maneuvers like luring
-the monster away from the exit and then doubling back, something you cannot
-find by analysing each agent's distances independently.
+the monster away from the exit and then doubling back, something you cannot find
+by analysing each agent's distances independently.
+
+To see why we can't just track the player position, look at the joint-state
+graph below. Each card is **one state**: a tiny abstract grid that only shows
+where the player (yellow) and the monster (violet) are — no walls, no textures,
+just positions. BFS reveals the cards in the order it visits them, so you can
+watch the search fan out level by level. Two cards can put the yellow dot in the
+same cell and still be different states, because the violet dot is somewhere
+else — and that is exactly what makes plain shortest-path fail here.
+
+<MineStateGraphVisual client:only="react" />
+
+Click any card to see that exact state on the game map above. Use `n` / `space`
+to reveal the next state, `b` to step back, and `r` to restart from the root.
+Press `f` to toggle fullscreen mode.
+
+Once the joint-state plan is found, you can also watch it play out as a
+trajectory on the real map:
 
 <MonsterPlanVisual client:only="react" />
 
@@ -86,8 +104,8 @@ appear:
 - **Multiple monsters** with different start positions — the joint state grows
   to a tuple of all agent positions.
 - **Monsters with imperfect information** — for example, a monster that only
-  sees you within a certain radius, or that wanders randomly until it spots
-  you. Suddenly the optimal player strategy is no longer deterministic.
+  sees you within a certain radius, or that wanders randomly until it spots you.
+  Suddenly the optimal player strategy is no longer deterministic.
 
 The next note in the series, [[Escaping with the Most Gold]], drops the monster
 but adds a different kind of pressure: every step you take **collapses the floor

@@ -288,6 +288,8 @@ export const MinePreludeEditor: React.FC<MinePreludeEditorProps> = ({
               Tip: open{" "}
               <a
                 href="/cave/representing-a-gold-mine"
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{ color: "var(--goldmine-hud-accent)" }}
               >
                 Representing a Gold Mine
