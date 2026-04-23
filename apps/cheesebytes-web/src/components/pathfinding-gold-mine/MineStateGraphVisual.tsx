@@ -12,7 +12,7 @@
  * the map moves to the left and the graph fills the right side.
  *
  * Vim keys (whole visual is one focus zone):
- *   n / space → next   b → back   f → fullscreen   r → restart
+ *   space → play/pause   ← → back   → → next   f → fullscreen   r → restart
  */
 
 import React, {
@@ -262,6 +262,8 @@ interface LaidOutNode extends StateNode {
   y: number;
 }
 
+type GraphLayoutMode = "circular" | "tree";
+
 function layoutRadial(
   nodes: StateNode[],
   nodeWidth: number,
@@ -303,6 +305,43 @@ function layoutRadial(
       ...original,
       x: Math.cos(angle) * r,
       y: Math.sin(angle) * r,
+    });
+  });
+  out.sort((a, b) => a.order - b.order);
+  return out;
+}
+
+function layoutTree(
+  nodes: StateNode[],
+  nodeWidth: number,
+  nodeHeight: number,
+): LaidOutNode[] {
+  if (nodes.length === 0) return [];
+  if (nodes.length === 1) {
+    return [{ ...nodes[0], x: 0, y: 0 }];
+  }
+
+  const root = d3
+    .stratify<StateNode>()
+    .id((d) => d.id)
+    .parentId((d) => d.parent ?? "")(nodes.map((n) => ({ ...n })));
+
+  const treeLayout = d3
+    .tree<StateNode>()
+    .nodeSize([nodeWidth * 1.25, nodeHeight * 1.9])
+    .separation((a, b) => (a.parent === b.parent ? 1 : 1.2));
+
+  const laid = treeLayout(root);
+
+  const out: LaidOutNode[] = [];
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  laid.each((d) => {
+    const original = byId.get(d.id as string);
+    if (!original) return;
+    out.push({
+      ...original,
+      x: d.x,
+      y: d.y,
     });
   });
   out.sort((a, b) => a.order - b.order);
@@ -445,9 +484,14 @@ export const MineStateGraphVisual: React.FC<Props> = ({
   const nodeWidth = cell * map.cols + padding * 2;
   const nodeHeight = cell * map.rows + padding * 2;
 
+  const [layoutMode, setLayoutMode] = useState<GraphLayoutMode>("circular");
+
   const laidOut = useMemo(
-    () => layoutRadial(graph.nodes, nodeWidth, nodeHeight),
-    [graph.nodes, nodeWidth, nodeHeight],
+    () =>
+      layoutMode === "circular"
+        ? layoutRadial(graph.nodes, nodeWidth, nodeHeight)
+        : layoutTree(graph.nodes, nodeWidth, nodeHeight),
+    [graph.nodes, layoutMode, nodeWidth, nodeHeight],
   );
 
   // ── State ─────────────────────────────────────────────────────
@@ -506,6 +550,10 @@ export const MineStateGraphVisual: React.FC<Props> = ({
 
   const removeNodeBudget = useCallback(() => {
     setMaxNodeLimit((n) => Math.max(10, n - 10));
+  }, []);
+
+  const toggleLayoutMode = useCallback(() => {
+    setLayoutMode((mode) => (mode === "circular" ? "tree" : "circular"));
   }, []);
 
   const stepBack = useCallback(
@@ -673,9 +721,15 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       .append("line")
       .attr("class", "edge")
       .attr("data-id", (d) => d.id)
-      .attr("stroke", edgeColor)
-      .attr("stroke-width", 1.4)
-      .attr("opacity", 0)
+      .attr("stroke", (d) =>
+        showPlan && d.onPlan && d.order < revealed
+          ? EDGE_PLAN_COLOR
+          : edgeColor,
+      )
+      .attr("stroke-width", (d) =>
+        showPlan && d.onPlan && d.order < revealed ? 2 : 1.4,
+      )
+      .attr("opacity", (d) => (d.order < revealed ? 1 : 0))
       .attr("x1", (d) => nodeById.get(d.parent!)?.x ?? 0)
       .attr("y1", (d) => nodeById.get(d.parent!)?.y ?? 0)
       .attr("x2", (d) => d.x)
@@ -734,32 +788,6 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       .attr("font-weight", 700)
       .attr("fill", labelColor)
       .text((d) => `depth=${d.depth}`);
-
-    // Goal badge.
-    nodeGroups
-      .filter((d) => d.isGoal)
-      .append("g")
-      .attr("transform", `translate(${nodeWidth - 4},${4})`)
-      .each(function () {
-        const g = d3.select(this);
-        g.append("rect")
-          .attr("x", -26)
-          .attr("y", 0)
-          .attr("width", 26)
-          .attr("height", 11)
-          .attr("rx", 3)
-          .attr("ry", 3)
-          .attr("fill", EXIT_FILL);
-        g.append("text")
-          .attr("x", -13)
-          .attr("y", 8.5)
-          .attr("text-anchor", "middle")
-          .attr("font-family", "monospace")
-          .attr("font-size", 7)
-          .attr("font-weight", 800)
-          .attr("fill", "#052e16")
-          .text("EXIT");
-      });
 
     // Click → highlight + update game preview.
     nodeGroups.on("click", (_evt, d) => {
@@ -886,20 +914,17 @@ export const MineStateGraphVisual: React.FC<Props> = ({
           label: "State graph",
           extends: "normal",
           commands: [
-            { key: "n", label: "Reveal next state", run: stepForward },
             {
               key: " ",
-              label: "Reveal next state",
-              run: stepForward,
-              hidden: true,
-            },
-            { key: "b", label: "Hide last state", run: stepBack },
-            { key: "f", label: "Toggle fullscreen", run: toggleFullscreen },
-            {
-              key: "p",
               label: "Play / pause",
               run: () => setPlaying((p) => !p),
             },
+            { key: "arrowleft", label: "Hide last state", run: stepBack },
+            { key: "arrowright", label: "Reveal next state", run: stepForward },
+            { key: "f", label: "Toggle fullscreen", run: toggleFullscreen },
+            { key: "l", label: "Toggle graph layout", run: toggleLayoutMode },
+            { key: "0", label: "Increase max nodes", run: addNodeBudget },
+            { key: "9", label: "Decrease max nodes", run: removeNodeBudget },
             { key: "r", label: "Restart", run: restart },
             {
               key: "escape",
@@ -915,6 +940,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     };
 
     const focusRoot = () => {
+      if (root.contains(document.activeElement)) return;
       root.focus({ preventScroll: true });
       setMode(true);
     };
@@ -926,13 +952,22 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     root.addEventListener("pointerdown", focusRoot, true);
     root.addEventListener("focusin", sync);
     root.addEventListener("focusout", sync);
+    sync();
     return () => {
       root.removeEventListener("pointerdown", focusRoot, true);
       root.removeEventListener("focusin", sync);
       root.removeEventListener("focusout", sync);
       getVim()?.popMode(VIM_MODE_ID);
     };
-  }, [stepForward, stepBack, toggleFullscreen, restart]);
+  }, [
+    stepForward,
+    stepBack,
+    toggleFullscreen,
+    toggleLayoutMode,
+    addNodeBudget,
+    removeNodeBudget,
+    restart,
+  ]);
 
   // ── Render ────────────────────────────────────────────────────
 
@@ -1045,7 +1080,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
           {/* Minimal HUD */}
           <div
             style={{
-              marginTop: 6,
+              marginTop: 0,
               padding: "6px 10px",
               background: HUD.bg,
               border: `1px solid ${HUD.border}`,
@@ -1081,7 +1116,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
               tabIndex={-1}
               onPointerDown={triggerButtonAction(stepBack)}
               disabled={revealed <= 1}
-              title="Back (b)"
+              title="Back (Left Arrow)"
               style={{
                 padding: "4px 10px",
                 fontSize: 13,
@@ -1110,58 +1145,9 @@ export const MineStateGraphVisual: React.FC<Props> = ({
             <button
               type="button"
               tabIndex={-1}
-              onPointerDown={triggerButtonAction(removeNodeBudget)}
-              disabled={maxNodeLimit <= 10}
-              title="Reduce max nodes by 10"
-              style={{
-                padding: "4px 8px",
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: "monospace",
-                cursor: maxNodeLimit <= 10 ? "default" : "pointer",
-                opacity: maxNodeLimit <= 10 ? 0.35 : 1,
-                border: `1px solid ${HUD.border}`,
-                background: HUD.btnBg,
-                color: HUD.text,
-                lineHeight: 1,
-              }}
-            >
-              -10
-            </button>
-            <span
-              style={{
-                color: HUD.muted,
-                minWidth: 68,
-                textAlign: "center",
-              }}
-            >
-              max {maxNodeLimit}
-            </span>
-            <button
-              type="button"
-              tabIndex={-1}
-              onPointerDown={triggerButtonAction(addNodeBudget)}
-              title="Increase max nodes by 10"
-              style={{
-                padding: "4px 8px",
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: "monospace",
-                cursor: "pointer",
-                border: `1px solid ${HUD.border}`,
-                background: HUD.btnBg,
-                color: HUD.text,
-                lineHeight: 1,
-              }}
-            >
-              +10
-            </button>
-            <button
-              type="button"
-              tabIndex={-1}
               onPointerDown={triggerButtonAction(stepForward)}
               disabled={revealed >= total}
-              title="Next (n / space)"
+              title="Next (Right Arrow)"
               style={{
                 padding: "4px 10px",
                 fontSize: 13,

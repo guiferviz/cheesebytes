@@ -163,6 +163,12 @@ interface PaletteColumn {
   kind?: "mode" | "pending";
 }
 
+function currentOverlayHost(): HTMLElement {
+  return document.fullscreenElement instanceof HTMLElement
+    ? document.fullscreenElement
+    : document.body;
+}
+
 function keyboardEventInitFor(key: string): KeyboardEventInit | null {
   const lower = key.toLowerCase();
   if (/^[a-z]$/.test(lower)) {
@@ -202,6 +208,17 @@ function keyboardEventInitFor(key: string): KeyboardEventInit | null {
     };
   }
   return null;
+}
+
+function displayKeyLabel(key: string): string {
+  const lower = key.toLowerCase();
+  if (lower === " ") return "SPACE";
+  if (lower === "arrowleft") return "LEFT";
+  if (lower === "arrowright") return "RIGHT";
+  if (lower === "arrowup") return "UP";
+  if (lower === "arrowdown") return "DOWN";
+  if (lower === "escape") return "ESC";
+  return key.toUpperCase();
 }
 
 function createPalette(): {
@@ -257,7 +274,15 @@ function createPalette(): {
 
   root.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
 
-  document.body.appendChild(root);
+  const ensureHost = () => {
+    const host = currentOverlayHost();
+    if (root.parentElement !== host) {
+      host.appendChild(root);
+    }
+  };
+
+  ensureHost();
+  document.addEventListener("fullscreenchange", ensureHost);
 
   let savedFocus: Element | null = null;
 
@@ -332,7 +357,7 @@ function createPalette(): {
       "display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;";
 
     const kbd = document.createElement("kbd");
-    kbd.textContent = cmd.key.toUpperCase();
+    kbd.textContent = displayKeyLabel(cmd.key);
     kbd.style.cssText = badgeCSS;
     badges.appendChild(kbd);
 
@@ -343,7 +368,7 @@ function createPalette(): {
         sep.style.cssText = "font-size: 9px; opacity: 0.35;";
         badges.appendChild(sep);
         const ak = document.createElement("kbd");
-        ak.textContent = alt;
+        ak.textContent = displayKeyLabel(alt);
         ak.style.cssText = badgeCSS;
         badges.appendChild(ak);
       }
@@ -361,6 +386,7 @@ function createPalette(): {
   }
 
   function show(columns: PaletteColumn[]) {
+    ensureHost();
     savedFocus = document.activeElement;
     const savedFocusRef = { value: savedFocus };
     panel.innerHTML = "";
@@ -447,6 +473,7 @@ function createPalette(): {
 
   function destroy() {
     window.removeEventListener("pointerdown", onWindowPointerDownCapture, true);
+    document.removeEventListener("fullscreenchange", ensureHost);
     root.remove();
   }
 
@@ -494,7 +521,16 @@ function createIndicator(onClickFn: () => void): {
     e.stopPropagation();
     onClickFn();
   });
-  document.body.appendChild(el);
+
+  const ensureHost = () => {
+    const host = currentOverlayHost();
+    if (el.parentElement !== host) {
+      host.appendChild(el);
+    }
+  };
+
+  ensureHost();
+  document.addEventListener("fullscreenchange", ensureHost);
 
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -545,6 +581,7 @@ function createIndicator(onClickFn: () => void): {
 
   function destroy() {
     if (hideTimer) clearTimeout(hideTimer);
+    document.removeEventListener("fullscreenchange", ensureHost);
     el.remove();
   }
 
