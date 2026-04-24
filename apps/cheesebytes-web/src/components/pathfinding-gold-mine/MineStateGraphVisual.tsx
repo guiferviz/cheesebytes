@@ -896,11 +896,33 @@ export const MineStateGraphVisual: React.FC<Props> = ({
             ),
     [graph.nodes, graph.backtrackEdges, layoutMode, nodeWidth, nodeHeight],
   );
+  const graphNodeById = useMemo(
+    () => new Map(graph.nodes.map((node) => [node.id, node])),
+    [graph.nodes],
+  );
+  const laidOutById = useMemo(
+    () => new Map(laidOut.map((node) => [node.id, node])),
+    [laidOut],
+  );
+  const planPathNodes = useMemo(() => {
+    if (!graph.goalId) return [] as StateNode[];
+    const path: StateNode[] = [];
+    let currentId: string | null = graph.goalId;
+    while (currentId) {
+      const node = graphNodeById.get(currentId);
+      if (!node) break;
+      path.push(node);
+      currentId = node.parent;
+    }
+    path.reverse();
+    return path;
+  }, [graph.goalId, graphNodeById]);
 
   // ── State ─────────────────────────────────────────────────────
 
   const [revealed, setRevealed] = useState(1);
   const [playing, setPlaying] = useState(false);
+  const [walkPathIndex, setWalkPathIndex] = useState<number | null>(null);
   const [armed, setArmed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDark, setIsDark] = useState(
@@ -1017,17 +1039,17 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     setPreviewNode(graph.nodes[0]);
     setSelectedId(null);
     setPlaying(false);
+    setWalkPathIndex(null);
   }, [graph]);
 
   const total = laidOut.length;
-  const showPlan = graph.goalId !== null && revealed >= total;
+  const showPlan =
+    graph.goalId !== null && (revealed >= total || walkPathIndex !== null);
 
-  const addNodeBudget = useCallback(() => {
-    setMaxNodeLimit((n) => n + 10);
-  }, []);
-
-  const removeNodeBudget = useCallback(() => {
-    setMaxNodeLimit((n) => Math.max(10, n - 10));
+  const applyMaxNodeLimit = useCallback((digits: string) => {
+    const parsed = Number.parseInt(digits, 10);
+    if (Number.isNaN(parsed)) return;
+    setMaxNodeLimit(Math.max(10, parsed));
   }, []);
 
   const toggleLayoutMode = useCallback(() => {
@@ -1051,19 +1073,107 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     setShowBacktracks((show) => !show);
   }, []);
 
-  const stepBack = useCallback(
-    () => setRevealed((n) => Math.max(1, n - 1)),
-    [],
-  );
-  const stepForward = useCallback(
-    () => setRevealed((n) => Math.min(total, n + 1)),
-    [total],
-  );
+  const togglePlaying = useCallback(() => {
+    setWalkPathIndex(null);
+    setPlaying((value) => !value);
+  }, []);
+
+  const openMaxNodesPending = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    const vm = (window as Window & { vimMode?: VimModeAPI }).vimMode;
+    if (!vm) return;
+
+    const pushDigits = (digits: string) => {
+      const nextValue =
+        digits.length > 0 ? Math.max(10, Number.parseInt(digits, 10)) : null;
+
+      vm.pushPending({
+        id: "mine-state-max-nodes",
+        label: digits.length > 0 ? `Max nodes = ${nextValue}` : "Max nodes",
+        trail: `m${digits}`,
+        inherit: false,
+        timeout: 2000,
+        onCancel: () => {
+          if (digits.length > 0) applyMaxNodeLimit(digits);
+        },
+        commands: [
+          ...Array.from({ length: 10 }, (_, digit) => {
+            const key = String(digit);
+            const nextDigits = `${digits}${key}`;
+            return {
+              key,
+              label:
+                digits.length > 0
+                  ? `Append ${key} -> ${nextDigits}`
+                  : `Start with ${key}`,
+              run: () => pushDigits(nextDigits),
+            };
+          }),
+          ...(digits.length > 0
+            ? [
+                {
+                  key: "backspace",
+                  label:
+                    digits.length > 1
+                      ? `Delete last digit -> ${digits.slice(0, -1)}`
+                      : "Clear digits",
+                  run: () => pushDigits(digits.slice(0, -1)),
+                },
+                {
+                  key: "enter",
+                  label: `Apply ${nextValue}`,
+                  run: () => applyMaxNodeLimit(digits),
+                },
+              ]
+            : []),
+          {
+            key: "escape",
+            label: "Cancel max nodes",
+            run: () => {},
+          },
+        ],
+      });
+    };
+
+    pushDigits("");
+  }, [applyMaxNodeLimit]);
+
+  const stepBack = useCallback(() => {
+    setWalkPathIndex(null);
+    setPlaying(false);
+    setRevealed((n) => Math.max(1, n - 1));
+  }, []);
+  const stepForward = useCallback(() => {
+    setWalkPathIndex(null);
+    setPlaying(false);
+    setRevealed((n) => Math.min(total, n + 1));
+  }, [total]);
+  const jumpToEnd = useCallback(() => {
+    const endNode =
+      (graph.goalId ? graphNodeById.get(graph.goalId) : null) ??
+      graph.nodes[graph.nodes.length - 1];
+    if (!endNode) return;
+    setWalkPathIndex(null);
+    setPlaying(false);
+    setRevealed(total);
+    setPreviewNode(endNode);
+    setSelectedId(endNode.id);
+  }, [graph.goalId, graph.nodes, graphNodeById, total]);
+  const startWalkPlan = useCallback(() => {
+    const startNode = planPathNodes[0];
+    if (!startNode) return;
+    setPlaying(false);
+    setWalkPathIndex(0);
+    setPreviewNode(startNode);
+    setSelectedId(startNode.id);
+  }, [planPathNodes]);
   const restart = useCallback(() => {
     setRevealed(1);
     setPreviewNode(graph.nodes[0]);
     setSelectedId(null);
     setPlaying(false);
+    setWalkPathIndex(null);
   }, [graph.nodes]);
 
   const triggerButtonAction = useCallback(
@@ -1091,6 +1201,39 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     );
     return () => window.clearInterval(id);
   }, [playing, total, fps]);
+
+  const walkFocusNode = useMemo(() => {
+    if (walkPathIndex == null) return null;
+    const node = planPathNodes[walkPathIndex];
+    if (!node) return null;
+    return laidOutById.get(node.id) ?? null;
+  }, [walkPathIndex, planPathNodes, laidOutById]);
+
+  useEffect(() => {
+    if (walkPathIndex == null) return;
+    const current = planPathNodes[walkPathIndex];
+    if (!current) {
+      setWalkPathIndex(null);
+      return;
+    }
+
+    setPreviewNode(current);
+    setSelectedId(current.id);
+
+    if (walkPathIndex >= planPathNodes.length - 1) return;
+
+    const id = window.setTimeout(
+      () => {
+        setWalkPathIndex((index) => {
+          if (index == null) return index;
+          return Math.min(planPathNodes.length - 1, index + 1);
+        });
+      },
+      Math.max(180, Math.round(1000 / fps)),
+    );
+
+    return () => window.clearTimeout(id);
+  }, [walkPathIndex, planPathNodes, fps]);
 
   // ── Refs ──────────────────────────────────────────────────────
 
@@ -1189,6 +1332,15 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     const ty = vh / 2 - revealedBBox.cy * scale;
     return d3.zoomIdentity.translate(tx, ty).scale(scale);
   }, [containerHeight, containerWidth, revealedBBox]);
+  const walkTransform = useCallback((): d3.ZoomTransform | null => {
+    if (!walkFocusNode) return null;
+    const vw = containerWidth;
+    const vh = containerHeight;
+    const scale = Math.min(vw / (nodeWidth * 3), vh / (nodeHeight * 3.4), 2.9);
+    const tx = vw / 2 - walkFocusNode.x * scale;
+    const ty = vh / 2 - walkFocusNode.y * scale;
+    return d3.zoomIdentity.translate(tx, ty).scale(scale);
+  }, [containerHeight, containerWidth, nodeHeight, nodeWidth, walkFocusNode]);
 
   // ── D3: draw once ─────────────────────────────────────────────
 
@@ -1374,6 +1526,8 @@ export const MineStateGraphVisual: React.FC<Props> = ({
 
     // Click → highlight + update game preview.
     nodeGroups.on("click", (_evt, d) => {
+      setPlaying(false);
+      setWalkPathIndex(null);
       setPreviewNode(d);
       setSelectedId(d.id);
     });
@@ -1427,13 +1581,13 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     if (!svgEl || !zoom) return;
     const svg = d3.select<SVGSVGElement, unknown>(svgEl);
     svg.interrupt();
-    const t = revealedTransform();
+    const t = walkTransform() ?? revealedTransform();
     svg
       .transition()
       .duration(400)
       .ease(d3.easeCubicOut)
       .call(zoom.transform, t);
-  }, [revealedTransform, nodeThumbnailUrls, nodeVisualMode]);
+  }, [revealedTransform, walkTransform, nodeThumbnailUrls, nodeVisualMode]);
 
   // ── D3: reveal nodes ──────────────────────────────────────────
 
@@ -1532,15 +1686,21 @@ export const MineStateGraphVisual: React.FC<Props> = ({
             {
               key: " ",
               label: "Play / pause",
-              run: () => setPlaying((p) => !p),
+              run: togglePlaying,
             },
             { key: "arrowleft", label: "Hide last state", run: stepBack },
             { key: "arrowright", label: "Reveal next state", run: stepForward },
+            { key: "e", label: "Jump to end", run: jumpToEnd },
             { key: "f", label: "Toggle fullscreen", run: toggleFullscreen },
             {
               key: "g",
               label: "Cycle map / grid / numeric",
               run: toggleNodeVisualMode,
+            },
+            {
+              key: "w",
+              label: "Walk shortest path",
+              run: startWalkPlan,
             },
             {
               key: "b",
@@ -1552,8 +1712,11 @@ export const MineStateGraphVisual: React.FC<Props> = ({
               label: "Cycle circular / tree / force",
               run: toggleLayoutMode,
             },
-            { key: "0", label: "Increase max nodes", run: addNodeBudget },
-            { key: "9", label: "Decrease max nodes", run: removeNodeBudget },
+            {
+              key: "m",
+              label: "Set max nodes…",
+              run: openMaxNodesPending,
+            },
             { key: "r", label: "Restart", run: restart },
             {
               key: "escape",
@@ -1591,12 +1754,14 @@ export const MineStateGraphVisual: React.FC<Props> = ({
   }, [
     stepForward,
     stepBack,
+    jumpToEnd,
+    togglePlaying,
     toggleFullscreen,
     toggleNodeVisualMode,
+    startWalkPlan,
     toggleBacktracks,
     toggleLayoutMode,
-    addNodeBudget,
-    removeNodeBudget,
+    openMaxNodesPending,
     restart,
   ]);
 
