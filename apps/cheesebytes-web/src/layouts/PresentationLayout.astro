@@ -61,31 +61,6 @@ const {
         // Expose for VimMode theme toggle
         window._syncHighlightTheme = syncHighlightTheme;
 
-        // Script to move the custom cursor.
-        var customCursor = document.getElementById("customCursor");
-        window._customCursorScale = 1;
-        document.addEventListener("mousemove", function (e) {
-          var scale = window._customCursorScale || 1;
-          customCursor.style.transform =
-            "translate(" +
-            e.clientX +
-            "px, " +
-            e.clientY +
-            "px) scale(" +
-            scale +
-            ")";
-        });
-        document.addEventListener("pointermove", function (e) {
-          var scale = window._customCursorScale || 1;
-          customCursor.style.transform =
-            "translate(" +
-            e.clientX +
-            "px, " +
-            e.clientY +
-            "px) scale(" +
-            scale +
-            ")";
-        });
         // Initialize Reveal.js (keyboard shortcuts handled by VimMode).
         Reveal.initialize({
           controls: false,
@@ -104,6 +79,7 @@ const {
     <!-- VimMode -->
     <script>
       import { createVimMode } from "../utils/vim-mode";
+      import cheeseCursor from "../utils/cheese-cursor";
 
       const vimMedia = window.matchMedia(
         "(max-width: 900px), (pointer: coarse)",
@@ -122,6 +98,9 @@ const {
         const vm = createVimMode();
         (window as any).__vimMode = vm;
         (window as any).vimMode = vm;
+
+        // Enable cheese cursor by default in presentations
+        cheeseCursor.enable();
 
         const R = () => (window as any).Reveal;
 
@@ -172,12 +151,10 @@ const {
           },
         });
 
-        function cursorTransform(scale: number): string {
-          const el = document.getElementById("customCursor");
-          if (!el) return "";
-          const m = el.style.transform.match(/translate\(([^)]+)\)/);
-          return m ? `translate(${m[1]}) scale(${scale})` : `scale(${scale})`;
-        }
+        vm.register("v", {
+          label: "Toggle cheese cursor",
+          run: () => cheeseCursor.toggle(),
+        });
 
         vm.register("c", {
           label: "Cursor controls…",
@@ -188,42 +165,22 @@ const {
                 {
                   key: "v",
                   label: "Toggle visibility",
-                  run: () => {
-                    const el = document.getElementById("customCursor");
-                    if (el)
-                      el.style.opacity = el.style.opacity === "0" ? "1" : "0";
-                  },
+                  run: () => cheeseCursor.toggleVisibility(),
                 },
                 {
                   key: "d",
                   label: "Decrease size",
-                  run: () => {
-                    const w = window as any;
-                    const s = Math.max((w._customCursorScale || 1) - 0.2, 0.4);
-                    w._customCursorScale = s;
-                    const el = document.getElementById("customCursor");
-                    if (el) el.style.transform = cursorTransform(s);
-                  },
+                  run: () => cheeseCursor.decreaseSize(),
                 },
                 {
                   key: "e",
                   label: "Enlarge size",
-                  run: () => {
-                    const w = window as any;
-                    const s = Math.min((w._customCursorScale || 1) + 0.2, 3);
-                    w._customCursorScale = s;
-                    const el = document.getElementById("customCursor");
-                    if (el) el.style.transform = cursorTransform(s);
-                  },
+                  run: () => cheeseCursor.increaseSize(),
                 },
                 {
                   key: "r",
                   label: "Reset size",
-                  run: () => {
-                    (window as any)._customCursorScale = 1;
-                    const el = document.getElementById("customCursor");
-                    if (el) el.style.transform = cursorTransform(1);
-                  },
+                  run: () => cheeseCursor.resetSize(),
                 },
               ],
               timeout: 3000,
@@ -244,7 +201,9 @@ const {
       syncVimMode();
       vimMedia.addEventListener("change", syncVimMode);
     </script>
-    <style is:inline>
+    <!-- The cheese-cursor module manages this style dynamically.
+         We keep it here so the presentation never flashes the default cursor. -->
+    <style is:inline id="cheese-cursor-hide">
       html,
       body,
       *,
@@ -256,17 +215,6 @@ const {
       *::before,
       *::after {
         cursor: none;
-      }
-
-      #customCursor {
-        position: absolute;
-        top: 0;
-        left: 0;
-        pointer-events: none; /* Crucial so clicks pass through to elements below */
-        z-index: 10001; /* Above everything including drawing overlay */
-        transition: opacity 0.3s linear; /* Only animate opacity, not position */
-        transform-origin: top left;
-        will-change: transform; /* Optimize for animations */
       }
     </style>
   </head>
@@ -286,6 +234,7 @@ const {
       alt="Custom Cheese Cursor"
       width="64"
       height="64"
+      style="position:fixed;top:0;left:0;pointer-events:none;z-index:10001;transition:opacity 0.3s linear;transform-origin:top left;will-change:transform;opacity:0"
     />
     <div
       class="reveal !max-w-none w-full h-full bg-yellow-50 dark:bg-black text-gray-700 dark:text-gray-100"

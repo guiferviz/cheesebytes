@@ -44,6 +44,7 @@ const { title, description } = Astro.props;
       import "../scripts/bootMermaid";
       import { createVimMode } from "../utils/vim-mode";
       import pixelMode from "../utils/pixel-mode";
+      import cheeseCursor from "../utils/cheese-cursor";
 
       // Restore pixel mode from localStorage on every page load.
       pixelMode.restore();
@@ -101,6 +102,12 @@ const { title, description } = Astro.props;
           category: "General",
           hidden: !pixelMode.isUnlocked(),
           run: () => pixelMode.toggle(),
+        });
+
+        vm.register("v", {
+          label: "Toggle cheese cursor",
+          category: "General",
+          run: () => cheeseCursor.toggle(),
         });
       }
 

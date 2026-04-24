@@ -1524,13 +1524,64 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       .attr("fill", labelColor)
       .text((d) => `depth=${d.depth}`);
 
-    // Click → highlight + update game preview.
-    nodeGroups.on("click", (_evt, d) => {
+    nodeGroups
+      .append("rect")
+      .attr("class", "hitbox")
+      .attr("width", nodeWidth)
+      .attr("height", nodeHeight)
+      .attr("fill", "transparent")
+      .style("pointer-events", "all")
+      .style("cursor", "pointer");
+
+    const selectNode = (d: LaidOutNode) => {
       setPlaying(false);
       setWalkPathIndex(null);
       setPreviewNode(d);
       setSelectedId(d.id);
-    });
+    };
+
+    const activateNode = (event: PointerEvent, fallbackNode: LaidOutNode) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const viewNode = view.node();
+      if (!viewNode) {
+        selectNode(fallbackNode);
+        return;
+      }
+
+      const [px, py] = d3.pointer(event, viewNode);
+      const halfWidth = nodeWidth / 2;
+      const halfHeight = nodeHeight / 2;
+      const bestNode = laidOut
+        .filter((node) => {
+          if (node.order >= revealed) return false;
+          return (
+            px >= node.x - halfWidth &&
+            px <= node.x + halfWidth &&
+            py >= node.y - halfHeight &&
+            py <= node.y + halfHeight
+          );
+        })
+        .reduce<{ node: LaidOutNode; distance: number } | null>(
+          (best, node) => {
+            const distance = (node.x - px) ** 2 + (node.y - py) ** 2;
+            if (!best || distance < best.distance) {
+              return { node, distance };
+            }
+            return best;
+          },
+          null,
+        )?.node;
+
+      selectNode(bestNode ?? fallbackNode);
+    };
+
+    // Select on pointerdown so trackpad micro-movement does not swallow clicks.
+    nodeGroups
+      .select<SVGRectElement>("rect.hitbox")
+      .on("pointerdown", activateNode);
 
     // Zoom.
     const zoom = d3
