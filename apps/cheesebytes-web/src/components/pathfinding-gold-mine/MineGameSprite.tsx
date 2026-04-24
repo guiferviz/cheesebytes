@@ -13,7 +13,7 @@ export type Direction = "north" | "south" | "east" | "west";
 export type SpriteKind = "miner" | "monster";
 export type SpriteAnim = "idle" | "walk";
 
-interface AtlasInfo {
+export interface AtlasInfo {
   src: string;
   manifestSrc: string;
   frameW: number;
@@ -31,7 +31,7 @@ interface AtlasInfo {
   walkFps: number;
 }
 
-const MINER_ATLAS: AtlasInfo = {
+export const MINER_ATLAS: AtlasInfo = {
   src: "/cave/greedy-gold-miner/gold-miner-atlas.png",
   manifestSrc: "/cave/greedy-gold-miner/gold-miner-atlas.json",
   frameW: 48,
@@ -46,7 +46,7 @@ const MINER_ATLAS: AtlasInfo = {
   walkFps: 10,
 };
 
-const MONSTER_ATLAS: AtlasInfo = {
+export const MONSTER_ATLAS: AtlasInfo = {
   src: "/cave/greedy-gold-miner/cave-monster-atlas.png",
   manifestSrc: "/cave/greedy-gold-miner/cave-monster-atlas.json",
   frameW: 92,
@@ -64,7 +64,7 @@ const MONSTER_ATLAS: AtlasInfo = {
   walkFps: 9,
 };
 
-const ATLASES: Record<SpriteKind, AtlasInfo> = {
+export const ATLASES: Record<SpriteKind, AtlasInfo> = {
   miner: MINER_ATLAS,
   monster: MONSTER_ATLAS,
 };
@@ -73,7 +73,7 @@ interface ManifestFrame {
   frame: { x: number; y: number; w: number; h: number };
 }
 
-interface Manifest {
+export interface Manifest {
   meta: { columns: number };
   frames: Record<string, ManifestFrame>;
   clips: {
@@ -84,7 +84,7 @@ interface Manifest {
 
 const manifestCache = new Map<string, Promise<Manifest>>();
 
-function loadManifest(src: string): Promise<Manifest> {
+export function loadManifest(src: string): Promise<Manifest> {
   let p = manifestCache.get(src);
   if (!p) {
     p = fetch(src).then((r) => r.json() as Promise<Manifest>);
@@ -93,7 +93,7 @@ function loadManifest(src: string): Promise<Manifest> {
   return p;
 }
 
-function frameToColRow(
+export function frameToColRow(
   m: Manifest,
   frameKey: string,
   atlas: AtlasInfo,
@@ -103,7 +103,7 @@ function frameToColRow(
   return [Math.floor(f.x / atlas.frameW), Math.floor(f.y / atlas.frameH)];
 }
 
-interface ResolvedAnim {
+export interface ResolvedAnim {
   frames: string[];
   mirrored: boolean;
 }
@@ -113,7 +113,7 @@ const HORIZONTAL_MIRROR: Partial<Record<Direction, Direction>> = {
   east: "west",
 };
 
-function resolveAnimFrames(
+export function resolveAnimFrames(
   m: Manifest,
   atlas: AtlasInfo,
   anim: SpriteAnim,

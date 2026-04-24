@@ -12,7 +12,7 @@
  * the map moves to the left and the graph fills the right side.
  *
  * Vim keys (whole visual is one focus zone):
- *   space → play/pause   ← → back   → → next   f → fullscreen   r → restart
+ *   space → play/pause   ← → back   → → next   g → node view   f → fullscreen   r → restart
  */
 
 import React, {
@@ -27,7 +27,21 @@ import { useArticleMap } from "./article-store";
 import { posKey } from "./types";
 import type { MineMapState, Pos } from "./types";
 import { MineMapViewer } from "./MineMapViewer";
-import { MineGameSprite } from "./MineGameSprite";
+import {
+  ATLASES,
+  MineGameSprite,
+  frameToColRow,
+  loadManifest,
+  resolveAnimFrames,
+} from "./MineGameSprite";
+import {
+  ATLAS_SRC,
+  GOLD_SPECKS,
+  TS,
+  buildTilemapData,
+  cellCenterX,
+  cellCenterY,
+} from "./mine-viewer-shared";
 import type { VimModeAPI } from "../../utils/vim-mode";
 
 // ── Colors ──────────────────────────────────────────────────────────
@@ -50,6 +64,7 @@ const EDGE_COLOR_LIGHT = "rgba(71, 85, 105, 0.55)";
 const EDGE_PLAN_COLOR = "#facc15";
 const CELL_EMPTY_DARK = "rgba(148, 163, 184, 0.22)";
 const CELL_EMPTY_LIGHT = "rgba(15, 23, 42, 0.10)";
+const NODE_THUMBNAIL_SPRITE_SCALE = 1.4;
 
 function baseNodeStroke(
   node: Pick<StateNode, "depth" | "isGoal">,
@@ -263,6 +278,7 @@ interface LaidOutNode extends StateNode {
 }
 
 type GraphLayoutMode = "circular" | "tree";
+type NodeVisualMode = "thumbnail" | "grid";
 
 function layoutRadial(
   nodes: StateNode[],
@@ -435,6 +451,191 @@ function renderMiniGrid(
     .attr("stroke-width", Math.max(0.6, cell * 0.07));
 }
 
+const imageCache = new Map<string, Promise<HTMLImageElement>>();
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  let cached = imageCache.get(src);
+  if (cached) return cached;
+
+  cached = new Promise((resolve, reject) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    img.src = src;
+  });
+  imageCache.set(src, cached);
+  return cached;
+}
+
+function colorNumberToCss(color: number): string {
+  return `#${color.toString(16).padStart(6, "0")}`;
+}
+
+function drawExitMarker(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+): void {
+  ctx.fillStyle = "#f44336";
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `bold ${Math.max(5, radius * 1.4)}px monospace`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("E", x, y + 0.5);
+}
+
+function drawStaticSprite(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  atlas: (typeof ATLASES)[keyof typeof ATLASES],
+  frameKey: string,
+  manifest: Awaited<ReturnType<typeof loadManifest>>,
+  cellPx: number,
+  pos: Pos,
+): void {
+  if (!frameKey) return;
+  const [fc, fr] = frameToColRow(manifest, frameKey, atlas);
+  const size = cellPx * atlas.cellScale * NODE_THUMBNAIL_SPRITE_SCALE;
+  const x = (pos.c + 0.5) * cellPx - size / 2;
+  const y = (pos.r + 0.5) * cellPx - size / 2;
+  ctx.drawImage(
+    image,
+    fc * atlas.frameW,
+    fr * atlas.frameH,
+    atlas.frameW,
+    atlas.frameH,
+    x,
+    y,
+    size,
+    size,
+  );
+}
+
+function renderStaticNodeThumbnail(
+  node: Pick<StateNode, "id" | "player" | "monster">,
+  map: MineMapState,
+  cellPx: number,
+  baseCanvas: HTMLCanvasElement,
+  minerImage: HTMLImageElement,
+  monsterImage: HTMLImageElement,
+  minerFrameKey: string,
+  monsterFrameKey: string,
+  minerManifest: Awaited<ReturnType<typeof loadManifest>>,
+  monsterManifest: Awaited<ReturnType<typeof loadManifest>>,
+): string | null {
+  const width = Math.max(1, Math.round(map.cols * cellPx));
+  const height = Math.max(1, Math.round(map.rows * cellPx));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.imageSmoothingEnabled = false;
+
+  ctx.drawImage(baseCanvas, 0, 0);
+  drawStaticSprite(
+    ctx,
+    minerImage,
+    ATLASES.miner,
+    minerFrameKey,
+    minerManifest,
+    cellPx,
+    node.player,
+  );
+  drawStaticSprite(
+    ctx,
+    monsterImage,
+    ATLASES.monster,
+    monsterFrameKey,
+    monsterManifest,
+    cellPx,
+    node.monster,
+  );
+
+  return canvas.toDataURL("image/png");
+}
+
+function createBaseThumbnailCanvas(
+  map: MineMapState,
+  cellPx: number,
+  isDark: boolean,
+  terrainImage: HTMLImageElement,
+): HTMLCanvasElement {
+  const width = Math.max(1, Math.round(map.cols * cellPx));
+  const height = Math.max(1, Math.round(map.rows * cellPx));
+  const worldScale = cellPx / (2 * TS);
+  const tilePx = TS * worldScale;
+  const atlasCols = Math.max(1, Math.floor(terrainImage.naturalWidth / TS));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = isDark ? "#05070a" : "#fff7ed";
+  ctx.fillRect(0, 0, width, height);
+
+  const tileData = buildTilemapData(map);
+  for (let row = 0; row < tileData.length; row += 1) {
+    for (let col = 0; col < tileData[row].length; col += 1) {
+      const tileIdx = tileData[row][col];
+      if (tileIdx < 0) continue;
+      const sx = (tileIdx % atlasCols) * TS;
+      const sy = Math.floor(tileIdx / atlasCols) * TS;
+      ctx.drawImage(
+        terrainImage,
+        sx,
+        sy,
+        TS,
+        TS,
+        col * tilePx,
+        row * tilePx,
+        tilePx,
+        tilePx,
+      );
+    }
+  }
+
+  for (let r = 0; r < map.rows; r += 1) {
+    for (let c = 0; c < map.cols; c += 1) {
+      if (map.walls.has(posKey(r, c))) continue;
+      const x = cellCenterX(c) * worldScale;
+      const y = cellCenterY(r) * worldScale;
+      for (const speck of GOLD_SPECKS) {
+        ctx.fillStyle = colorNumberToCss(speck.color);
+        ctx.globalAlpha = speck.alpha;
+        ctx.beginPath();
+        ctx.arc(
+          x + speck.dx * worldScale,
+          y + speck.dy * worldScale,
+          Math.max(0.45, speck.radius * worldScale),
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  drawExitMarker(
+    ctx,
+    cellCenterX(map.exit.c) * worldScale,
+    cellCenterY(map.exit.r) * worldScale,
+    Math.max(2.5, TS * 0.55 * worldScale),
+  );
+
+  return canvas;
+}
+
 // ── HUD styling ─────────────────────────────────────────────────────
 
 const HUD = {
@@ -479,12 +680,15 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     const longest = Math.max(map.rows, map.cols);
     return Math.max(4, Math.min(9, Math.floor(60 / longest)));
   }, [map.rows, map.cols]);
+  const thumbnailCell = useMemo(() => Math.max(cell * 4, 24), [cell]);
 
   const padding = 8;
   const nodeWidth = cell * map.cols + padding * 2;
   const nodeHeight = cell * map.rows + padding * 2;
 
   const [layoutMode, setLayoutMode] = useState<GraphLayoutMode>("circular");
+  const [nodeVisualMode, setNodeVisualMode] =
+    useState<NodeVisualMode>("thumbnail");
 
   const laidOut = useMemo(
     () =>
@@ -513,6 +717,9 @@ export const MineStateGraphVisual: React.FC<Props> = ({
 
   // Currently selected (clicked) node id — for highlight ring.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [nodeThumbnailUrls, setNodeThumbnailUrls] = useState<
+    Record<string, string>
+  >({});
 
   // The map keeps the original S / M markers; the moving sprites show the current state.
   const previewMapState = useMemo((): MineMapState => {
@@ -532,6 +739,78 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     });
     return () => obs.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+    setNodeThumbnailUrls({});
+
+    const generate = async () => {
+      try {
+        const [
+          terrainImage,
+          minerImage,
+          monsterImage,
+          minerManifest,
+          monsterManifest,
+        ] = await Promise.all([
+          loadImage(ATLAS_SRC),
+          loadImage(ATLASES.miner.src),
+          loadImage(ATLASES.monster.src),
+          loadManifest(ATLASES.miner.manifestSrc),
+          loadManifest(ATLASES.monster.manifestSrc),
+        ]);
+
+        if (cancelled) return;
+
+        const minerFrameKey =
+          resolveAnimFrames(minerManifest, ATLASES.miner, "idle", "south")
+            .frames[0] ?? "";
+        const monsterFrameKey =
+          resolveAnimFrames(monsterManifest, ATLASES.monster, "idle", "south")
+            .frames[0] ?? "";
+
+        const baseCanvas = createBaseThumbnailCanvas(
+          map,
+          thumbnailCell,
+          isDark,
+          terrainImage,
+        );
+
+        const nextUrls: Record<string, string> = {};
+        for (const node of graph.nodes) {
+          const url = renderStaticNodeThumbnail(
+            node,
+            map,
+            thumbnailCell,
+            baseCanvas,
+            minerImage,
+            monsterImage,
+            minerFrameKey,
+            monsterFrameKey,
+            minerManifest,
+            monsterManifest,
+          );
+          if (url) nextUrls[node.id] = url;
+        }
+
+        if (!cancelled) {
+          setNodeThumbnailUrls(nextUrls);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to generate mine graph thumbnails", error);
+          setNodeThumbnailUrls({});
+        }
+      }
+    };
+
+    void generate();
+    return () => {
+      cancelled = true;
+    };
+  }, [graph.nodes, map, thumbnailCell, isDark]);
 
   // Reset on graph change.
   useEffect(() => {
@@ -554,6 +833,10 @@ export const MineStateGraphVisual: React.FC<Props> = ({
 
   const toggleLayoutMode = useCallback(() => {
     setLayoutMode((mode) => (mode === "circular" ? "tree" : "circular"));
+  }, []);
+
+  const toggleNodeVisualMode = useCallback(() => {
+    setNodeVisualMode((mode) => (mode === "thumbnail" ? "grid" : "thumbnail"));
   }, []);
 
   const stepBack = useCallback(
@@ -767,15 +1050,28 @@ export const MineStateGraphVisual: React.FC<Props> = ({
         .select(this)
         .append("g")
         .attr("transform", `translate(${padding},${padding})`);
-      renderMiniGrid(inner, {
-        rows: map.rows,
-        cols: map.cols,
-        cell,
-        player: d.player,
-        monster: d.monster,
-        exit: map.exit,
-        isDark,
-      });
+      const thumbnailUrl = nodeThumbnailUrls[d.id];
+      if (nodeVisualMode === "thumbnail" && thumbnailUrl) {
+        inner
+          .append("image")
+          .attr("href", thumbnailUrl)
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", nodeWidth - padding * 2)
+          .attr("height", nodeHeight - padding * 2)
+          .attr("preserveAspectRatio", "none")
+          .style("image-rendering", "pixelated");
+      } else {
+        renderMiniGrid(inner, {
+          rows: map.rows,
+          cols: map.cols,
+          cell,
+          player: d.player,
+          monster: d.monster,
+          exit: map.exit,
+          isDark,
+        });
+      }
     });
 
     // Depth label.
@@ -810,9 +1106,18 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     zoomRef.current = zoom;
     svg.call(zoom);
     svg.on("dblclick.zoom", null);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [laidOut, isDark, padding, cell, map.rows, map.cols]);
+  }, [
+    laidOut,
+    isDark,
+    padding,
+    cell,
+    map.rows,
+    map.cols,
+    nodeThumbnailUrls,
+    nodeVisualMode,
+    revealed,
+    showPlan,
+  ]);
 
   // ── D3: size the svg ──────────────────────────────────────────
 
@@ -840,7 +1145,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       .duration(400)
       .ease(d3.easeCubicOut)
       .call(zoom.transform, t);
-  }, [revealedTransform]); // fires whenever revealedBBox changes → whenever `revealed` changes
+  }, [revealedTransform, nodeThumbnailUrls, nodeVisualMode]);
 
   // ── D3: reveal nodes ──────────────────────────────────────────
 
@@ -922,6 +1227,11 @@ export const MineStateGraphVisual: React.FC<Props> = ({
             { key: "arrowleft", label: "Hide last state", run: stepBack },
             { key: "arrowright", label: "Reveal next state", run: stepForward },
             { key: "f", label: "Toggle fullscreen", run: toggleFullscreen },
+            {
+              key: "g",
+              label: "Toggle thumbnail / grid",
+              run: toggleNodeVisualMode,
+            },
             { key: "l", label: "Toggle graph layout", run: toggleLayoutMode },
             { key: "0", label: "Increase max nodes", run: addNodeBudget },
             { key: "9", label: "Decrease max nodes", run: removeNodeBudget },
@@ -963,6 +1273,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     stepForward,
     stepBack,
     toggleFullscreen,
+    toggleNodeVisualMode,
     toggleLayoutMode,
     addNodeBudget,
     removeNodeBudget,
