@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useLayoutEffect,
 } from "react";
+import { createPortal } from "react-dom";
 
 type Tool = "pen" | "rectangle" | "circle" | "eraser" | "text";
 type MenuMode = "normal" | "color" | "tool" | "size" | "help";
@@ -18,6 +19,20 @@ interface DrawingOverlayProps {
   activationKey?: string; // Key to activate (default: 'p')
   disableCursorStyles?: boolean; // Disable cursor changes (useful when using custom cursor)
   enableKeyboardShortcut?: boolean; // Enable internal keyboard shortcut
+}
+
+interface OverlayDocument extends Document {
+  webkitFullscreenElement?: Element | null;
+}
+
+function currentOverlayHost(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const doc = document as OverlayDocument;
+  const fullscreenElement =
+    doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+  return fullscreenElement instanceof HTMLElement
+    ? fullscreenElement
+    : document.body;
 }
 
 // Color options with key bindings
@@ -69,6 +84,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   const [strokeColor, setStrokeColor] = useState("#ef4444");
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [mousePos, setMousePos] = useState<Point>({ x: 0, y: 0 });
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
 
   // Text tool state
   const [textInput, setTextInput] = useState<{ x: number; y: number } | null>(
@@ -100,6 +116,20 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   useEffect(() => {
     strokeColorRef.current = strokeColor;
   }, [strokeColor]);
+
+  useEffect(() => {
+    const syncPortalHost = () => {
+      setPortalHost(currentOverlayHost());
+    };
+
+    syncPortalHost();
+    document.addEventListener("fullscreenchange", syncPortalHost);
+    document.addEventListener("webkitfullscreenchange", syncPortalHost);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncPortalHost);
+      document.removeEventListener("webkitfullscreenchange", syncPortalHost);
+    };
+  }, []);
 
   useEffect(() => {
     strokeWidthRef.current = strokeWidth;
@@ -163,7 +193,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       const { x, y } = mousePosRef.current;
       cursorRef.current.style.transform = `translate3d(${x - 10}px, ${y}px, 0) rotate(-25deg)`;
     }
-  }, [isActive]);
+  }, [isActive, portalHost]);
 
   // Save state to history
   const saveToHistory = useCallback(() => {
@@ -553,6 +583,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     activateOverlay,
     deactivateOverlay,
     enableKeyboardShortcut,
+    portalHost,
   ]);
 
   // Drawing handlers - use refs to avoid re-renders during drawing
@@ -757,7 +788,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       canvas.removeEventListener("pointercancel", stopDrawing);
       canvas.removeEventListener("pointerleave", stopDrawing);
     };
-  }, [startDrawing, draw, stopDrawing]);
+  }, [startDrawing, draw, stopDrawing, portalHost]);
 
   // Render radial menu options in a fan shape
   const renderRadialMenu = () => {
@@ -1088,7 +1119,9 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     );
   };
 
-  return (
+  if (!portalHost) return null;
+
+  return createPortal(
     <>
       {/* Canvas overlay */}
       <canvas
@@ -1158,7 +1191,8 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
           }}
         />
       )}
-    </>
+    </>,
+    portalHost,
   );
 };
 
