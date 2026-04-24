@@ -18,7 +18,8 @@ let _active = false;
 let _visible = true;
 let _scale = 1;
 let _cursorEl: HTMLImageElement | null = null;
-let _listening = false;
+let _tracking = false;
+let _fullscreenSyncing = false;
 let _position = { x: 0, y: 0 };
 let _hasPosition = false;
 
@@ -110,22 +111,25 @@ function onFullscreenChange() {
   renderCursor();
 }
 
-function addListeners() {
-  if (_listening) return;
+function ensurePointerTracking() {
+  if (_tracking) return;
   document.addEventListener("mousemove", onMove);
   document.addEventListener("pointermove", onMove);
-  document.addEventListener("fullscreenchange", onFullscreenChange);
-  document.addEventListener("webkitfullscreenchange", onFullscreenChange);
-  _listening = true;
+  _tracking = true;
 }
 
-function removeListeners() {
-  if (!_listening) return;
-  document.removeEventListener("mousemove", onMove);
-  document.removeEventListener("pointermove", onMove);
+function addFullscreenListeners() {
+  if (_fullscreenSyncing) return;
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+  _fullscreenSyncing = true;
+}
+
+function removeFullscreenListeners() {
+  if (!_fullscreenSyncing) return;
   document.removeEventListener("fullscreenchange", onFullscreenChange);
   document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
-  _listening = false;
+  _fullscreenSyncing = false;
 }
 
 /* ------------------------------------------------------------------ */
@@ -135,16 +139,17 @@ function removeListeners() {
 export function enable() {
   const el = getOrCreateCursor();
   injectHideStyle();
+  ensurePointerTracking();
   syncCursorHost();
   seedPosition();
   _active = true;
-  addListeners();
+  addFullscreenListeners();
   renderCursor();
 }
 
 export function disable() {
   removeHideStyle();
-  removeListeners();
+  removeFullscreenListeners();
   _active = false;
   renderCursor();
 }
