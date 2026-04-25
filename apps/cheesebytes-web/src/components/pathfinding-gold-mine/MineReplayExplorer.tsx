@@ -27,30 +27,25 @@ import { posKey } from "./types";
 import type { Pos } from "./types";
 import { MineGridOverlay } from "./MineGridOverlay";
 import { MineMapViewer } from "./MineMapViewer";
-import {
-  useFullscreen,
-  fullscreenRootStyle,
-  fullscreenInnerStyle,
-} from "./useFullscreen";
+import { useFullscreen } from "./useFullscreen";
 import { getArticlePrelude, useArticleMap } from "./article-store";
+import {
+  MINE_HUD as HUD_THEME,
+  MineHudBar,
+  MineHudButton as HudButton,
+  MinePanelLabel,
+  MineShortcutLabel as ShortcutLabel,
+  MineVisualFrame,
+} from "./MineVisualFrame";
 
 interface ReplayFrame {
   step: number;
   visited: Pos[] | null;
   path: Pos[];
   current: Pos | null;
+  currentMonster: Pos | null;
+  discarded: boolean;
 }
-
-const HUD_THEME = {
-  bg: "var(--goldmine-hud-bg)",
-  border: "var(--goldmine-hud-border)",
-  text: "var(--goldmine-hud-text)",
-  muted: "var(--goldmine-hud-muted)",
-  accent: "var(--goldmine-hud-accent)",
-  activeBg: "var(--goldmine-hud-active-bg)",
-  activeText: "var(--goldmine-hud-active-text)",
-  btnBg: "var(--goldmine-hud-btn-bg)",
-};
 
 const cmSmallFont = EditorView.theme({
   "&": { fontSize: "11px" },
@@ -75,7 +70,13 @@ const REPLAY_PRELUDE = `import json
 
 _viz_step = 0
 
-def show_state(visited, path, current=None):
+def show_state(
+  visited,
+  path,
+  current=None,
+  current_monster=None,
+  discarded=False,
+):
     global _viz_step
     _viz_step += 1
     visible_visited = None if visited is None else [list(cell) for cell in sorted(visited)]
@@ -84,6 +85,8 @@ def show_state(visited, path, current=None):
         "visited": visible_visited,
         "path": [list(cell) for cell in path],
         "current": None if current is None else list(current),
+    "current_monster": None if current_monster is None else list(current_monster),
+    "discarded": bool(discarded),
     }))`;
 
 function clampPlaybackDelay(value: number): number {
@@ -105,6 +108,8 @@ function parseFrame(line: string): ReplayFrame | null {
       visited: unknown[] | null;
       path: unknown[];
       current: unknown;
+      current_monster?: unknown;
+      discarded?: unknown;
     };
     return {
       step: raw.step,
@@ -114,6 +119,8 @@ function parseFrame(line: string): ReplayFrame | null {
           : (raw.visited.map(toPos).filter(Boolean) as Pos[]),
       path: raw.path.map(toPos).filter(Boolean) as Pos[],
       current: toPos(raw.current),
+      currentMonster: toPos(raw.current_monster),
+      discarded: raw.discarded === true,
     };
   } catch {
     return null;
@@ -146,7 +153,9 @@ function compressFrames(frames: ReplayFrame[]): ReplayFrame[] {
     if (
       previous &&
       samePath(previous.path, frame.path) &&
-      samePos(previous.current, frame.current)
+      samePos(previous.current, frame.current) &&
+      samePos(previous.currentMonster, frame.currentMonster) &&
+      previous.discarded === frame.discarded
     ) {
       compressed[compressed.length - 1] = {
         ...frame,
@@ -170,56 +179,12 @@ function addInitialFrame(frames: ReplayFrame[]): ReplayFrame[] {
       visited: null,
       path: [],
       current: null,
+      currentMonster: null,
+      discarded: false,
     },
     ...frames,
   ];
 }
-
-const HudButton: React.FC<{
-  active?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  title?: string;
-  minWidth?: number;
-  children: React.ReactNode;
-}> = ({
-  active = false,
-  disabled = false,
-  onClick,
-  title,
-  minWidth,
-  children,
-}) => (
-  <button
-    type="button"
-    tabIndex={-1}
-    onMouseDown={(event) => {
-      event.preventDefault();
-    }}
-    onClick={onClick}
-    disabled={disabled}
-    title={title}
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 3,
-      padding: "3px 8px",
-      fontSize: 10,
-      fontWeight: 700,
-      fontFamily: "monospace",
-      cursor: disabled ? "default" : "pointer",
-      opacity: disabled ? 0.45 : 1,
-      border: `1px solid ${HUD_THEME.border}`,
-      background: active ? HUD_THEME.activeBg : HUD_THEME.btnBg,
-      color: active ? HUD_THEME.activeText : HUD_THEME.text,
-      whiteSpace: "nowrap",
-      minWidth,
-    }}
-  >
-    {children}
-  </button>
-);
 
 const SpeedButton: React.FC<{
   disabled?: boolean;
@@ -289,18 +254,6 @@ const SpeedButton: React.FC<{
     </button>
   );
 };
-
-const ShortcutLabel: React.FC<{ hotkey: string; label: string }> = ({
-  hotkey,
-  label,
-}) => (
-  <span style={{ display: "inline-flex", alignItems: "baseline" }}>
-    <span style={{ fontWeight: 800, textDecoration: "underline" }}>
-      {hotkey}
-    </span>
-    <span style={{ marginLeft: "-0.04em" }}>{label}</span>
-  </span>
-);
 
 export interface MineReplayExplorerProps {
   maxWidth?: number;
@@ -761,14 +714,32 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
     return keys;
   }, [currentFrame]);
 
+  const currentMonsterMarkers = useMemo(() => {
+    if (!currentFrame?.currentMonster) return [];
+    const caughtPreview =
+      currentFrame.discarded ||
+      samePos(currentFrame.current, currentFrame.currentMonster);
+    return [
+      {
+        pos: currentFrame.currentMonster,
+        label: caughtPreview ? undefined : "M",
+        fill: caughtPreview
+          ? "rgba(244, 67, 54, 0.48)"
+          : "rgba(168, 85, 247, 0.45)",
+        outline: caughtPreview
+          ? "inset 0 0 0 2px rgba(244,67,54,0.88)"
+          : "inset 0 0 0 2px rgba(168,85,247,0.82)",
+      },
+    ];
+  }, [currentFrame]);
+
   return (
-    <div ref={rootRef} style={{ ...fullscreenRootStyle(isFullscreen) }}>
-      <div
-        style={{
-          ...fullscreenInnerStyle(isFullscreen, maxWidth),
-          margin: "2rem auto",
-        }}
-      >
+    <MineVisualFrame
+      rootRef={rootRef}
+      isFullscreen={isFullscreen}
+      maxWidth={maxWidth}
+      margin="2rem auto"
+    >
         <div
           style={{
             display: "grid",
@@ -778,19 +749,7 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                color: "var(--goldmine-label-fg)",
-                marginBottom: 6,
-                opacity: 0.7,
-              }}
-            >
-              Python
-            </div>
+            <MinePanelLabel>Python</MinePanelLabel>
             <div
               style={{
                 overflow: "hidden",
@@ -851,24 +810,13 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
             tabIndex={0}
             style={{ outline: "none", minWidth: 0 }}
           >
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                color: "var(--goldmine-label-fg)",
-                marginBottom: 6,
-                opacity: 0.7,
-              }}
-            >
-              {title}
-            </div>
+            <MinePanelLabel>{title}</MinePanelLabel>
 
             <div style={{ position: "relative" }}>
               <MineMapViewer
                 mapState={mapState}
                 pathCells={currentFrame?.path ?? []}
+                showMonsterMarker={Boolean(mapState.monsterStart)}
                 joinHudBottom
               />
               <MineGridOverlay
@@ -879,23 +827,15 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
                 showHoverLabel={showHoverCoords}
                 selected={currentFrame?.current ?? null}
                 highlightedKeys={visitedKeys}
+                markers={currentMonsterMarkers}
               />
             </div>
 
-            <div
+            <MineHudBar
               style={{
                 display: "grid",
                 gridTemplateRows: "auto auto",
                 gap: 8,
-                background: HUD_THEME.bg,
-                border: `2px solid ${HUD_THEME.border}`,
-                borderTop: "none",
-                padding: "7px 12px",
-                fontFamily: "monospace",
-                fontSize: 11,
-                color: HUD_THEME.text,
-                userSelect: "none",
-                minHeight: 34,
               }}
             >
               <div
@@ -1039,13 +979,33 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
                     <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
                       {currentFrame.path.length}
                     </span>
+                    {currentFrame.currentMonster && (
+                      <>
+                        <span style={{ color: HUD_THEME.muted }}>Monster</span>
+                        <span
+                          style={{ color: HUD_THEME.accent, fontWeight: 700 }}
+                        >
+                          ({currentFrame.currentMonster.r},{" "}
+                          {currentFrame.currentMonster.c})
+                        </span>
+                      </>
+                    )}
+                    {currentFrame.discarded && (
+                      <span
+                        style={{
+                          color: "var(--goldmine-error-fg)",
+                          fontWeight: 800,
+                        }}
+                      >
+                        discarded
+                      </span>
+                    )}
                   </>
                 )}
               </div>
-            </div>
+            </MineHudBar>
           </div>
         </div>
-      </div>
-    </div>
+    </MineVisualFrame>
   );
 };

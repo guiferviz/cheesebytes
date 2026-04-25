@@ -43,6 +43,11 @@ import {
   cellCenterY,
 } from "./mine-viewer-shared";
 import type { VimModeAPI } from "../../utils/vim-mode";
+import {
+  MINE_HUD as HUD,
+  MineHudBar,
+  MineHudButton,
+} from "./MineVisualFrame";
 
 // ── Colors ──────────────────────────────────────────────────────────
 
@@ -50,8 +55,8 @@ const PLAYER_FILL = "#4caf50";
 const PLAYER_RING = "#1b5e20";
 const MONSTER_FILL = "#a855f7";
 const MONSTER_RING = "#4b1d6b";
-const NODE_FILL_DARK = "#0f172a";
-const NODE_FILL_LIGHT = "#fffbeb";
+const NODE_FILL_DARK = "transparent";
+const NODE_FILL_LIGHT = "transparent";
 const NODE_STROKE_DARK = "rgba(254, 171, 2, 0.34)";
 const NODE_STROKE_LIGHT = "rgba(147, 50, 9, 0.40)";
 const NODE_STROKE_ROOT_DARK = "rgba(76, 175, 80, 0.72)";
@@ -83,6 +88,31 @@ function baseNodeStrokeWidth(
   if (node.isGoal) return 2;
   if (node.depth === 0) return 1.35;
   return 1;
+}
+
+function zoomStrokeBoost(zoomScale: number): number {
+  if (zoomScale >= 1) return 1;
+  const clamped = Math.max(0.25, zoomScale);
+  return 1 + (1 - clamped) * 0.7;
+}
+
+function edgeStrokeWidth(plan: boolean, zoomScale: number): number {
+  return (plan ? 2 : 1.4) * zoomStrokeBoost(zoomScale);
+}
+
+function backtrackEdgeStrokeWidth(
+  forceShowsBacktracks: boolean,
+  zoomScale: number,
+): number {
+  return (forceShowsBacktracks ? 1.4 : 1.6) * zoomStrokeBoost(zoomScale);
+}
+
+function nodeCardStrokeWidth(
+  node: Pick<StateNode, "depth" | "isGoal">,
+  zoomScale: number,
+  selected: boolean,
+): number {
+  return (selected ? 2.5 : baseNodeStrokeWidth(node)) * zoomStrokeBoost(zoomScale);
 }
 
 // ── BFS helpers ─────────────────────────────────────────────────────
@@ -827,19 +857,6 @@ function createBaseThumbnailCanvas(
   return canvas;
 }
 
-// ── HUD styling ─────────────────────────────────────────────────────
-
-const HUD = {
-  bg: "var(--goldmine-hud-bg)",
-  border: "var(--goldmine-hud-border)",
-  text: "var(--goldmine-hud-text)",
-  muted: "var(--goldmine-hud-muted)",
-  accent: "var(--goldmine-hud-accent)",
-  btnBg: "var(--goldmine-hud-btn-bg)",
-  activeBg: "var(--goldmine-hud-active-bg)",
-  activeText: "var(--goldmine-hud-active-text)",
-};
-
 const VIM_MODE_ID = "mine-state-graph";
 const GRAPH_HEIGHT = 420;
 
@@ -881,6 +898,8 @@ export const MineStateGraphVisual: React.FC<Props> = ({
   const [nodeVisualMode, setNodeVisualMode] =
     useState<NodeVisualMode>("thumbnail");
   const [showBacktracks, setShowBacktracks] = useState(false);
+  const [graphOnly, setGraphOnly] = useState(false);
+  const [followRevealPreview, setFollowRevealPreview] = useState(false);
 
   const laidOut = useMemo(
     () =>
@@ -1040,6 +1059,8 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     setSelectedId(null);
     setPlaying(false);
     setWalkPathIndex(null);
+    setGraphOnly(false);
+    setFollowRevealPreview(false);
   }, [graph]);
 
   const total = laidOut.length;
@@ -1075,7 +1096,12 @@ export const MineStateGraphVisual: React.FC<Props> = ({
 
   const togglePlaying = useCallback(() => {
     setWalkPathIndex(null);
+    setFollowRevealPreview(true);
     setPlaying((value) => !value);
+  }, []);
+
+  const toggleGraphOnly = useCallback(() => {
+    setGraphOnly((value) => !value);
   }, []);
 
   const openMaxNodesPending = useCallback(() => {
@@ -1142,11 +1168,13 @@ export const MineStateGraphVisual: React.FC<Props> = ({
   const stepBack = useCallback(() => {
     setWalkPathIndex(null);
     setPlaying(false);
+    setFollowRevealPreview(true);
     setRevealed((n) => Math.max(1, n - 1));
   }, []);
   const stepForward = useCallback(() => {
     setWalkPathIndex(null);
     setPlaying(false);
+    setFollowRevealPreview(true);
     setRevealed((n) => Math.min(total, n + 1));
   }, [total]);
   const jumpToEnd = useCallback(() => {
@@ -1156,6 +1184,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     if (!endNode) return;
     setWalkPathIndex(null);
     setPlaying(false);
+    setFollowRevealPreview(false);
     setRevealed(total);
     setPreviewNode(endNode);
     setSelectedId(endNode.id);
@@ -1164,6 +1193,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     const startNode = planPathNodes[0];
     if (!startNode) return;
     setPlaying(false);
+    setFollowRevealPreview(false);
     setWalkPathIndex(0);
     setPreviewNode(startNode);
     setSelectedId(startNode.id);
@@ -1174,6 +1204,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     setSelectedId(null);
     setPlaying(false);
     setWalkPathIndex(null);
+    setFollowRevealPreview(false);
   }, [graph.nodes]);
 
   const triggerButtonAction = useCallback(
@@ -1201,6 +1232,14 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     );
     return () => window.clearInterval(id);
   }, [playing, total, fps]);
+
+  useEffect(() => {
+    if (!followRevealPreview || walkPathIndex != null) return;
+    const node = graph.nodes[Math.max(0, Math.min(graph.nodes.length, revealed) - 1)];
+    if (!node) return;
+    setPreviewNode(node);
+    setSelectedId(node.id);
+  }, [followRevealPreview, graph.nodes, revealed, walkPathIndex]);
 
   const walkFocusNode = useMemo(() => {
     if (walkPathIndex == null) return null;
@@ -1242,6 +1281,8 @@ export const MineStateGraphVisual: React.FC<Props> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const armedRef = useRef(false);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const zoomScaleRef = useRef(1);
+  const selectedIdRef = useRef<string | null>(null);
   const backtrackMarkerIdRef = useRef(
     `mine-state-backtrack-arrow-${Math.random().toString(36).slice(2)}`,
   );
@@ -1251,6 +1292,41 @@ export const MineStateGraphVisual: React.FC<Props> = ({
   useEffect(() => {
     armedRef.current = armed;
   }, [armed]);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  const syncStrokeWidths = useCallback(() => {
+    const svgNode = svgRef.current;
+    if (!svgNode) return;
+
+    const zoomScale = zoomScaleRef.current;
+    const svg = d3.select(svgNode);
+
+    svg
+      .selectAll<SVGLineElement, LaidOutNode>("line.edge")
+      .attr("vector-effect", "non-scaling-stroke")
+      .attr("stroke-width", (d) =>
+        edgeStrokeWidth(showPlan && d.onPlan && d.order < revealed, zoomScale),
+      );
+
+    svg
+      .selectAll<SVGLineElement, LaidOutBacktrackEdge>("line.backtrack-edge")
+      .attr("vector-effect", "non-scaling-stroke")
+      .attr(
+        "stroke-width",
+        backtrackEdgeStrokeWidth(forceShowsBacktracks, zoomScale),
+      );
+
+    svg.selectAll<SVGGElement, LaidOutNode>("g.node").each(function (d) {
+      const selected = d.id === selectedIdRef.current;
+      d3.select(this)
+        .select<SVGRectElement>("rect.card")
+        .attr("vector-effect", "non-scaling-stroke")
+        .attr("stroke-width", nodeCardStrokeWidth(d, zoomScale, selected));
+    });
+  }, [forceShowsBacktracks, revealed, showPlan]);
 
   useEffect(() => {
     const syncFullscreen = () => {
@@ -1377,7 +1453,6 @@ export const MineStateGraphVisual: React.FC<Props> = ({
 
     const edgeColor = isDark ? EDGE_COLOR_DARK : EDGE_COLOR_LIGHT;
     const backtrackStroke = forceShowsBacktracks ? edgeColor : backtrackColor;
-    const backtrackStrokeWidth = forceShowsBacktracks ? 1.4 : 1.6;
     const backtrackDashArray = forceShowsBacktracks ? null : "5 4";
     const backtrackMarkerEnd = forceShowsBacktracks
       ? null
@@ -1412,13 +1487,17 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       .append("line")
       .attr("class", "edge")
       .attr("data-id", (d) => d.id)
+      .attr("vector-effect", "non-scaling-stroke")
       .attr("stroke", (d) =>
         showPlan && d.onPlan && d.order < revealed
           ? EDGE_PLAN_COLOR
           : edgeColor,
       )
       .attr("stroke-width", (d) =>
-        showPlan && d.onPlan && d.order < revealed ? 2 : 1.4,
+        edgeStrokeWidth(
+          showPlan && d.onPlan && d.order < revealed,
+          zoomScaleRef.current,
+        ),
       )
       .attr("opacity", (d) => (d.order < revealed ? 1 : 0))
       .attr("x1", (d) => nodeById.get(d.parent!)?.x ?? 0)
@@ -1433,8 +1512,12 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       .append("line")
       .attr("class", "backtrack-edge")
       .attr("data-id", (d) => d.id)
+      .attr("vector-effect", "non-scaling-stroke")
       .attr("stroke", backtrackStroke)
-      .attr("stroke-width", backtrackStrokeWidth)
+      .attr(
+        "stroke-width",
+        backtrackEdgeStrokeWidth(forceShowsBacktracks, zoomScaleRef.current),
+      )
       .attr("stroke-dasharray", backtrackDashArray)
       .attr("stroke-linecap", "round")
       .attr("marker-end", backtrackMarkerEnd)
@@ -1473,9 +1556,12 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       .attr("height", nodeHeight)
       .attr("rx", 6)
       .attr("ry", 6)
+      .attr("vector-effect", "non-scaling-stroke")
       .attr("fill", cardFill)
       .attr("stroke", (d) => baseNodeStroke(d, isDark))
-      .attr("stroke-width", (d) => baseNodeStrokeWidth(d));
+      .attr("stroke-width", (d) =>
+        nodeCardStrokeWidth(d, zoomScaleRef.current, false),
+      );
 
     nodeGroups.each(function (d) {
       const inner = d3
@@ -1575,6 +1661,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
           null,
         )?.node;
 
+      setFollowRevealPreview(false);
       selectNode(bestNode ?? fallbackNode);
     };
 
@@ -1593,11 +1680,14 @@ export const MineStateGraphVisual: React.FC<Props> = ({
         return !target?.closest?.("g.node");
       })
       .on("zoom", (event) => {
+        zoomScaleRef.current = event.transform.k;
         view.attr("transform", event.transform.toString());
+        syncStrokeWidths();
       });
     zoomRef.current = zoom;
     svg.call(zoom);
     svg.on("dblclick.zoom", null);
+    syncStrokeWidths();
   }, [
     laidOut,
     isDark,
@@ -1610,6 +1700,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     graph.backtrackEdges,
     revealed,
     showPlan,
+    syncStrokeWidths,
   ]);
 
   // ── D3: size the svg ──────────────────────────────────────────
@@ -1679,7 +1770,10 @@ export const MineStateGraphVisual: React.FC<Props> = ({
           .ease(d3.easeCubicOut)
           .attr("opacity", visible ? 1 : 0)
           .attr("stroke", plan ? EDGE_PLAN_COLOR : baseEdge)
-          .attr("stroke-width", plan ? 2 : 1.4);
+          .attr(
+            "stroke-width",
+            edgeStrokeWidth(plan, zoomScaleRef.current),
+          );
       });
 
     svg
@@ -1695,7 +1789,11 @@ export const MineStateGraphVisual: React.FC<Props> = ({
           .duration(visible ? 350 : 100)
           .ease(d3.easeCubicOut)
           .attr("opacity", visible ? backtrackVisibleOpacity : 0)
-          .attr("stroke", backtrackStroke);
+          .attr("stroke", backtrackStroke)
+          .attr(
+            "stroke-width",
+            backtrackEdgeStrokeWidth(forceShowsBacktracks, zoomScaleRef.current),
+          );
       });
   }, [revealed, isDark, showPlan, showBacktracks, forceShowsBacktracks]);
 
@@ -1712,7 +1810,10 @@ export const MineStateGraphVisual: React.FC<Props> = ({
       const selected = d.id === selectedId;
       card
         .attr("stroke", selected ? HIGHLIGHT : baseNodeStroke(d, isDark))
-        .attr("stroke-width", selected ? 2.5 : baseNodeStrokeWidth(d));
+        .attr(
+          "stroke-width",
+          nodeCardStrokeWidth(d, zoomScaleRef.current, selected),
+        );
     });
   }, [selectedId, isDark]);
 
@@ -1741,6 +1842,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
             },
             { key: "arrowleft", label: "Hide last state", run: stepBack },
             { key: "arrowright", label: "Reveal next state", run: stepForward },
+            { key: "h", label: "Toggle graph-only view", run: toggleGraphOnly },
             { key: "e", label: "Jump to end", run: jumpToEnd },
             { key: "f", label: "Toggle fullscreen", run: toggleFullscreen },
             {
@@ -1810,6 +1912,7 @@ export const MineStateGraphVisual: React.FC<Props> = ({
     toggleFullscreen,
     toggleNodeVisualMode,
     startWalkPlan,
+    toggleGraphOnly,
     toggleBacktracks,
     toggleLayoutMode,
     openMaxNodesPending,
@@ -1835,67 +1938,68 @@ export const MineStateGraphVisual: React.FC<Props> = ({
         outline: "none",
         display: "flex",
         flexDirection: "column",
-        gap: isFullscreen ? 10 : 0,
+        gap: graphOnly ? 0 : isFullscreen ? 10 : 0,
       }}
     >
       <div
         style={{
           display: "flex",
           flexDirection: isFullscreen ? "row" : "column",
-          gap: isFullscreen ? 16 : 0,
+          gap: graphOnly ? 0 : isFullscreen ? 16 : 0,
           alignItems: "stretch",
           flex: isFullscreen ? 1 : undefined,
           minHeight: 0,
         }}
       >
-        {/* Game preview */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginBottom: isFullscreen ? 0 : 12,
-            flex: isFullscreen ? "0 0 min(40vw, 480px)" : undefined,
-            alignItems: "center",
-            minWidth: isFullscreen ? 280 : undefined,
-          }}
-        >
+        {!graphOnly ? (
           <div
             style={{
-              position: "relative",
-              width: isFullscreen ? "100%" : "55%",
-              minWidth: isFullscreen ? 280 : 200,
-              maxWidth: isFullscreen ? "none" : 400,
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: isFullscreen ? 0 : 12,
+              flex: isFullscreen ? "0 0 min(40vw, 480px)" : undefined,
+              alignItems: "center",
+              minWidth: isFullscreen ? 280 : undefined,
             }}
           >
-            <MineMapViewer
-              mapState={previewMapState}
-              showGoldSpecks
-              showMonsterMarker
-            />
-            <MineGameSprite
-              kind="miner"
-              facing="south"
-              anim="idle"
-              row={previewNode.player.r}
-              col={previewNode.player.c}
-              rows={map.rows}
-              cols={map.cols}
-              zIndex={6}
-              transitionMs={200}
-            />
-            <MineGameSprite
-              kind="monster"
-              facing="south"
-              anim="idle"
-              row={previewNode.monster.r}
-              col={previewNode.monster.c}
-              rows={map.rows}
-              cols={map.cols}
-              zIndex={7}
-              transitionMs={200}
-            />
+            <div
+              style={{
+                position: "relative",
+                width: isFullscreen ? "100%" : "55%",
+                minWidth: isFullscreen ? 280 : 200,
+                maxWidth: isFullscreen ? "none" : 400,
+              }}
+            >
+              <MineMapViewer
+                mapState={previewMapState}
+                showGoldSpecks
+                showMonsterMarker
+              />
+              <MineGameSprite
+                kind="miner"
+                facing="south"
+                anim="idle"
+                row={previewNode.player.r}
+                col={previewNode.player.c}
+                rows={map.rows}
+                cols={map.cols}
+                zIndex={6}
+                transitionMs={200}
+              />
+              <MineGameSprite
+                kind="monster"
+                facing="south"
+                anim="idle"
+                row={previewNode.monster.r}
+                col={previewNode.monster.c}
+                rows={map.rows}
+                cols={map.cols}
+                zIndex={7}
+                transitionMs={200}
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div
           style={{
@@ -1917,100 +2021,71 @@ export const MineStateGraphVisual: React.FC<Props> = ({
               minHeight: isFullscreen ? 0 : GRAPH_HEIGHT,
               overflow: "hidden",
               background: surfaceBg,
-              border: `1px solid ${HUD.border}`,
-              borderRadius: 6,
+              border: graphOnly ? "none" : `1px solid ${HUD.border}`,
+              borderRadius: graphOnly ? 0 : 6,
             }}
           >
             <svg ref={svgRef} role="img" aria-label="Joint-state BFS graph" />
           </div>
 
-          {/* Minimal HUD */}
-          <div
-            style={{
-              marginTop: 0,
-              padding: "6px 10px",
-              background: HUD.bg,
-              border: `1px solid ${HUD.border}`,
-              fontFamily: "monospace",
-              fontSize: 11,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-            }}
-          >
-            <button
-              type="button"
-              tabIndex={-1}
-              onPointerDown={triggerButtonAction(restart)}
-              title="Restart (r)"
+          {!graphOnly ? (
+            <MineHudBar
+              attachedTop={false}
               style={{
-                padding: "4px 10px",
-                fontSize: 16,
-                fontWeight: 700,
-                fontFamily: "monospace",
-                cursor: "pointer",
-                border: `1px solid ${HUD.border}`,
-                background: HUD.btnBg,
-                color: HUD.text,
-                lineHeight: 1,
+                marginTop: 0,
+                padding: "6px 10px",
+                justifyContent: "center",
+                gap: 12,
+                borderWidth: 1,
               }}
             >
-              ⟲
-            </button>
-            <button
-              type="button"
-              tabIndex={-1}
-              onPointerDown={triggerButtonAction(stepBack)}
-              disabled={revealed <= 1}
-              title="Back (Left Arrow)"
-              style={{
-                padding: "4px 10px",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: "monospace",
-                cursor: revealed <= 1 ? "default" : "pointer",
-                opacity: revealed <= 1 ? 0.35 : 1,
-                border: `1px solid ${HUD.border}`,
-                background: HUD.btnBg,
-                color: HUD.text,
-                lineHeight: 1,
-              }}
-            >
-              ◀
-            </button>
-            <span
-              style={{
-                color: HUD.muted,
-                fontVariantNumeric: "tabular-nums",
-                minWidth: 60,
-                textAlign: "center",
-              }}
-            >
-              {Math.min(revealed, total)} / {total}
-            </span>
-            <button
-              type="button"
-              tabIndex={-1}
-              onPointerDown={triggerButtonAction(stepForward)}
-              disabled={revealed >= total}
-              title="Next (Right Arrow)"
-              style={{
-                padding: "4px 10px",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: "monospace",
-                cursor: revealed >= total ? "default" : "pointer",
-                opacity: revealed >= total ? 0.35 : 1,
-                border: `1px solid ${HUD.border}`,
-                background: HUD.btnBg,
-                color: HUD.text,
-                lineHeight: 1,
-              }}
-            >
-              ▶
-            </button>
-          </div>
+              <MineHudButton
+                onPointerDown={triggerButtonAction(restart)}
+                title="Restart (r)"
+                style={{
+                  padding: "4px 10px",
+                  fontSize: 16,
+                  lineHeight: 1,
+                }}
+              >
+                ⟲
+              </MineHudButton>
+              <MineHudButton
+                onPointerDown={triggerButtonAction(stepBack)}
+                disabled={revealed <= 1}
+                title="Back (Left Arrow)"
+                style={{
+                  padding: "4px 10px",
+                  fontSize: 13,
+                  lineHeight: 1,
+                }}
+              >
+                ◀
+              </MineHudButton>
+              <span
+                style={{
+                  color: HUD.muted,
+                  fontVariantNumeric: "tabular-nums",
+                  minWidth: 60,
+                  textAlign: "center",
+                }}
+              >
+                {Math.min(revealed, total)} / {total}
+              </span>
+              <MineHudButton
+                onPointerDown={triggerButtonAction(stepForward)}
+                disabled={revealed >= total}
+                title="Next (Right Arrow)"
+                style={{
+                  padding: "4px 10px",
+                  fontSize: 13,
+                  lineHeight: 1,
+                }}
+              >
+                ▶
+              </MineHudButton>
+            </MineHudBar>
+          ) : null}
         </div>
       </div>
     </div>

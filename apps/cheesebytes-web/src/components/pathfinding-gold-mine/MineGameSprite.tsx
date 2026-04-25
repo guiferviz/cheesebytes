@@ -210,21 +210,31 @@ export const MineGameSprite: React.FC<MineGameSpriteProps> = ({
   // Animation loop.
   useEffect(() => {
     if (!manifest) return;
-    const fps = anim === "walk" ? atlas.walkFps : atlas.idleFps;
     const { frames } = resolveAnimFrames(manifest, atlas, anim, facing);
     if (frames.length <= 1) {
       setFrameIdx(0);
       return;
     }
+
     setFrameIdx(0);
-    const id = setInterval(
-      () => {
-        setFrameIdx((i) => (i + 1) % frames.length);
-      },
-      Math.max(40, Math.round(1000 / fps)),
-    );
-    return () => clearInterval(id);
-  }, [manifest, anim, facing, atlas]);
+
+    if (anim === "walk") {
+      let nextFrame = 1;
+      const id = window.setInterval(() => {
+        setFrameIdx(Math.min(nextFrame, frames.length - 1));
+        nextFrame += 1;
+        if (nextFrame >= frames.length) {
+          window.clearInterval(id);
+        }
+      }, Math.max(40, Math.round(transitionMs / frames.length)));
+      return () => window.clearInterval(id);
+    }
+
+    const id = window.setInterval(() => {
+      setFrameIdx((i) => (i + 1) % frames.length);
+    }, Math.max(40, Math.round(1000 / atlas.idleFps)));
+    return () => window.clearInterval(id);
+  }, [manifest, anim, facing, row, col, transitionMs, atlas]);
 
   if (!manifest) {
     return <div ref={wrapRef} style={{ display: "none" }} />;

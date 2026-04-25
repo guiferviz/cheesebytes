@@ -67,6 +67,8 @@ const { title, description } = Astro.props;
         (window as any).__vimMode = vm;
         (window as any).vimMode = vm;
 
+        cheeseCursor.init();
+
         vm.register("t", {
           label: "Toggle theme",
           category: "General",

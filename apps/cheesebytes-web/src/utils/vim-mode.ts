@@ -498,6 +498,7 @@ function createIndicator(onClickFn: () => void): {
     passive: boolean,
     modeId: string,
   ) => void;
+  toggleHidden: () => boolean;
   destroy: () => void;
 } {
   const el = document.createElement("div");
@@ -533,6 +534,8 @@ function createIndicator(onClickFn: () => void): {
   document.addEventListener("fullscreenchange", ensureHost);
 
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
+  let hidden = localStorage.getItem("vim-mode-indicator-hidden") === "1";
+  el.style.display = hidden ? "none" : "";
 
   function update(
     label: string,
@@ -540,6 +543,12 @@ function createIndicator(onClickFn: () => void): {
     passive: boolean,
     modeId: string,
   ) {
+    if (hidden) {
+      el.style.display = "none";
+      return;
+    }
+
+    el.style.display = "";
     if (hideTimer) clearTimeout(hideTimer);
     el.style.opacity = "0.85";
 
@@ -579,13 +588,20 @@ function createIndicator(onClickFn: () => void): {
     );
   }
 
+  function toggleHidden() {
+    hidden = !hidden;
+    localStorage.setItem("vim-mode-indicator-hidden", hidden ? "1" : "0");
+    el.style.display = hidden ? "none" : "";
+    return hidden;
+  }
+
   function destroy() {
     if (hideTimer) clearTimeout(hideTimer);
     document.removeEventListener("fullscreenchange", ensureHost);
     el.remove();
   }
 
-  return { el, update, destroy };
+  return { el, update, toggleHidden, destroy };
 }
 
 // ── VimMode singleton ────────────────────────────────────────────────
@@ -641,6 +657,14 @@ export function createVimMode(): VimModeAPI {
   const indicator = createIndicator(() => {
     const entry = getEntry(effectiveMode());
     if (!entry.passive) api.togglePalette();
+  });
+  modes.get("normal")!.commands.set("!", {
+    key: "!",
+    label: "Toggle mode label",
+    run: () => {
+      indicator.toggleHidden();
+      syncIndicator();
+    },
   });
 
   // ── Pending state ────────────────────────────────────────────────

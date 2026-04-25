@@ -52,10 +52,63 @@ export function toPythonCode(lines: string[]): string {
   return `MINE_MAP = [\n${rows}\n]`;
 }
 
+function extractMineMapLiteral(code: string): string | null {
+  const matches = Array.from(code.matchAll(/\bMINE_MAP\s*=\s*\[/g));
+  const lastMatch = matches.at(-1);
+  if (!lastMatch || lastMatch.index == null) return null;
+
+  const start = lastMatch.index + lastMatch[0].length - 1;
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let escaped = false;
+
+  for (let index = start; index < code.length; index += 1) {
+    const ch = code[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (inSingle) {
+      if (ch === "\\") escaped = true;
+      else if (ch === "'") inSingle = false;
+      continue;
+    }
+
+    if (inDouble) {
+      if (ch === "\\") escaped = true;
+      else if (ch === '"') inDouble = false;
+      continue;
+    }
+
+    if (ch === "'") {
+      inSingle = true;
+      continue;
+    }
+    if (ch === '"') {
+      inDouble = true;
+      continue;
+    }
+
+    if (ch === "[") {
+      depth += 1;
+      continue;
+    }
+
+    if (ch === "]") {
+      depth -= 1;
+      if (depth === 0) return code.slice(start + 1, index);
+    }
+  }
+
+  return null;
+}
+
 export function fromPythonCode(code: string): string[] | null {
-  const match = code.match(/\[([^\]]*)\]/s);
-  if (!match) return null;
-  const inner = match[1];
+  const inner = extractMineMapLiteral(code);
+  if (inner == null) return null;
   const strs: string[] = [];
   const re = /"([^"]*)"|'([^']*)'/g;
   let m: RegExpExecArray | null;

@@ -25,6 +25,11 @@ import {
   setArticlePrelude,
   useArticlePrelude,
 } from "./article-store";
+import {
+  MineHudBar,
+  MineHudButton,
+  MineVisualFrame,
+} from "./MineVisualFrame";
 
 const cmSmallFont = EditorView.theme({
   "&": { fontSize: "11px" },
@@ -160,14 +165,11 @@ export const MinePreludeEditor: React.FC<MinePreludeEditorProps> = ({
   }, [handleReset, vimModeId, vimModeLabel]);
 
   return (
-    <div
-      ref={rootRef}
-      tabIndex={0}
-      style={{
-        outline: "none",
-        margin: "1.5rem auto",
-        maxWidth,
-      }}
+    <MineVisualFrame
+      rootRef={rootRef}
+      focusable
+      maxWidth={maxWidth}
+      margin="1.5rem auto"
     >
       <button
         type="button"
@@ -254,36 +256,20 @@ export const MinePreludeEditor: React.FC<MinePreludeEditorProps> = ({
               }}
             />
           </div>
-          <div
+          <MineHudBar
             style={{
-              display: "flex",
-              alignItems: "center",
               gap: 8,
-              padding: "6px 12px",
-              background: "var(--goldmine-hud-bg)",
-              border: `2px solid var(--goldmine-hud-border)`,
-              borderTop: "none",
-              fontFamily: "monospace",
-              fontSize: 10,
               color: "var(--goldmine-hud-muted)",
             }}
           >
-            <button
-              type="button"
+            <MineHudButton
               onClick={handleReset}
               style={{
-                padding: "3px 8px",
-                background: "var(--goldmine-hud-btn-bg)",
-                border: `1px solid var(--goldmine-hud-border)`,
-                color: "var(--goldmine-hud-text)",
-                fontFamily: "monospace",
                 fontSize: 10,
-                fontWeight: 700,
-                cursor: "pointer",
               }}
             >
               Reset to defaults
-            </button>
+            </MineHudButton>
             <span>
               Tip: open{" "}
               <a
@@ -296,10 +282,10 @@ export const MinePreludeEditor: React.FC<MinePreludeEditorProps> = ({
               </a>{" "}
               in another tab to design a fresh map and paste it here.
             </span>
-          </div>
+          </MineHudBar>
         </div>
       )}
-    </div>
+    </MineVisualFrame>
   );
 };
 

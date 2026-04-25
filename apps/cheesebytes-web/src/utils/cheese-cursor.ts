@@ -136,10 +136,14 @@ function removeFullscreenListeners() {
 /*  Public API                                                         */
 /* ------------------------------------------------------------------ */
 
+export function init() {
+  ensurePointerTracking();
+}
+
 export function enable() {
   const el = getOrCreateCursor();
   injectHideStyle();
-  ensurePointerTracking();
+  init();
   syncCursorHost();
   seedPosition();
   _active = true;
@@ -186,6 +190,7 @@ export function resetSize() {
 }
 
 const cheeseCursor = {
+  init,
   enable,
   disable,
   toggle,

@@ -25,28 +25,20 @@ import { posKey } from "./types";
 import type { Pos } from "./types";
 import { MineGridOverlay } from "./MineGridOverlay";
 import { MineMapViewer } from "./MineMapViewer";
-import {
-  useFullscreen,
-  fullscreenRootStyle,
-  fullscreenInnerStyle,
-} from "./useFullscreen";
+import { useFullscreen } from "./useFullscreen";
 import {
   getArticleMapPython,
   getArticleMarkersPython,
-  getArticleNeighborsPython,
   setArticleNeighborsPython,
   useArticleMap,
   useArticleNeighborsPython,
 } from "./article-store";
-
-const HUD_THEME = {
-  bg: "var(--goldmine-hud-bg)",
-  border: "var(--goldmine-hud-border)",
-  text: "var(--goldmine-hud-text)",
-  muted: "var(--goldmine-hud-muted)",
-  accent: "var(--goldmine-hud-accent)",
-  btnBg: "var(--goldmine-hud-btn-bg)",
-};
+import {
+  MINE_HUD as HUD_THEME,
+  MineHudBar,
+  MinePanelLabel,
+  MineVisualFrame,
+} from "./MineVisualFrame";
 
 const cmSmallFont = EditorView.theme({
   "&": { fontSize: "11px" },
@@ -281,17 +273,13 @@ export const MineNeighborsVisual: React.FC<MineNeighborsVisualProps> = ({
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      style={{ ...fullscreenRootStyle(isFullscreen), outline: "none" }}
+    <MineVisualFrame
+      rootRef={containerRef}
+      focusable
+      isFullscreen={isFullscreen}
+      maxWidth={maxWidth}
+      margin="2rem auto"
     >
-      <div
-        style={{
-          ...fullscreenInnerStyle(isFullscreen, maxWidth),
-          margin: "2rem auto",
-        }}
-      >
         <div
           style={{
             display: "grid",
@@ -301,19 +289,7 @@ export const MineNeighborsVisual: React.FC<MineNeighborsVisualProps> = ({
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                color: "var(--goldmine-label-fg)",
-                marginBottom: 6,
-                opacity: 0.7,
-              }}
-            >
-              Python
-            </div>
+            <MinePanelLabel>Python</MinePanelLabel>
             <div
               style={{
                 overflow: "hidden",
@@ -370,19 +346,7 @@ export const MineNeighborsVisual: React.FC<MineNeighborsVisualProps> = ({
           </div>
 
           <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                color: "var(--goldmine-label-fg)",
-                marginBottom: 6,
-                opacity: 0.7,
-              }}
-            >
-              Click a cell to test
-            </div>
+            <MinePanelLabel>Click a cell to test</MinePanelLabel>
 
             <div style={{ position: "relative" }}>
               <MineMapViewer mapState={mapState} joinHudBottom />
@@ -400,22 +364,7 @@ export const MineNeighborsVisual: React.FC<MineNeighborsVisualProps> = ({
               />
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                background: HUD_THEME.bg,
-                border: `2px solid ${HUD_THEME.border}`,
-                borderTop: "none",
-                padding: "7px 12px",
-                fontFamily: "monospace",
-                fontSize: 11,
-                color: HUD_THEME.text,
-                userSelect: "none",
-                minHeight: 34,
-              }}
-            >
+            <MineHudBar style={{ gap: 10 }}>
               {selected ? (
                 <>
                   <span style={{ color: HUD_THEME.muted }}>Cell</span>
@@ -449,10 +398,9 @@ export const MineNeighborsVisual: React.FC<MineNeighborsVisualProps> = ({
                     : "Warming up Python engine..."}
                 </span>
               )}
-            </div>
+            </MineHudBar>
           </div>
         </div>
-      </div>
-    </div>
+    </MineVisualFrame>
   );
 };

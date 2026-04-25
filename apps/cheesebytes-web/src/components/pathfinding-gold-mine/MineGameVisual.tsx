@@ -40,27 +40,20 @@ import type { Pos, MineMapState } from "./types";
 import { MineMapViewer } from "./MineMapViewer";
 import {
   useFullscreen,
-  fullscreenRootStyle,
-  fullscreenInnerStyle,
 } from "./useFullscreen";
 import { useArticleMap } from "./article-store";
 import { MineGameSprite } from "./MineGameSprite";
 import type { Direction } from "./MineGameSprite";
 import { MusicEngine, sfx } from "./mine-audio";
+import {
+  MINE_HUD as HUD,
+  MineHudBar,
+  MineHudButton as HudBtn,
+  MineVisualFrame,
+} from "./MineVisualFrame";
 
 type GameMode = "collapse" | "shortest" | "monster";
 type GameStatus = "playing" | "won" | "lost";
-
-const HUD = {
-  bg: "var(--goldmine-hud-bg)",
-  border: "var(--goldmine-hud-border)",
-  text: "var(--goldmine-hud-text)",
-  muted: "var(--goldmine-hud-muted)",
-  accent: "var(--goldmine-hud-accent)",
-  btnBg: "var(--goldmine-hud-btn-bg)",
-  activeBg: "var(--goldmine-hud-active-bg)",
-  activeText: "var(--goldmine-hud-active-text)",
-};
 
 /** Duration of one cell-to-cell move (sprite slide + walk animation). */
 const MOVE_DURATION_MS = 380;
@@ -79,6 +72,11 @@ interface Snapshot {
   monster: Pos | null;
   monsterFacing: Direction;
   steps: number;
+}
+
+interface PendingMove {
+  dr: number;
+  dc: number;
 }
 
 interface GameState extends Snapshot {
@@ -316,7 +314,7 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef);
 
   const [state, setState] = useState<GameState>(() => initialState(map, mode));
-  const [history, setHistory] = useState<Snapshot[]>([]);
+  const [, setHistory] = useState<Snapshot[]>([]);
   const [armed, setArmed] = useState(false);
   const [musicOn, setMusicOn] = useState(false);
   const [sfxOn, setSfxOn] = useState(true);
@@ -335,6 +333,13 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
 
   const moveTimerRef = useRef<number | null>(null);
   const monsterTimerRef = useRef<number | null>(null);
+  const pendingMoveRef = useRef<PendingMove | null>(null);
+  const gameFrameRef = useRef<HTMLDivElement>(null);
+
+  const [gameFrameWidth, setGameFrameWidth] = useState(maxWidth);
+  const [viewportHeight, setViewportHeight] = useState(() =>
+    typeof window === "undefined" ? 720 : window.innerHeight,
+  );
 
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -355,12 +360,14 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
 
   // ── Reset on map change ──
   useEffect(() => {
+    pendingMoveRef.current = null;
     setState(initialState(map, mode));
     setHistory([]);
     setZoomed(false);
   }, [map, mode]);
 
   const reset = useCallback(() => {
+    pendingMoveRef.current = null;
     setState(initialState(map, mode));
     setHistory([]);
     setIsMoving(false);
@@ -381,6 +388,7 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
 
   useEffect(
     () => () => {
+      pendingMoveRef.current = null;
       if (moveTimerRef.current !== null)
         window.clearTimeout(moveTimerRef.current);
       if (monsterTimerRef.current !== null)
@@ -388,6 +396,25 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
     },
     [],
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => setViewportHeight(window.innerHeight);
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, []);
+
+  useEffect(() => {
+    const el = gameFrameRef.current;
+    if (!el) return;
+
+    const sync = () => setGameFrameWidth(el.clientWidth || maxWidth);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [maxWidth]);
 
   // ── Music lifecycle ──
   useEffect(() => {
@@ -402,7 +429,18 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
   const tryMove = useCallback(
     (dr: number, dc: number) => {
       const cur = stateRef.current;
-      if (cur.status !== "playing") return;
+      if (cur.status !== "playing") {
+        pendingMoveRef.current = null;
+        return;
+      }
+
+      if (moveTimerRef.current !== null) {
+        pendingMoveRef.current = { dr, dc };
+        return;
+      }
+
+      pendingMoveRef.current = null;
+
       const nr = cur.player.r + dr;
       const nc = cur.player.c + dc;
       const nk = posKey(nr, nc);
@@ -503,19 +541,24 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
       if (moveTimerRef.current !== null)
         window.clearTimeout(moveTimerRef.current);
       moveTimerRef.current = window.setTimeout(() => {
+        const pending = pendingMoveRef.current;
+        pendingMoveRef.current = null;
+        if (pending && stateRef.current.status === "playing") {
+          moveTimerRef.current = null;
+          if (monsterTimerRef.current !== null) {
+            window.clearTimeout(monsterTimerRef.current);
+            monsterTimerRef.current = null;
+          }
+          window.requestAnimationFrame(() => tryMove(pending.dr, pending.dc));
+          return;
+        }
+
         setIsMoving(false);
+        setMonsterMoving(false);
         moveTimerRef.current = null;
       }, MOVE_DURATION_MS);
 
-      if (monsterMovedThisTurn) {
-        setMonsterMoving(true);
-        if (monsterTimerRef.current !== null)
-          window.clearTimeout(monsterTimerRef.current);
-        monsterTimerRef.current = window.setTimeout(() => {
-          setMonsterMoving(false);
-          monsterTimerRef.current = null;
-        }, MOVE_DURATION_MS);
-      }
+      setMonsterMoving(monsterMovedThisTurn);
 
       // For collapse mode, check if we are stranded (no walkable
       // neighbours that aren't collapsed).
@@ -540,6 +583,7 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
 
   const tryUndo = useCallback(() => {
     if (mode !== "collapse") return;
+    pendingMoveRef.current = null;
     setHistory((h) => {
       if (h.length === 0) return h;
       const snap = h[h.length - 1];
@@ -775,16 +819,24 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
           ? HUD.activeText
           : HUD.accent;
 
-  const hint =
-    mode === "collapse"
-      ? "↑ ↓ ← → / hjkl move · Z zoom · F fullscreen · U undo · R restart"
-      : "↑ ↓ ← → / hjkl move · Z zoom · F fullscreen · R restart";
+  const mapAspect = Math.max(0.05, map.cols / Math.max(1, map.rows));
+  const maxBoardHeight = isFullscreen
+    ? Math.max(180, viewportHeight - 132)
+    : Math.max(180, Math.min(720, viewportHeight * 0.68));
+  const boardWidth = Math.max(
+    1,
+    Math.min(gameFrameWidth || maxWidth, maxBoardHeight * mapAspect),
+  );
+  const boardHeight = Math.max(1, boardWidth / mapAspect);
 
   return (
-    <div
-      ref={rootRef}
-      tabIndex={0}
-      style={{ ...fullscreenRootStyle(isFullscreen), outline: "none" }}
+    <MineVisualFrame
+      rootRef={rootRef}
+      innerRef={gameFrameRef}
+      focusable
+      isFullscreen={isFullscreen}
+      maxWidth={maxWidth}
+      margin="1.5rem auto"
     >
       <style>{`
         @keyframes mgv-pulse { 0%,100%{opacity:1} 50%{opacity:0.15} }
@@ -809,15 +861,12 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
         }
       `}</style>
 
-      <div
-        style={{
-          ...fullscreenInnerStyle(isFullscreen, maxWidth),
-          margin: "1.5rem auto",
-        }}
-      >
         <div
           style={{
             position: "relative",
+            width: boardWidth,
+            maxWidth: "100%",
+            margin: "0 auto",
             // Re-trigger the shake on every bump by alternating between
             // two identical keyframes (no remount → Phaser stays alive).
             animation:
@@ -826,10 +875,19 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
                 : undefined,
           }}
         >
-          <div style={{ position: "relative", overflow: "hidden" }}>
+          <div
+            style={{
+              position: "relative",
+              overflow: "hidden",
+              border: `2px solid ${HUD.border}`,
+              boxSizing: "border-box",
+              background: "var(--goldmine-fullscreen-bg, #05070a)",
+            }}
+          >
             <div
               style={{
                 position: "relative",
+                width: "100%",
                 transformOrigin: "top left",
                 transform: zoomTransform,
                 transition: `transform ${isMoving ? MOVE_DURATION_MS : ZOOM_TWEEN_MS}ms ease-out`,
@@ -839,6 +897,9 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
               <MineMapViewer
                 mapState={displayMap}
                 showMonsterMarker={mode === "monster"}
+                width="100%"
+                height={boardHeight}
+                border="none"
               />
 
               {/* Player sprite. */}
@@ -956,31 +1017,14 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
         </div>
 
         {/* HUD */}
-        <div
+        <MineHudBar
           style={{
-            display: "flex",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 8,
-            background: HUD.bg,
-            border: `2px solid ${HUD.border}`,
-            borderTop: "none",
-            padding: "7px 12px",
-            fontFamily: "monospace",
-            fontSize: 11,
-            color: HUD.text,
-            userSelect: "none",
-            minHeight: 34,
+            width: boardWidth,
+            maxWidth: "100%",
+            margin: "0 auto",
           }}
         >
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <HudBtn
-              onClick={() => toggleZoom()}
-              active={zoomed}
-              title="Toggle zoom on player [Z]"
-            >
-              <span style={{ textDecoration: "underline" }}>Z</span>oom
-            </HudBtn>
             <HudBtn
               onClick={() => setMusicOn((v) => !v)}
               active={musicOn}
@@ -1054,51 +1098,9 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
               </span>
             )}
           </div>
-        </div>
-
-        <div
-          style={{
-            marginTop: 4,
-            fontFamily: "monospace",
-            fontSize: 10,
-            color: HUD.muted,
-            textAlign: "center",
-          }}
-        >
-          {hint}
-        </div>
-      </div>
-    </div>
+        </MineHudBar>
+    </MineVisualFrame>
   );
 };
-
-const HudBtn: React.FC<{
-  onClick: () => void;
-  active?: boolean;
-  children: React.ReactNode;
-  title?: string;
-}> = ({ onClick, active, children, title }) => (
-  <button
-    type="button"
-    tabIndex={-1}
-    onClick={onClick}
-    title={title}
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "3px 8px",
-      fontSize: 10,
-      fontWeight: 700,
-      fontFamily: "monospace",
-      cursor: "pointer",
-      border: `1px solid ${HUD.border}`,
-      background: active ? HUD.activeBg : HUD.btnBg,
-      color: active ? HUD.activeText : HUD.text,
-      whiteSpace: "nowrap",
-    }}
-  >
-    {children}
-  </button>
-);
 
 export default MineGameVisual;

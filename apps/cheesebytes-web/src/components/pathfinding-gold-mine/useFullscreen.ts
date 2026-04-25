@@ -58,8 +58,8 @@ export function fullscreenRootStyle(
   return {
     background: "var(--goldmine-fullscreen-bg, #fefce8)",
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
     padding: 24,
     width: "100%",
     height: "100%",

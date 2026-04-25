@@ -18,6 +18,7 @@ interface MineMapViewerProps {
   width?: string | number;
   height?: string | number;
   maxWidth?: string | number;
+  border?: string;
   joinHudBottom?: boolean;
   children?: React.ReactNode;
 }
@@ -35,6 +36,7 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
   width = "100%",
   height,
   maxWidth = "100%",
+  border = "2px solid var(--goldmine-hud-border, #d4a574)",
   joinHudBottom = false,
   children,
 }) => {
@@ -285,7 +287,8 @@ export const MineMapViewer: React.FC<MineMapViewerProps> = ({
           position: "relative",
           aspectRatio: height ? undefined : `${aspect}`,
           height: height ?? "auto",
-          border: "2px solid var(--goldmine-hud-border, #d4a574)",
+          border,
+          borderBottom: joinHudBottom ? "none" : border,
           background: viewerBackgroundColor,
           boxSizing: "border-box",
         }}

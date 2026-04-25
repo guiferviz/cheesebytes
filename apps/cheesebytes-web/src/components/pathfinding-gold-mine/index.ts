@@ -40,6 +40,14 @@ export {
 export { simpleMap, mediumMap, monsterMap } from "./maps";
 
 // React components
+export {
+  MINE_HUD,
+  MineHudBar,
+  MineHudButton,
+  MinePanelLabel,
+  MineShortcutLabel,
+  MineVisualFrame,
+} from "./MineVisualFrame";
 export { MineMapViewer } from "./MineMapViewer";
 export { MineGridOverlay } from "./MineGridOverlay";
 
@@ -82,5 +90,6 @@ export { MineReplayExplorer } from "./MineReplayExplorer";
 export { MinePreludeEditor } from "./MinePreludeEditor";
 export { MineGameVisual } from "./MineGameVisual";
 export { MineGameSprite } from "./MineGameSprite";
+export { MonsterFirstAttemptExplorer } from "./MonsterFirstAttemptExplorer";
 export { MonsterPlanVisual } from "./MonsterPlanVisual";
 export { MineStateGraphVisual } from "./MineStateGraphVisual";

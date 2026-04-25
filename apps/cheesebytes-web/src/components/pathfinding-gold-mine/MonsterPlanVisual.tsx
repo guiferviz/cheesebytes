@@ -9,13 +9,19 @@
  * Shares the tile renderer and the sprite component with MineGameVisual,
  * but uses a tiny play/pause/step HUD instead of keyboard controls.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { posKey } from "./types";
 import type { Pos, MineMapState } from "./types";
 import { MineMapViewer } from "./MineMapViewer";
 import { MineGameSprite } from "./MineGameSprite";
 import type { Direction } from "./MineGameSprite";
 import { useArticleMap } from "./article-store";
+import {
+  MINE_HUD as HUD,
+  MineHudBar,
+  MineHudButton as Btn,
+  MineVisualFrame,
+} from "./MineVisualFrame";
 
 interface Frame {
   path: Pos[];
@@ -26,6 +32,12 @@ interface Frame {
   failure?: boolean;
   /** True when the algorithm successfully reached the exit. */
   success?: boolean;
+}
+
+interface JointStateNode {
+  prev: string | null;
+  player: Pos;
+  monster: Pos;
 }
 
 const MOVES: Array<[number, number]> = [
@@ -134,7 +146,7 @@ function buildJointStateFrames(map: MineMapState, monsterStart: Pos): Frame[] {
   // player are not enqueued.
   const startKey = `${posKey(map.start.r, map.start.c)}|${posKey(monsterStart.r, monsterStart.c)}`;
   const exitKey = posKey(map.exit.r, map.exit.c);
-  const parent = new Map<string, { prev: string | null; player: Pos; monster: Pos }>();
+  const parent = new Map<string, JointStateNode>();
   parent.set(startKey, { prev: null, player: map.start, monster: monsterStart });
 
   let foundKey: string | null = null;
@@ -179,7 +191,7 @@ function buildJointStateFrames(map: MineMapState, monsterStart: Pos): Frame[] {
   const trajectory: Array<{ player: Pos; monster: Pos }> = [];
   let cur: string | null = foundKey;
   while (cur) {
-    const node = parent.get(cur)!;
+    const node: JointStateNode = parent.get(cur)!;
     trajectory.unshift({ player: node.player, monster: node.monster });
     cur = node.prev;
   }
@@ -206,46 +218,6 @@ interface Props {
   fps?: number;
 }
 
-const HUD = {
-  bg: "var(--goldmine-hud-bg)",
-  border: "var(--goldmine-hud-border)",
-  text: "var(--goldmine-hud-text)",
-  muted: "var(--goldmine-hud-muted)",
-  accent: "var(--goldmine-hud-accent)",
-  btnBg: "var(--goldmine-hud-btn-bg)",
-  activeBg: "var(--goldmine-hud-active-bg)",
-  activeText: "var(--goldmine-hud-active-text)",
-};
-
-const Btn: React.FC<{
-  onClick: () => void;
-  disabled?: boolean;
-  active?: boolean;
-  title?: string;
-  children: React.ReactNode;
-}> = ({ onClick, disabled, active, title, children }) => (
-  <button
-    type="button"
-    tabIndex={-1}
-    onClick={onClick}
-    disabled={disabled}
-    title={title}
-    style={{
-      padding: "3px 8px",
-      fontSize: 10,
-      fontWeight: 700,
-      fontFamily: "monospace",
-      cursor: disabled ? "default" : "pointer",
-      opacity: disabled ? 0.4 : 1,
-      border: `1px solid ${HUD.border}`,
-      background: active ? HUD.activeBg : HUD.btnBg,
-      color: active ? HUD.activeText : HUD.text,
-    }}
-  >
-    {children}
-  </button>
-);
-
 export const MonsterPlanVisual: React.FC<Props> = ({ fps = 4 }) => {
   const map = useArticleMap();
   const monsterStart = useMemo(() => resolveMonsterStart(map), [map]);
@@ -259,12 +231,12 @@ export const MonsterPlanVisual: React.FC<Props> = ({ fps = 4 }) => {
   );
 
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const playRef = useRef<number | null>(null);
+  const [playing, setPlaying] = useState(true);
+  const stepMs = useMemo(() => Math.max(360, Math.round(1000 / fps)), [fps]);
 
   useEffect(() => {
     setIndex(0);
-    setPlaying(false);
+    setPlaying(frames.length > 1);
   }, [frames]);
 
   useEffect(() => {
@@ -278,11 +250,10 @@ export const MonsterPlanVisual: React.FC<Props> = ({ fps = 4 }) => {
           }
           return i + 1;
         }),
-      Math.max(60, Math.round(1000 / fps)),
+      stepMs,
     );
-    playRef.current = interval;
     return () => window.clearInterval(interval);
-  }, [playing, frames.length, fps]);
+  }, [playing, frames.length, stepMs]);
 
   const frame = frames[Math.min(index, frames.length - 1)] ?? null;
 
@@ -319,17 +290,9 @@ export const MonsterPlanVisual: React.FC<Props> = ({ fps = 4 }) => {
         : HUD.accent;
 
   return (
-    <div style={{ margin: "1.5rem auto", maxWidth: 720 }}>
+    <MineVisualFrame maxWidth={720} margin="1.5rem auto">
       <div style={{ position: "relative" }}>
-        <MineMapViewer mapState={displayMap} showMonsterMarker />
-
-        {/* path (gold). */}
-        {frame.path.map((p, i) => (
-          <div
-            key={`pt-${p.r}-${p.c}-${i}`}
-            style={overlayStyle(p.r, p.c, map.rows, map.cols, "rgba(246, 189, 96, 0.55)", 5)}
-          />
-        ))}
+        <MineMapViewer mapState={displayMap} showMonsterMarker joinHudBottom />
 
         {/* Sprites. */}
         <MineGameSprite
@@ -341,7 +304,7 @@ export const MonsterPlanVisual: React.FC<Props> = ({ fps = 4 }) => {
           rows={map.rows}
           cols={map.cols}
           zIndex={6}
-          transitionMs={Math.max(80, Math.round(1000 / fps))}
+          transitionMs={stepMs}
         />
         <MineGameSprite
           kind="monster"
@@ -352,26 +315,12 @@ export const MonsterPlanVisual: React.FC<Props> = ({ fps = 4 }) => {
           rows={map.rows}
           cols={map.cols}
           zIndex={7}
-          transitionMs={Math.max(80, Math.round(1000 / fps))}
+          transitionMs={stepMs}
         />
       </div>
 
       {/* HUD */}
-      <div
-        style={{
-          marginTop: 6,
-          padding: "8px 10px",
-          background: HUD.bg,
-          border: `1px solid ${HUD.border}`,
-          color: HUD.text,
-          fontFamily: "monospace",
-          fontSize: 11,
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
+      <MineHudBar>
         <Btn
           onClick={() => {
             setIndex(0);
@@ -416,44 +365,9 @@ export const MonsterPlanVisual: React.FC<Props> = ({ fps = 4 }) => {
         >
           {status}
         </span>
-      </div>
-
-      <div
-        style={{
-          marginTop: 4,
-          padding: "6px 10px",
-          background: HUD.bg,
-          border: `1px solid ${HUD.border}`,
-          color: HUD.text,
-          fontFamily: "monospace",
-          fontSize: 11,
-          minHeight: 22,
-        }}
-      >
-        {frame.caption}
-      </div>
-    </div>
+      </MineHudBar>
+    </MineVisualFrame>
   );
 };
-
-function overlayStyle(
-  r: number,
-  c: number,
-  rows: number,
-  cols: number,
-  bg: string,
-  zIndex: number,
-): React.CSSProperties {
-  return {
-    position: "absolute",
-    left: `${(c / cols) * 100}%`,
-    top: `${(r / rows) * 100}%`,
-    width: `${100 / cols}%`,
-    height: `${100 / rows}%`,
-    background: bg,
-    pointerEvents: "none",
-    zIndex,
-  };
-}
 
 export default MonsterPlanVisual;

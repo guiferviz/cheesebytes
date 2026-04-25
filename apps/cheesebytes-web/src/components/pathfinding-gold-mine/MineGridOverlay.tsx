@@ -24,6 +24,13 @@ export interface MineGridOverlayProps {
   selectedOutline?: string;
   highlightedFill?: string;
   highlightedOutline?: string;
+  markers?: Array<{
+    pos: Pos;
+    label?: string;
+    fill?: string;
+    outline?: string;
+    color?: string;
+  }>;
 }
 
 export const MineGridOverlay: React.FC<MineGridOverlayProps> = ({
@@ -43,6 +50,7 @@ export const MineGridOverlay: React.FC<MineGridOverlayProps> = ({
   selectedOutline = "inset 0 0 0 2px rgba(76,175,80,0.7)",
   highlightedFill = "rgba(246, 189, 96, 0.35)",
   highlightedOutline = "inset 0 0 0 2px rgba(246,189,96,0.5)",
+  markers = [],
 }) => {
   const [dragging, setDragging] = useState(false);
   const [isDark, setIsDark] = useState(
@@ -131,11 +139,18 @@ export const MineGridOverlay: React.FC<MineGridOverlayProps> = ({
           const isHovered = hover?.r === r && hover?.c === c;
           const isSelected = selected?.r === r && selected?.c === c;
           const isHighlighted = highlightedKeys.has(key);
-          const label = cellLabels.get(key);
+          const marker = markers.find(
+            (candidate) => candidate.pos.r === r && candidate.pos.c === c,
+          );
+          const label = marker?.label ?? cellLabels.get(key);
 
           let background: string | undefined;
           let boxShadow: string | undefined;
-          if (isSelected) {
+          if (marker) {
+            background = marker.fill ?? "rgba(168, 85, 247, 0.42)";
+            boxShadow =
+              marker.outline ?? "inset 0 0 0 2px rgba(168,85,247,0.78)";
+          } else if (isSelected) {
             background = selectedFill;
             boxShadow = selectedOutline;
           } else if (isHighlighted) {
@@ -163,13 +178,13 @@ export const MineGridOverlay: React.FC<MineGridOverlayProps> = ({
                     : undefined,
                 background,
                 boxShadow,
-                color:
-                  isSelected || isHighlighted ? "#fff5e6" : undefined,
+                color: marker?.color ??
+                  (isSelected || isHighlighted ? "#fff5e6" : undefined),
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 11,
                 fontWeight: 700,
                 textShadow:
-                  isSelected || isHighlighted
+                  marker || isSelected || isHighlighted
                     ? "0 1px 2px rgba(0,0,0,0.65)"
                     : undefined,
               }}
