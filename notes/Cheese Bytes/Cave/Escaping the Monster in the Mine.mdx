@@ -4,6 +4,7 @@ import {
   MinePreludeEditor,
   MineStateGraphVisual,
   MONSTER_MARKERS_PYTHON,
+  MonsterFirstAttemptExplorer,
   MonsterPlanVisual,
   monsterMap,
 } from "../../../apps/cheesebytes-web/src/components/pathfinding-gold-mine";
@@ -14,52 +15,80 @@ import {
   markersPython={MONSTER_MARKERS_PYTHON}
 />
 
-You step back into the mine, and this time you are not alone. Somewhere in the
-dark there is a **monster**, and it can hear every step you take. Each time you
-move, it moves. If the monster ever catches up to you, the game is over.
+Once again you step into the mine, and this time you are not alone. Somewhere
+in the dark there is a **monster**. Every time you move, it moves too. And it
+moves toward you. If it catches you, that's it.
 
-How do you escape a maze when the maze itself is hunting you?
+Which algorithm would you trust now if you still want the fastest escape?
+
+This note is part of the [[Pathfinding in the Gold Mine]] series. In the
+[[The Shortest Path Out of the Mine|previous note]] we found the shortest path
+out of the mine. Now we add a monster that chases you through the
+tunnels. The shortest path is not necessarily the safest path, so we need a
+slightly different strategy to escape.
 
 # Try It Yourself First
 
-Use the arrow keys (or `hjkl`) to walk. The monster takes one step toward you on
-every move you make, always picking the shortest route through the walkable
-cells. There is no time pressure: you can think for as long as you like between
-moves. Reach the red `E` to escape.
+Click the game and use the arrow keys to walk. The monster gets one step after
+every step you take, and it always chooses a shortest route through the cave.
+Reach the red `E` before the monster reaches you.
 
 <MineGameVisual client:only="react" mode="monster" />
 
-You will probably get caught a few times before you find the trick. Most mazes
-have at least one route the monster cannot cut you off on, but finding it
-requires thinking **two players ahead**.
-
-# Setup From the Previous Notes
-
-If you want to experiment with a different cave layout — moving walls, shifting
-the start, or changing the monster's spawn — edit the prelude below. Besides `S`
-and `E`, the map uses an `M` marker for the monster's initial cell. The game,
-the replay, and the prelude all read that exact spawn from `MINE_MAP`. The
-dark-violet `M` circle on the map marks it.
+If you want to change the cave, edit the shared setup below. Move walls, shift
+the start, drag the exit somewhere else, or place the monster with `M`.
+Everything on this page reads the same `MINE_MAP`, so one edit updates the game
+above and the rest of the visuals.
 
 <MinePreludeEditor client:only="react" />
 
-# Why This Is Harder Than Shortest Path
+# A Deterministic Monster
 
-In [[The Shortest Path Out of the Mine]] the only thing that mattered was how
-far each cell was from the start. Here, the monster is also moving — and it
-always takes the **shortest path** toward you. That makes its behaviour
-completely **deterministic**: given a sequence of player moves, the monster's
-trajectory is fully determined. No randomness, no fog of war.
+The monster moves after you, and it always follows a shortest path toward your
+new position. There may be more than one shortest path; in that case it picks
+one consistently, depending on how the `neighbors()` function is defined. It
+does not move randomly. It does not have a secret strategy. It just chases you
+through a shortest route.
 
-This determinism is what makes the problem tractable. Instead of reasoning about
-probabilities or worst-case branches, we can search for the **optimal plan** —
-the shortest sequence of player moves that reaches the exit without ever landing
-on the same cell as the monster.
+It is a dumb monster, but still a very interesting one.
 
-# Joint-State BFS
+Another way to say this is that the monster is **deterministic**. Given your
+move sequence, the monster's path is fixed.
 
-The key insight is to model the full situation as a single graph where each node
-is a **pair** of positions — the player's and the monster's:
+That determinism is good news. We do not need probabilities or guesses. We can
+search for the **optimal plan** directly: the shortest sequence of player moves
+that reaches the exit without ever sharing a cell with the monster.
+
+# A First Attempt
+
+The first idea that comes to mind is to run BFS on the cave grid, just like we
+did in the previous note. The only difference is that now we have to check, for
+every candidate move, whether the monster's next step would land on the same
+cell as the player. If it does, we discard that move and do not add it to the
+BFS queue.
+
+Watch that first attempt below. BFS expands from `S` and discovers new player
+cells. Every time it considers a new cell, it also computes where the monster
+would be after reacting to that move. If the monster lands on the same cell as
+the candidate player position, that candidate is discarded.
+
+<MonsterFirstAttemptExplorer client:only="react" />
+
+The orange line is the player path reconstructed through the `parent` map. The
+green current cell is the player position currently being considered. The
+violet `M` is the hypothetical monster position for that same iteration. When
+the monster catches the candidate move, the marker turns red and the frame is
+marked as discarded.
+
+This is not a terrible idea. It even works on some maps. But there is a hidden
+lie in it: it treats a player cell as if it were fully visited forever. It
+forgets where the monster was when the player reached that cell.
+
+# The State We Forgot
+
+The key is to stop asking, "where is the player?" and start asking, "where is
+everyone?" Each node in the graph is a **pair** of positions: the player's cell
+and the monster's cell.
 
 - **Nodes** are pairs $(p, m)$ with $p \neq m$.
 - **Edges** correspond to one player move in any of the four directions,
@@ -67,18 +96,17 @@ is a **pair** of positions — the player's and the monster's:
   position).
 - **Goal** is any node where $p = \text{exit}$.
 
-Running BFS on this joint graph gives us the shortest plan — the fewest player
-moves that reach the exit alive. It naturally discovers maneuvers like luring
-the monster away from the exit and then doubling back, something you cannot find
-by analysing each agent's distances independently.
+Run BFS on that joint graph and you get the shortest escape plan. This naturally
+discovers moves that look strange locally — luring the monster away, doubling
+back, waiting for a corridor to become safe — because the search is over the
+whole situation, not just one piece of it.
 
-To see why we can't just track the player position, look at the joint-state
-graph below. Each card is **one state**: a tiny abstract grid that only shows
-where the player (yellow) and the monster (violet) are — no walls, no textures,
-just positions. BFS reveals the cards in the order it visits them, so you can
-watch the search fan out level by level. Two cards can put the yellow dot in the
-same cell and still be different states, because the violet dot is somewhere
-else — and that is exactly what makes plain shortest-path fail here.
+The graph below shows that idea directly. Each card is **one state**: a tiny
+abstract grid with the player in green and the monster in violet. No textures,
+no walls, just positions. BFS reveals cards in visit order, so you can watch the
+search fan out level by level. Two cards can put the green marker in the same
+cell and still be different states if the violet marker is elsewhere. That is
+exactly why plain shortest path breaks.
 
 <MineStateGraphVisual client:only="react" />
 
@@ -86,32 +114,35 @@ Click any card to see that exact state on the game map above. Use `space` to
 play or pause, `←` / `→` to step backward or forward, `e` to jump to the end,
 `w` to walk the shortest path from root to exit, and `r` to restart from the
 root. Press `g` to cycle between map, grid, and numeric node views, `b` to
-toggle backtrack edges toward already-seen states, `f` to toggle fullscreen
-mode, and `l` to cycle between the circular, tree, and force layouts. In the
-force layout, backtracks are always shown.
+toggle backtrack edges toward already-seen states, `h` to hide the map preview
+and controls so only the graph remains, `f` to toggle fullscreen mode, and `l`
+to cycle between the circular, tree, and force layouts. In the force layout,
+backtracks are always shown.
 
-Once the joint-state plan is found, you can also watch it play out as a
-trajectory on the real map:
+Once the joint-state plan is found, the replay below plays the escape on the
+real cave map — no search noise, just the solution trajectory:
 
 <MonsterPlanVisual client:only="react" />
 
-The joint graph has up to $W^2$ nodes (where $W$ is the number of walkable
-cells), so it uses more memory than plain BFS. For the small caves in these
-notes that is no problem; for huge mazes you would want pruning, symmetry
-breaking, or A\* with a tailored heuristic.
+The price is memory. If the cave has $W$ walkable cells, the joint graph has up
+to $W^2$ states. For these little caves, that is fine. For a huge maze, you
+would start adding pruning, symmetry breaking, or A\* with a heuristic that
+understands both agents.
 
 # What Comes Next
 
-Once you can outrun a single, perfectly-informed monster, two natural follow-ups
-appear:
+Once you can outrun one perfectly informed monster, the cave starts asking
+meaner questions:
 
-- **Multiple monsters** with different start positions — the joint state grows
-  to a tuple of all agent positions.
-- **Monsters with imperfect information** — for example, a monster that only
-  sees you within a certain radius, or that wanders randomly until it spots you.
-  Suddenly the optimal player strategy is no longer deterministic.
+- **Multiple monsters** with different start positions. This variation would
+  make the joint state grow to a tuple of all agent positions. As long as they
+  are all deterministic, BFS still works, but the state space grows.
+- **Monsters with imperfect information**. For example, a monster that only sees
+  you within a certain radius, or that wanders randomly until it spots you.
+  Suddenly the optimal player strategy is no longer deterministic. This is a
+  much harder problem... but it is also more realistic.
 
 The next note in the series, [[Escaping with the Most Gold]], drops the monster
 but adds a different kind of pressure: every step you take **collapses the floor
 behind you**, so each cell can only be visited once. The goal is no longer to
-escape fast, it is to escape rich.
+escape fast, it is to escape the mine rich.
