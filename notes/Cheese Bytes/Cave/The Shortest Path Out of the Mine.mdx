@@ -1,6 +1,7 @@
 import {
   BfsShortestPathExplorer,
   DfsFirstPathExplorer,
+  DfsIterativeFirstPathExplorer,
 } from "../../../apps/cheesebytes-web/src/components/cave/shortest-path-out-of-the-mine";
 import {
   MineGameVisual,
@@ -42,9 +43,10 @@ There are many ways to explore a maze, but two of them show up everywhere:
   all cells one step away from the start, then all cells two steps away, then
   three, and so on, until you find the exit.
 
-The mental picture is helpful: DFS is one curious explorer that never hesitates;
-BFS is a wave of water spreading out from the start in every direction at the
-same speed.
+DFS is one curious explorer that never hesitates; BFS is a wave of water
+spreading out from the start in every direction at the same speed.
+
+Which one do you think will find the shortest path out of the mine?
 
 # DFS: The First Path We Find
 
@@ -52,13 +54,13 @@ Let's start with DFS because it is the most natural to write. We walk into a
 cell, mark it as visited, recurse on each unvisited neighbor, and stop the
 moment we reach the exit.
 
-This implementation returns `True` as soon as it finds **any** path from start
-to exit. It does not care whether that path is short, it just commits to the
-first one it stumbles into.
+This `dfs` function returns as soon as it finds **any** path from start to exit.
+It does not care whether that path is short, it just commits to the first one it
+stumbles into.
 
-Press _Play_ to watch the explorer follow the corridors. The orange line is the
-current path it is holding on its stack; the highlighted cells are everything it
-has visited along the way.
+Press _Play_ to watch the explorer follow the corridors. The yellow/orange line
+is the current path it is holding on its `path` list; the highlighted cells are
+everything it has visited along the way.
 
 <DfsFirstPathExplorer client:only="react" />
 
@@ -71,8 +73,58 @@ It only knows "go deeper, backtrack on dead ends".
 > Change the order of `MOVES` in the `neighbors()` function. How does that
 > affect the path DFS finds? In general, it will bias the search toward certain
 > directions, and that can lead to much longer or shorter paths depending on the
-> layout of the mine. Can you find a layout where the order of `MOVES` finds the
-> shortest path?
+> layout of the mine. Can you find the order of `MOVES` that finds the shortest
+> path?
+
+# DFS Without Recursion
+
+The recursive version is the most natural one to write, but recursion is not
+what makes DFS work. The real engine is a stack.
+
+Every recursive call pushes a new frame onto Python's call stack, and every
+return pops one back off. So in a very literal sense, recursive DFS is already a
+stack-based algorithm. An iterative DFS just makes that stack explicit and
+manages it with a `while` loop.
+
+Below is the same "first path found" strategy written iteratively. Instead of
+asking Python to remember where to come back to, we keep our own stack of
+frames.
+
+We keep a `parent` dictionary that remembers, for each cell, which neighbor
+discovered it. Once we hit the exit we walk that dictionary backwards to
+reconstruct the route.
+
+<DfsIterativeFirstPathExplorer client:only="react" />
+
+Removing recursion does not change the behavior, but it is usually more
+efficient because we avoid the overhead of function calls. It also removes the
+risk of hitting Python's recursion limit on large maps.
+
+> [!warning]
+>
+> We are calling the `reconstruct` function on every iteration of the loop
+> because it helps the replay show the path being explored at each step. In a
+> more optimized implementation, we would only reconstruct the path once we find
+> the exit, and that would save some time.
+
+> [!tip] Experiment Tips
+>
+> - This iterative version finds a different path than the recursive one. Can
+>   you figure out why? Hint: it has to do with the order in which neighbors are
+>   added to the stack vs the order in which they are explored. Can you modfiy
+>   the code above to make it find the same path as the recursive version?
+> - The recursive version marks a cell as visited when it enters that cell. The
+>   iterative version marks a cell as visited before pushing it onto the stack.
+>   This prevents the same cell from being pushed several times through
+>   different paths. If we do not mind having duplicate cells on the stack, we
+>   could instead mark a cell as visited only when we pop it from the stack.
+>   That would make the iterative version behave more like the recursive one:
+>   during the replay, `visited` would contain only the cells that have actually
+>   been expanded, meaning the cells whose neighbors have been inspected.
+> - We can also construct the path incrementally as we go, without the need of a
+>   `reconstruct` function and the `parent` dictionary, but that would require
+>   more bookkeeping and make the code less clear. Feel free to try it if you
+>   want!
 
 # BFS: The Shortest Path, Guaranteed
 
@@ -84,9 +136,9 @@ BFS pops the **oldest** unexplored cell and expands its neighbors. As a
 consequence, every cell is reached for the first time via a shortest path from
 the start.
 
-To actually return the path (and not just the distance) we keep a `parent`
-dictionary that remembers, for each cell, which neighbor discovered it. Once we
-hit the exit we walk that dictionary backwards to reconstruct the route.
+Similarly to iterative DFS, we keep a `parent` dictionary that remembers, for
+each cell, which neighbor discovered it. Once we hit the exit we walk that
+dictionary backwards to reconstruct the route.
 
 <BfsShortestPathExplorer client:only="react" />
 
@@ -131,15 +183,14 @@ trades a bit of memory for the shortest-path guarantee.
 
 # Code Similarity
 
-Just for fun, look at the code for DFS and BFS above. They are almost identical.
-The only differences are:
+Just for fun, look at the code for the iterative implementation of DFS and BFS
+above. They are almost identical. The only difference is:
 
 - The queue vs stack data structure. Swap the stack for a queue and DFS becomes
   BFS.
   - **Stack**: last-in, first-out. The most recently discovered cell is explored
     next.
   - **Queue**: first-in, first-out. The oldest discovered cell is explored next.
-- The `parent` dictionary to reconstruct the path in BFS.
 
 # What Comes Next
 
