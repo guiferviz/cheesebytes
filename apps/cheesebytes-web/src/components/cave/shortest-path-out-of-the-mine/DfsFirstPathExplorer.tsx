@@ -7,29 +7,29 @@ const INITIAL_CODE = `def dfs(
     end: Cell,
     visited: set[Cell],
     path: list[Cell],
-) -> bool:
+) -> list[Cell] | None:
     visited.add(current)
     path.append(current)
     show_state(visited, path, current)
 
     if current == end:
-        return True
+        return path.copy()
 
     for nxt in neighbors(grid, current):
         if nxt in visited:
             continue
-        if dfs(grid, nxt, end, visited, path):
-            return True
+        result = dfs(grid, nxt, end, visited, path)
+        if result:
+            return result
 
     path.pop()
     show_state(visited, path, path[-1] if path else None)
-    return False
+    return None
 
 
 def solve() -> None:
     visited: set[Cell] = set()
-    path: list[Cell] = []
-    dfs(MINE_MAP, START, END, visited, path)
+    path = dfs(MINE_MAP, START, END, visited, [])
     show_state(None, path, None)`;
 
 export const DfsFirstPathExplorer: React.FC = () => (

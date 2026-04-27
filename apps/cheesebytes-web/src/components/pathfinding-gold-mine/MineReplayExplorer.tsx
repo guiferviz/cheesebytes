@@ -19,6 +19,7 @@ import React, {
   useState,
 } from "react";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
+import { foldEffect, foldGutter } from "@codemirror/language";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
 import type { VimModeAPI } from "../../utils/vim-mode";
@@ -88,6 +89,58 @@ def show_state(
     "current_monster": None if current_monster is None else list(current_monster),
     "discarded": bool(discarded),
     }))`;
+
+function findTopLevelFunctionFoldRanges(
+  source: string,
+  functionNames: readonly string[],
+) {
+  const targetNames = new Set(functionNames);
+  const lines = source.split("\n");
+  const lineStarts: number[] = [];
+  let offset = 0;
+
+  for (const line of lines) {
+    lineStarts.push(offset);
+    offset += line.length + 1;
+  }
+
+  const ranges: Array<{ from: number; to: number }> = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^def\s+([A-Za-z_]\w*)\b/.exec(lines[index]);
+    if (!match || !targetNames.has(match[1])) continue;
+
+    let endLine = lines.length - 1;
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      if (/^def\s+[A-Za-z_]\w*\b/.test(lines[nextIndex])) {
+        endLine = nextIndex - 1;
+        break;
+      }
+    }
+
+    while (endLine > index && lines[endLine].trim() === "") {
+      endLine -= 1;
+    }
+
+    const from = lineStarts[index] + lines[index].length;
+    const to = lineStarts[endLine] + lines[endLine].length;
+    if (to > from) ranges.push({ from, to });
+  }
+
+  return ranges;
+}
+
+function foldNamedFunctions(view: EditorView, functionNames: readonly string[]) {
+  const ranges = findTopLevelFunctionFoldRanges(
+    view.state.doc.toString(),
+    functionNames,
+  );
+  if (ranges.length === 0) return;
+
+  view.dispatch({
+    effects: ranges.map((range) => foldEffect.of(range)),
+  });
+}
 
 function clampPlaybackDelay(value: number): number {
   return Math.min(Math.max(value, MIN_STEP_DELAY_MS), MAX_STEP_DELAY_MS);
@@ -261,6 +314,7 @@ export interface MineReplayExplorerProps {
   vimModeId: string;
   vimModeLabel: string;
   initialCode: string;
+  initialCollapsedFunctions?: readonly string[];
 }
 
 export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
@@ -269,6 +323,7 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
   vimModeId,
   vimModeLabel,
   initialCode,
+  initialCollapsedFunctions = [],
 }) => {
   const mapState = useArticleMap();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -293,6 +348,14 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
   const playbackRafRef = useRef<number | null>(null);
   const playbackLastTickRef = useRef<number | null>(null);
   codeRef.current = code;
+
+  const editorExtensions = useMemo(
+    () =>
+      initialCollapsedFunctions.length > 0
+        ? [...cmExtensions, foldGutter()]
+        : cmExtensions,
+    [initialCollapsedFunctions.length],
+  );
 
   const keepViewerFocus = useCallback(() => {
     const root = viewerRootRef.current;
@@ -759,9 +822,12 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
             >
               <CodeMirror
                 value={code}
-                extensions={cmExtensions}
+                extensions={editorExtensions}
                 theme={isDark ? oneDark : undefined}
                 onChange={handleCodeChange}
+                onCreateEditor={(view) => {
+                  foldNamedFunctions(view, initialCollapsedFunctions);
+                }}
                 indentWithTab
                 basicSetup={{
                   lineNumbers: true,

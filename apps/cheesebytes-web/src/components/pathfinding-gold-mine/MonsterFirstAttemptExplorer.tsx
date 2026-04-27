@@ -105,6 +105,12 @@ export const MonsterFirstAttemptExplorer: React.FC = () => (
     vimModeId="mine-monster-first-attempt"
     vimModeLabel="Monster BFS"
     initialCode={INITIAL_CODE}
+        initialCollapsedFunctions={[
+            "monster_next_step",
+            "reconstruct",
+            "first_attempt_bfs",
+            "solve",
+        ]}
   />
 );
 

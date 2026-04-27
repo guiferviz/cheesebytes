@@ -660,7 +660,7 @@ export function createVimMode(): VimModeAPI {
   });
   modes.get("normal")!.commands.set("!", {
     key: "!",
-    label: "Toggle mode label",
+    label: "Toggle Vim mode label",
     run: () => {
       indicator.toggleHidden();
       syncIndicator();
