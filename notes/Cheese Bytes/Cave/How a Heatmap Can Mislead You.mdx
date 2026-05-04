@@ -1,0 +1,167 @@
+import {
+  HeatmapAggregationVisual,
+  HeatmapExplorerVisual,
+  HeatmapPointCloudVisual,
+  HeatmapShiftComparisonVisual,
+} from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/HeatmapStoryVisuals";
+import { HeatmapGaussianPythonVisual } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/HeatmapGaussianPythonVisual";
+import { TemporalAggregationVisual } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/TemporalAggregationVisual";
+
+Imagine this: you want to open a small coffee shop in your city. You do not want
+to choose the location by instinct alone, so you gather a dataset with hundreds
+of signals: delivery orders, searches for "coffee near me", and places where
+people often buy breakfast.
+
+At first the data does not look useful at all. It is just a cloud of points. You
+can tell that some areas are busier than others, but you cannot yet point to a
+crisp recommendation and say, "Open here."
+
+<HeatmapPointCloudVisual client:only="react" />
+
+# Why We Aggregate
+
+This is exactly why heatmaps and choropleths feel so appealing. They promise to
+turn a messy cloud into a clean surface.
+
+The usual recipe is simple:
+
+1. Lay a grid on top of the city.
+2. Count how many events fall inside each cell.
+3. Paint each cell with a color scale.
+
+Suddenly the map feels much easier to read. We do not see isolated orders
+anymore. We see regions, hot spots, and apparently clear recommendations.
+
+<HeatmapAggregationVisual client:only="react" />
+
+This step is not wrong. Aggregation is often useful. The problem is that the
+result now depends on something that was never in the raw data: **the geometry
+of the grid itself**.
+
+# The Grid Is Part of the Model
+
+When people look at an aggregated map, they often treat the cells as if they
+were natural neighborhoods. But those boundaries are artificial. We made them
+up.
+
+That means the map is not just showing demand. It is showing demand **after we
+forced it through a particular partition of space**.
+
+Shift the partition a little and some points cross a border. A cell that looked
+dominant can lose part of its count. Another one can suddenly absorb a nearby
+cluster and look far more important.
+
+<HeatmapShiftComparisonVisual client:only="react" />
+
+This is the heart of the **Modifiable Areal Unit Problem**, or **MAUP**:
+
+> The pattern you think you see can depend heavily on how you grouped the same
+> underlying spatial data.
+
+Nothing about the customers changed. Nothing about the orders changed. Only the
+aggregation scheme changed. But the story changed anyway.
+
+# Three Quiet Choices That Change the Story
+
+Once you notice MAUP, it becomes hard to unsee. There are at least three quiet
+decisions hiding inside a heatmap like this:
+
+- **Origin**: where the grid starts.
+- **Scale**: how large each cell is.
+- **Shape and orientation**: squares, hexagons, and rotated tessellations do not
+  pool points in the same way.
+
+Those choices sound cosmetic, but they affect which observations become
+neighbors and which ones get separated by a border.
+
+The explorer below lets you perturb those choices directly. Drag the grid. Make
+the cells bigger. Rotate them. Swap squares, triangles, hexagons, or even
+postcode-like administrative districts. The underlying point cloud stays the
+same, but the summary surface keeps mutating.
+
+<HeatmapExplorerVisual client:only="react" />
+
+Postal codes deserve a special mention because they feel so official. But they
+were designed to make delivery and routing easier, not to reveal clean
+behavioral tribes. The same warning can apply at the level of states or even
+countries: a border may be administratively convenient while still being a poor
+match for how people actually behave.
+
+So if a pattern appears only because one postcode map, one state map, or one
+country split happened to cut space that way, that pattern is already fragile.
+The explorer's postcode mode is there to make that point concrete: changing the
+administrative shape alone can change the story.
+
+This is why a choropleth or heatmap should be treated as a **modeling output**,
+not as raw truth. The picture depends on assumptions, even when those
+assumptions are easy to miss.
+
+# Not Just a Spatial Problem
+
+This is not only a map problem.
+
+The deeper issue appears whenever we choose an arbitrary unit of aggregation and
+then forget that it was a choice. Spatial cells are one example, but time
+buckets can do the same thing. Administrative units can do the same thing.
+Product categories, age bands, school districts, sales territories, or postal
+codes can all end up acting like artificial containers that shape the story.
+
+Once we group data, the boundary starts participating in the result.
+
+# A Year Is Also A Boundary
+
+Take the S&amp;P 500 at monthly resolution. The underlying series is just a long
+sequence of monthly values. But the moment we decide to summarize it as
+"yearly" performance, we need to answer a hidden question:
+
+> When does the year begin?
+
+Calendar years begin in January, but that is a convention, not a law of the
+market. A fiscal year could start in April. A reporting cycle could start in
+July. The monthly data is identical, yet the 12-month buckets shift.
+
+The visual below keeps the same monthly history and only moves the place where
+the year starts. Each row is still twelve months. But some years flip from
+positive to negative, or the other way around, simply because the boundary
+moved.
+
+<TemporalAggregationVisual client:only="react" />
+
+This is the temporal version of the same mistake: we start believing that the
+aggregated year is a natural object, when in fact it is a frame we imposed on a
+continuous sequence.
+
+# Can Smoothing Help?
+
+A common response is to smooth the counts after aggregation. That is often a
+reasonable thing to do. If neighboring cells are meant to describe the same
+continuous urban process, some local averaging can reduce visual noise and make
+broader patterns easier to read.
+
+One popular option is a Gaussian filter. Instead of using only the count in one
+cell, we replace it with a weighted average of nearby cells, giving more weight
+to closer neighbors.
+
+That can produce a much cleaner surface. But it does **not** make MAUP go away.
+Smoothing happens **after** we already chose the grid. It can soften the sharp
+edges of aggregation, but it still inherits the partition we started from.
+
+The last visual lets you edit a small Python implementation of a Gaussian
+filter. The map on the right updates from the code on the left.
+
+<HeatmapGaussianPythonVisual client:only="react" />
+
+# What To Do in Practice
+
+The practical lesson is not "never aggregate." It is this:
+
+1. Treat aggregation choices as assumptions.
+2. Check whether your conclusions survive shifts in origin, scale, cell shape,
+  year start, or administrative boundary.
+3. Report patterns that remain stable across reasonable groupings.
+
+If a recommendation appears only for one lucky tessellation, it is probably not
+strong enough to trust.
+
+That is what makes MAUP important. It reminds us that a spatial summary is not
+just a lens over the data. It is a lens that can bend the image.
