@@ -1,0 +1,30 @@
+:root {
+  --heatmapviz-panel-bg: #f8f1e5;
+  --heatmapviz-panel-edge: rgba(83, 63, 44, 0.18);
+  --heatmapviz-panel-shadow: 0 22px 56px rgba(72, 53, 37, 0.14);
+  --heatmapviz-ink: #3a2e21;
+  --heatmapviz-muted: #7b6855;
+  --heatmapviz-accent: #b95d1e;
+  --heatmapviz-accent-soft: rgba(185, 93, 30, 0.14);
+  --heatmapviz-button-bg: rgba(58, 46, 33, 0.05);
+  --heatmapviz-button-bg-hover: rgba(58, 46, 33, 0.1);
+  --heatmapviz-button-bg-active: rgba(185, 93, 30, 0.18);
+  --heatmapviz-code-bg: #11161f;
+  --heatmapviz-fullscreen-bg: #f5ede0;
+  --goldmine-fullscreen-bg: var(--heatmapviz-fullscreen-bg);
+}
+
+.dark {
+  --heatmapviz-panel-bg: #111927;
+  --heatmapviz-panel-edge: rgba(226, 232, 240, 0.12);
+  --heatmapviz-panel-shadow: 0 28px 72px rgba(0, 0, 0, 0.42);
+  --heatmapviz-ink: #f3efe6;
+  --heatmapviz-muted: #c7bfb0;
+  --heatmapviz-accent: #ff9d5c;
+  --heatmapviz-accent-soft: rgba(255, 157, 92, 0.18);
+  --heatmapviz-button-bg: rgba(255, 255, 255, 0.06);
+  --heatmapviz-button-bg-hover: rgba(255, 255, 255, 0.11);
+  --heatmapviz-button-bg-active: rgba(255, 157, 92, 0.24);
+  --heatmapviz-code-bg: #0b1017;
+  --heatmapviz-fullscreen-bg: #090d13;
+}

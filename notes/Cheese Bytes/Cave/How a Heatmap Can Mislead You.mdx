@@ -14,7 +14,7 @@ people often buy breakfast.
 
 At first the data does not look useful at all. It is just a cloud of points. You
 can tell that some areas are busier than others, but you cannot yet point to a
-crisp recommendation and say, "Open here."
+crisp recommendation and say: "Open here".
 
 <HeatmapPointCloudVisual client:only="react" />
 
@@ -110,9 +110,9 @@ Once we group data, the boundary starts participating in the result.
 
 # A Year Is Also A Boundary
 
-Take the S&amp;P 500 at monthly resolution. The underlying series is just a long
-sequence of monthly values. But the moment we decide to summarize it as "yearly"
-performance, we need to answer a hidden question:
+Take the S&P 500 at monthly resolution. The underlying series is just a long
+sequence of monthly values. But the moment we summarize it as "yearly"
+performance, we introduce a hidden modeling choice:
 
 > When does the year begin?
 
@@ -127,9 +127,29 @@ moved.
 
 <TemporalAggregationVisual client:only="react" />
 
-This is the temporal version of the same mistake: we start believing that the
-aggregated year is a natural object, when in fact it is a frame we imposed on a
-continuous sequence.
+This is the temporal analogue of the MAUP in geospatial analysis: we start
+believing that the aggregated year is a natural object, when in fact it is a
+frame we imposed on a continuous sequence.
+
+# Arbitrary does not mean meaningless.
+
+A calendar year is a convention, but it is not random. People and institutions
+organize behavior around it: holidays, planning cycles, reporting habits.
+December and January are not just identical months with different names.
+
+The same applies to geography. Postal codes, census tracts, or neighborhood
+boundaries may reflect real differences in how places are built, governed, or
+lived in. Sometimes a boundary really does separate two different environments.
+
+But that does not make the boundary neutral.
+
+The key point is that aggregation requires a choice. And different defensible
+choices can produce different results from the same underlying data. A pattern
+can look strong under one set of boundaries, weak under another, and sometimes
+disappear entirely.
+
+That is the heart of the MAUP: the problem is not that boundaries are always
+wrong. The problem is that they matter.
 
 # Can Smoothing Help?
 
