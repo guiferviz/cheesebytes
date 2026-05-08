@@ -194,7 +194,24 @@ export function TemporalAggregationVisual() {
   const visibleYears = showFullHistory
     ? alignedYears
     : alignedYears.slice(0, 18);
-  const tableScale = isFullscreen ? 1.35 : 1;
+  const tableRowGap = isFullscreen ? 4 : 3;
+  const tableRowCount = visibleYears.length + 1;
+  const fullscreenHeightBudget = `100vh - 150px - ${
+    visibleYears.length * tableRowGap
+  }px`;
+  const monthCellSize = isFullscreen
+    ? `clamp(28px, calc((${fullscreenHeightBudget}) / ${tableRowCount}), 58px)`
+    : `${TABLE_MONTH_CELL}px`;
+  const yearCellWidth = isFullscreen
+    ? `clamp(88px, calc((${fullscreenHeightBudget}) / ${(tableRowCount / 3.1).toFixed(4)}), 178px)`
+    : `${TABLE_YEAR_CELL_WIDTH}px`;
+  const totalCellWidth = isFullscreen
+    ? `clamp(64px, calc((${fullscreenHeightBudget}) / ${(tableRowCount / 2.15).toFixed(4)}), 124px)`
+    : `${TABLE_TOTAL_CELL_WIDTH}px`;
+  const totalGutterWidth = isFullscreen
+    ? `clamp(12px, calc((${fullscreenHeightBudget}) / ${(tableRowCount / 0.45).toFixed(4)}), 28px)`
+    : `${TABLE_TOTAL_GUTTER}px`;
+  const tableGridTemplate = `${yearCellWidth} repeat(12, ${monthCellSize}) ${totalGutterWidth} ${totalCellWidth}`;
 
   const shiftStart = (delta: number) => {
     setStartMonth((current) => (current + delta + 12) % 12);
@@ -261,8 +278,20 @@ export function TemporalAggregationVisual() {
         outline: "none",
       }}
     >
-      <div style={fullscreenInnerStyle(isFullscreen, 1120)}>
-        <div style={{ display: "grid", gap: 12 }}>
+      <div
+        style={{
+          ...fullscreenInnerStyle(isFullscreen, 1120),
+          height: isFullscreen ? "100%" : undefined,
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gap: isFullscreen ? 14 : 12,
+            gridTemplateRows: isFullscreen ? "auto minmax(0, 1fr)" : undefined,
+            height: isFullscreen ? "100%" : undefined,
+          }}
+        >
           <div
             style={{
               display: "grid",
@@ -304,34 +333,38 @@ export function TemporalAggregationVisual() {
 
           <div
             style={{
-              overflowX: "hidden",
-              overflowY: showFullHistory ? "auto" : "hidden",
-              maxHeight: isFullscreen
-                ? "calc(100vh - 170px)"
+              alignItems: "flex-start",
+              display: isFullscreen ? "flex" : undefined,
+              justifyContent: isFullscreen ? "center" : undefined,
+              minHeight: 0,
+              overflowX: "auto",
+              overflowY: isFullscreen
+                ? "auto"
                 : showFullHistory
-                  ? 580
-                  : undefined,
+                  ? "auto"
+                  : "hidden",
+              maxHeight: !isFullscreen && showFullHistory ? 580 : undefined,
             }}
           >
             <div
               style={{
-                width: "100%",
-                padding: 10,
                 display: "grid",
-                gap: 3,
+                gap: tableRowGap,
                 justifyContent: "center",
-                transform: `scale(${tableScale})`,
-                transformOrigin: "top center",
+                padding: isFullscreen ? "6px 10px 10px" : 10,
+                width: isFullscreen ? "max-content" : "100%",
               }}
             >
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: `${TABLE_YEAR_CELL_WIDTH}px repeat(12, ${TABLE_MONTH_CELL}px) ${TABLE_TOTAL_GUTTER}px ${TABLE_TOTAL_CELL_WIDTH}px`,
-                  columnGap: 2,
+                  gridTemplateColumns: tableGridTemplate,
+                  columnGap: isFullscreen ? 4 : 2,
                   alignItems: "end",
                   justifyContent: "center",
-                  fontSize: "0.58rem",
+                  fontSize: isFullscreen
+                    ? "clamp(0.7rem, 1.25vh, 1.1rem)"
+                    : "0.58rem",
                   color: "var(--heatmapviz-muted)",
                   fontWeight: 700,
                 }}
@@ -357,15 +390,17 @@ export function TemporalAggregationVisual() {
                   key={year.label}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: `${TABLE_YEAR_CELL_WIDTH}px repeat(12, ${TABLE_MONTH_CELL}px) ${TABLE_TOTAL_GUTTER}px ${TABLE_TOTAL_CELL_WIDTH}px`,
-                    columnGap: 2,
+                    gridTemplateColumns: tableGridTemplate,
+                    columnGap: isFullscreen ? 4 : 2,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
                   <div
                     style={{
-                      fontSize: "0.72rem",
+                      fontSize: isFullscreen
+                        ? "clamp(1rem, 1.8vh, 1.6rem)"
+                        : "0.72rem",
                       fontWeight: 700,
                       whiteSpace: "nowrap",
                     }}
@@ -382,8 +417,8 @@ export function TemporalAggregationVisual() {
                           : `${MONTH_LABELS[month.month]} ${month.year}: no data yet`
                       }
                       style={{
-                        width: TABLE_MONTH_CELL,
-                        height: TABLE_MONTH_CELL,
+                        width: monthCellSize,
+                        height: monthCellSize,
                         border: month.hasData
                           ? "1px solid rgba(255,255,255,0.14)"
                           : "1px dashed rgba(148,163,184,0.38)",
@@ -405,13 +440,15 @@ export function TemporalAggregationVisual() {
                           : `Window return: ${formatPercent(year.totalReturn)}`
                     }
                     style={{
-                      width: TABLE_TOTAL_CELL_WIDTH,
-                      height: TABLE_MONTH_CELL,
+                      width: totalCellWidth,
+                      height: monthCellSize,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontFamily: "'IosevkaTermSlab Nerd Font Mono', monospace",
-                      fontSize: "0.62rem",
+                      fontSize: isFullscreen
+                        ? "clamp(0.78rem, 1.35vh, 1.18rem)"
+                        : "0.62rem",
                       lineHeight: 1,
                       background:
                         year.totalReturn === null

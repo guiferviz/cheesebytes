@@ -1,11 +1,6 @@
-import React, {
-  useRef,
-  useState,
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-} from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import cheeseCursor from "../utils/cheese-cursor";
 
 type Tool = "pen" | "rectangle" | "circle" | "eraser" | "text";
 type MenuMode = "normal" | "color" | "tool" | "size" | "help";
@@ -72,7 +67,6 @@ const SIZE_OPTIONS = [
 ];
 
 const MAX_HISTORY = 20;
-const PALETTE_CURSOR_OFFSET = { x: 10, y: 10 } as const;
 
 const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   disableCursorStyles = false,
@@ -96,14 +90,12 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<Point | null>(null);
   const lastPointRef = useRef<Point | null>(null);
-  const cursorPosRef = useRef({ x: 0, y: 0 });
 
   // Cache canvas context and rect to avoid repeated lookups
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const canvasRectRef = useRef<DOMRect | null>(null);
 
   // Performance refs for interaction
-  const cursorRef = useRef<HTMLImageElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const menuModeRef = useRef(menuMode);
   const mousePosRef = useRef<Point>({ x: 0, y: 0 });
@@ -160,10 +152,6 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
       // Always update ref for sync
       mousePosRef.current = { x, y };
-      cursorPosRef.current = {
-        x: x - PALETTE_CURSOR_OFFSET.x,
-        y: y - PALETTE_CURSOR_OFFSET.y,
-      };
 
       // Only force re-render if we need to update the menu position
       if (menuModeRef.current !== "normal") {
@@ -174,30 +162,17 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // Cursor animation loop for high performance (decoupled from React/Canvas)
-  useLayoutEffect(() => {
-    if (!isActive) return;
-
-    let frameId: number;
-    const animate = () => {
-      if (cursorRef.current) {
-        const { x, y } = cursorPosRef.current;
-        cursorRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(-25deg)`;
-      }
-      frameId = requestAnimationFrame(animate);
-    };
-
-    frameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frameId);
-  }, [isActive]);
-
-  // Sync cursor position when overlay becomes active
   useEffect(() => {
-    if (isActive && cursorRef.current) {
-      const { x, y } = mousePosRef.current;
-      cursorRef.current.style.transform = `translate3d(${x - PALETTE_CURSOR_OFFSET.x}px, ${y - PALETTE_CURSOR_OFFSET.y}px, 0) rotate(-25deg)`;
+    if (!isActive) {
+      cheeseCursor.hidePaintPalette();
+      return;
     }
-  }, [isActive, portalHost]);
+
+    cheeseCursor.showPaintPalette();
+    return () => {
+      cheeseCursor.hidePaintPalette();
+    };
+  }, [isActive]);
 
   // Save state to history
   const saveToHistory = useCallback(() => {
@@ -676,12 +651,6 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       const color = strokeColorRef.current;
       const width = strokeWidthRef.current;
 
-      // Update cursor ref for the animation loop
-      cursorPosRef.current = {
-        x: e.clientX - PALETTE_CURSOR_OFFSET.x,
-        y: e.clientY - PALETTE_CURSOR_OFFSET.y,
-      };
-
       if (tool === "pen" || tool === "eraser") {
         // Draw all coalesced points
         for (const event of events) {
@@ -1144,22 +1113,6 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
         }}
         // Event listeners are now attached via useEffect for better performance
       />
-
-      {/* Palette indicator - top-left of cursor, tilted as if held */}
-      {isActive && (
-        <img
-          ref={cursorRef}
-          src="/cursors/palette.png"
-          alt="Drawing mode active"
-          className="fixed z-[10002] pointer-events-none w-14 h-14 transition-opacity duration-200"
-          style={{
-            opacity: 1,
-            top: 0,
-            left: 0,
-            transformOrigin: "bottom right",
-          }}
-        />
-      )}
 
       {/* Radial menu (including help mode) */}
       {isActive && menuMode !== "normal" && renderRadialMenu()}

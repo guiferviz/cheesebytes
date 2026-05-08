@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import type { VimCommand } from "../../../utils/vim-mode";
 import pyodideWorkerContext from "../../../utils/pyodideWorkerContext";
@@ -10,7 +11,10 @@ import {
 
 import { HeatmapCanvas } from "./HeatmapCanvas";
 import { buildSquareMatrix, matrixToSquareCellValues } from "./heatmap-core";
-import { useHeatmapArticlePoints } from "./heatmap-article";
+import {
+  useHeatmapArticlePoints,
+  useHeatmapPointState,
+} from "./heatmap-article";
 import { HeatmapHudButton } from "./shared";
 import type { Origin } from "./types";
 import { useScopedVimMode } from "./useScopedVimMode";
@@ -18,7 +22,6 @@ import { useScopedVimMode } from "./useScopedVimMode";
 const FONT = "'IosevkaTermSlab Nerd Font Mono', monospace";
 
 const MARKER = "__HEATMAP_JSON__";
-const CANVAS_SIZE = 360;
 const FILTER_ORIGIN: Origin = { x: 10, y: 4 };
 const FILTER_CELL_SIZE = 48;
 const FILTER_ORIENTATION = 0;
@@ -66,6 +69,25 @@ def gaussian_filter(grid):
 def solve(grid):
     return gaussian_filter(grid)
 `;
+
+function fullscreenCanvasStyle(
+  isFullscreen: boolean,
+  dimensions: { width: number; height: number },
+): CSSProperties | undefined {
+  if (!isFullscreen) {
+    return undefined;
+  }
+  const size = "min(40vw, 78vh, 820px)";
+  const isLandscape = dimensions.width >= dimensions.height;
+  const ratio = isLandscape
+    ? dimensions.height / dimensions.width
+    : dimensions.width / dimensions.height;
+
+  return {
+    width: isLandscape ? size : `calc(${size} * ${ratio.toFixed(4)})`,
+    height: isLandscape ? `calc(${size} * ${ratio.toFixed(4)})` : size,
+  };
+}
 
 function buildPrelude(matrix: number[][]) {
   return [
@@ -180,7 +202,8 @@ export function HeatmapGaussianPythonVisual() {
   const [showPoints, setShowPoints] = useState(true);
   const [origin, setOrigin] = useState(FILTER_ORIGIN);
   const [cellValues, setCellValues] = useState(() => new Map());
-  const points = useHeatmapArticlePoints(CANVAS_SIZE);
+  const { canvasWidth, canvasHeight } = useHeatmapPointState();
+  const points = useHeatmapArticlePoints();
   const { matrix, range } = useMemo(
     () =>
       buildSquareMatrix(points, {
@@ -188,9 +211,11 @@ export function HeatmapGaussianPythonVisual() {
         cellSize: FILTER_CELL_SIZE,
         orientation: FILTER_ORIENTATION,
         origin,
-        canvasSize: CANVAS_SIZE,
+        canvasSize: canvasWidth,
+        canvasWidth,
+        canvasHeight,
       }),
-    [origin, points],
+    [canvasHeight, canvasWidth, origin, points],
   );
 
   const runCode = useCallback(
@@ -404,7 +429,8 @@ export function HeatmapGaussianPythonVisual() {
             >
               <HeatmapCanvas
                 points={points}
-                canvasSize={CANVAS_SIZE}
+                canvasWidth={canvasWidth}
+                canvasHeight={canvasHeight}
                 gridType="square"
                 cellSize={FILTER_CELL_SIZE}
                 orientation={FILTER_ORIENTATION}
@@ -417,14 +443,10 @@ export function HeatmapGaussianPythonVisual() {
                 showPoints={showPoints}
                 cellValues={cellValues}
                 onOriginChange={setOrigin}
-                style={
-                  isFullscreen
-                    ? {
-                        width: "min(40vw, 78vh, 820px)",
-                        height: "min(40vw, 78vh, 820px)",
-                      }
-                    : undefined
-                }
+                style={fullscreenCanvasStyle(isFullscreen, {
+                  width: canvasWidth,
+                  height: canvasHeight,
+                })}
               />
 
               {(stdout || error) && (

@@ -23,6 +23,8 @@ import type { CellValues, GridType, Origin, Point } from "./types";
 interface HeatmapCanvasProps {
   points: Point[];
   canvasSize?: number;
+  canvasWidth?: number;
+  canvasHeight?: number;
   gridType: GridType;
   cellSize: number;
   orientation: number;
@@ -53,34 +55,35 @@ function drawPolygon(ctx: CanvasRenderingContext2D, polygon: Point[]) {
 
 function drawCityBackdrop(
   ctx: CanvasRenderingContext2D,
-  canvasSize: number,
+  canvasWidth: number,
+  canvasHeight: number,
   isDark: boolean,
 ) {
-  ctx.clearRect(0, 0, canvasSize, canvasSize);
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   ctx.fillStyle = isDark ? "#0c1320" : "#fffaf2";
-  ctx.fillRect(0, 0, canvasSize, canvasSize);
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
   ctx.fillStyle = isDark
     ? "rgba(92, 120, 160, 0.08)"
     : "rgba(70, 101, 142, 0.06)";
   ctx.beginPath();
-  ctx.moveTo(canvasSize * 0.06, canvasSize * 0.18);
+  ctx.moveTo(canvasWidth * 0.06, canvasHeight * 0.18);
   ctx.bezierCurveTo(
-    canvasSize * 0.24,
-    canvasSize * 0.08,
-    canvasSize * 0.5,
-    canvasSize * 0.14,
-    canvasSize * 0.92,
-    canvasSize * 0.04,
+    canvasWidth * 0.24,
+    canvasHeight * 0.08,
+    canvasWidth * 0.5,
+    canvasHeight * 0.14,
+    canvasWidth * 0.92,
+    canvasHeight * 0.04,
   );
-  ctx.lineTo(canvasSize * 0.92, canvasSize * 0.18);
+  ctx.lineTo(canvasWidth * 0.92, canvasHeight * 0.18);
   ctx.bezierCurveTo(
-    canvasSize * 0.58,
-    canvasSize * 0.28,
-    canvasSize * 0.26,
-    canvasSize * 0.18,
-    canvasSize * 0.08,
-    canvasSize * 0.3,
+    canvasWidth * 0.58,
+    canvasHeight * 0.28,
+    canvasWidth * 0.26,
+    canvasHeight * 0.18,
+    canvasWidth * 0.08,
+    canvasHeight * 0.3,
   );
   ctx.closePath();
   ctx.fill();
@@ -99,10 +102,10 @@ function drawCityBackdrop(
   for (const [x, y, w, h] of districts) {
     ctx.beginPath();
     ctx.roundRect(
-      canvasSize * x,
-      canvasSize * y,
-      canvasSize * w,
-      canvasSize * h,
+      canvasWidth * x,
+      canvasHeight * y,
+      canvasWidth * w,
+      canvasHeight * h,
       18,
     );
     ctx.fill();
@@ -113,23 +116,23 @@ function drawCityBackdrop(
   const roadOffsets = [0.16, 0.35, 0.54, 0.72];
   for (const offset of roadOffsets) {
     ctx.beginPath();
-    ctx.moveTo(canvasSize * 0.08, canvasSize * offset);
+    ctx.moveTo(canvasWidth * 0.08, canvasHeight * offset);
     ctx.quadraticCurveTo(
-      canvasSize * 0.36,
-      canvasSize * (offset - 0.08),
-      canvasSize * 0.92,
-      canvasSize * (offset + 0.03),
+      canvasWidth * 0.36,
+      canvasHeight * (offset - 0.08),
+      canvasWidth * 0.92,
+      canvasHeight * (offset + 0.03),
     );
     ctx.stroke();
   }
   for (const offset of [0.2, 0.42, 0.62, 0.82]) {
     ctx.beginPath();
-    ctx.moveTo(canvasSize * offset, canvasSize * 0.08);
+    ctx.moveTo(canvasWidth * offset, canvasHeight * 0.08);
     ctx.quadraticCurveTo(
-      canvasSize * (offset - 0.04),
-      canvasSize * 0.42,
-      canvasSize * (offset + 0.05),
-      canvasSize * 0.92,
+      canvasWidth * (offset - 0.04),
+      canvasHeight * 0.42,
+      canvasWidth * (offset + 0.05),
+      canvasHeight * 0.92,
     );
     ctx.stroke();
   }
@@ -174,6 +177,8 @@ function canvasDeltaToGridDelta(
 export function HeatmapCanvas({
   points,
   canvasSize = 320,
+  canvasWidth,
+  canvasHeight,
   gridType,
   cellSize,
   orientation,
@@ -189,6 +194,8 @@ export function HeatmapCanvas({
   style,
   onOriginChange,
 }: HeatmapCanvasProps) {
+  const logicalWidth = canvasWidth ?? canvasSize;
+  const logicalHeight = canvasHeight ?? canvasSize;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{
     pointerId: number;
@@ -199,8 +206,8 @@ export function HeatmapCanvas({
     origin: Origin;
   } | null>(null);
   const [displaySize, setDisplaySize] = useState(() => ({
-    width: canvasSize,
-    height: canvasSize,
+    width: logicalWidth,
+    height: logicalHeight,
   }));
   const isDark = useDarkModeFlag();
 
@@ -212,8 +219,8 @@ export function HeatmapCanvas({
 
     const updateDisplaySize = () => {
       const bounds = canvas.getBoundingClientRect();
-      const width = bounds.width || canvasSize;
-      const height = bounds.height || canvasSize;
+      const width = bounds.width || logicalWidth;
+      const height = bounds.height || logicalHeight;
 
       setDisplaySize((current) => {
         if (
@@ -242,7 +249,7 @@ export function HeatmapCanvas({
       observer.disconnect();
       window.removeEventListener("resize", updateDisplaySize);
     };
-  }, [canvasSize]);
+  }, [logicalHeight, logicalWidth]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -281,10 +288,10 @@ export function HeatmapCanvas({
     }
 
     ctx.setTransform(
-      bufferWidth / canvasSize,
+      bufferWidth / logicalWidth,
       0,
       0,
-      bufferHeight / canvasSize,
+      bufferHeight / logicalHeight,
       0,
       0,
     );
@@ -292,9 +299,9 @@ export function HeatmapCanvas({
     ctx.lineCap = "round";
 
     if (showBackdrop) {
-      drawCityBackdrop(ctx, canvasSize, isDark);
+      drawCityBackdrop(ctx, logicalWidth, logicalHeight, isDark);
     } else {
-      ctx.clearRect(0, 0, canvasSize, canvasSize);
+      ctx.clearRect(0, 0, logicalWidth, logicalHeight);
     }
 
     const settings = {
@@ -302,7 +309,9 @@ export function HeatmapCanvas({
       cellSize,
       orientation,
       origin,
-      canvasSize,
+      canvasSize: logicalWidth,
+      canvasWidth: logicalWidth,
+      canvasHeight: logicalHeight,
     };
     const values = cellValues ?? getGridCellValues(points, settings);
     const maxValue = getMaxCellValue(values);
@@ -398,7 +407,12 @@ export function HeatmapCanvas({
     }
 
     if (showOrigin) {
-      const transformedOrigin = toCanvasSpace(origin, canvasSize, orientation);
+      const transformedOrigin = toCanvasSpace(
+        origin,
+        logicalWidth,
+        orientation,
+        logicalHeight,
+      );
       ctx.beginPath();
       ctx.arc(transformedOrigin.x, transformedOrigin.y, 4.2, 0, Math.PI * 2);
       ctx.fillStyle = isDark ? "rgba(255,157,92,0.95)" : "rgba(185,93,30,0.88)";
@@ -417,16 +431,17 @@ export function HeatmapCanvas({
         ? "rgba(255,255,255,0.1)"
         : "rgba(60,46,31,0.12)";
       ctx.lineWidth = 1;
-      ctx.strokeRect(0.5, 0.5, canvasSize - 1, canvasSize - 1);
+      ctx.strokeRect(0.5, 0.5, logicalWidth - 1, logicalHeight - 1);
     }
   }, [
-    canvasSize,
     cellSize,
     cellValues,
     displaySize.height,
     displaySize.width,
     gridType,
     isDark,
+    logicalHeight,
+    logicalWidth,
     orientation,
     origin,
     pointRadius,
@@ -441,11 +456,11 @@ export function HeatmapCanvas({
   return (
     <canvas
       ref={canvasRef}
-      width={canvasSize}
-      height={canvasSize}
+      width={logicalWidth}
+      height={logicalHeight}
       style={{
-        width: canvasSize,
-        height: canvasSize,
+        width: logicalWidth,
+        height: logicalHeight,
         borderRadius: showBorder || showBackdrop ? 20 : 0,
         display: "block",
         cursor: interactive
@@ -465,8 +480,9 @@ export function HeatmapCanvas({
           pointerId: event.pointerId,
           startX: event.clientX,
           startY: event.clientY,
-          pixelsToCanvasX: bounds.width > 0 ? canvasSize / bounds.width : 1,
-          pixelsToCanvasY: bounds.height > 0 ? canvasSize / bounds.height : 1,
+          pixelsToCanvasX: bounds.width > 0 ? logicalWidth / bounds.width : 1,
+          pixelsToCanvasY:
+            bounds.height > 0 ? logicalHeight / bounds.height : 1,
           origin,
         };
         event.currentTarget.setPointerCapture(event.pointerId);

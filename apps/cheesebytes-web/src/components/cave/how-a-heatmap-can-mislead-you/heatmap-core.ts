@@ -60,32 +60,42 @@ function randomBell(rand: () => number) {
   return (rand() + rand() + rand() + rand() - 2) / 2;
 }
 
-function rotate(point: Point, center: number, degrees: number): Point {
+function rotate(point: Point, center: Point, degrees: number): Point {
   const angle = (degrees * Math.PI) / 180;
   const sin = Math.sin(angle);
   const cos = Math.cos(angle);
-  const dx = point.x - center;
-  const dy = point.y - center;
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
   return {
-    x: center + dx * cos - dy * sin,
-    y: center + dx * sin + dy * cos,
+    x: center.x + dx * cos - dy * sin,
+    y: center.y + dx * sin + dy * cos,
   };
 }
 
 export function toGridSpace(
   point: Point,
-  canvasSize: number,
+  canvasWidth: number,
   orientation: number,
+  canvasHeight = canvasWidth,
 ) {
-  return rotate(point, canvasSize / 2, -orientation);
+  return rotate(
+    point,
+    { x: canvasWidth / 2, y: canvasHeight / 2 },
+    -orientation,
+  );
 }
 
 export function toCanvasSpace(
   point: Point,
-  canvasSize: number,
+  canvasWidth: number,
   orientation: number,
+  canvasHeight = canvasWidth,
 ) {
-  return rotate(point, canvasSize / 2, orientation);
+  return rotate(
+    point,
+    { x: canvasWidth / 2, y: canvasHeight / 2 },
+    orientation,
+  );
 }
 
 export function squareKey(ix: number, iy: number) {
@@ -104,15 +114,41 @@ export function postcodeKey(gx: number, gy: number) {
   return `postcode-${gx},${gy}`;
 }
 
+function getCanvasWidth(settings: HeatmapSettings) {
+  return settings.canvasWidth ?? settings.canvasSize;
+}
+
+function getCanvasHeight(settings: HeatmapSettings) {
+  return settings.canvasHeight ?? settings.canvasSize;
+}
+
+function toSettingsGridSpace(point: Point, settings: HeatmapSettings) {
+  return toGridSpace(
+    point,
+    getCanvasWidth(settings),
+    settings.orientation,
+    getCanvasHeight(settings),
+  );
+}
+
+function toSettingsCanvasSpace(point: Point, settings: HeatmapSettings) {
+  return toCanvasSpace(
+    point,
+    getCanvasWidth(settings),
+    settings.orientation,
+    getCanvasHeight(settings),
+  );
+}
+
 function getGridBounds(settings: HeatmapSettings): GridBounds {
+  const width = getCanvasWidth(settings);
+  const height = getCanvasHeight(settings);
   const corners = [
     { x: 0, y: 0 },
-    { x: settings.canvasSize, y: 0 },
-    { x: settings.canvasSize, y: settings.canvasSize },
-    { x: 0, y: settings.canvasSize },
-  ].map((corner) =>
-    toGridSpace(corner, settings.canvasSize, settings.orientation),
-  );
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height },
+  ].map((corner) => toSettingsGridSpace(corner, settings));
 
   const xs = corners.map((corner) => corner.x);
   const ys = corners.map((corner) => corner.y);
@@ -149,7 +185,8 @@ function lerpPoint(left: Point, right: Point, t: number): Point {
 
 function polygonIntersectsCanvas(
   polygon: Point[],
-  canvasSize: number,
+  canvasWidth: number,
+  canvasHeight: number,
   margin: number,
 ) {
   const xs = polygon.map((point) => point.x);
@@ -157,8 +194,8 @@ function polygonIntersectsCanvas(
   return !(
     Math.max(...xs) < -margin ||
     Math.max(...ys) < -margin ||
-    Math.min(...xs) > canvasSize + margin ||
-    Math.min(...ys) > canvasSize + margin
+    Math.min(...xs) > canvasWidth + margin ||
+    Math.min(...ys) > canvasHeight + margin
   );
 }
 
@@ -218,18 +255,18 @@ export function generateStoryPoints(
 
 export function generateUniformStoryPoints(
   count: number,
-  canvasSize: number,
+  canvasWidth: number,
   seed = 124,
   padding = 10,
   layoutCount = count,
+  canvasHeight = canvasWidth,
 ): Point[] {
   const rand = mulberry32(seed);
   const reservedCount = Math.max(count, layoutCount);
+  const usableWidth = canvasWidth - padding * 2;
+  const usableHeight = canvasHeight - padding * 2;
   const columns = Math.ceil(Math.sqrt(reservedCount));
   const rows = Math.ceil(reservedCount / columns);
-  const usableSize = canvasSize - padding * 2;
-  const cellWidth = usableSize / columns;
-  const cellHeight = usableSize / rows;
   const cells = Array.from({ length: columns * rows }, (_, index) => ({
     column: index % columns,
     row: Math.floor(index / columns),
@@ -242,18 +279,15 @@ export function generateUniformStoryPoints(
     cells[swapIndex] = current;
   }
 
-  return cells.slice(0, count).map((cell) => ({
-    x: clamp(
-      padding + (cell.column + 0.18 + rand() * 0.64) * cellWidth,
-      padding,
-      canvasSize - padding,
-    ),
-    y: clamp(
-      padding + (cell.row + 0.18 + rand() * 0.64) * cellHeight,
-      padding,
-      canvasSize - padding,
-    ),
-  }));
+  return cells.slice(0, count).map((cell) => {
+    const u = (cell.column + 0.18 + rand() * 0.64) / columns;
+    const v = (cell.row + 0.18 + rand() * 0.64) / rows;
+
+    return {
+      x: clamp(padding + u * usableWidth, padding, canvasWidth - padding),
+      y: clamp(padding + v * usableHeight, padding, canvasHeight - padding),
+    };
+  });
 }
 
 export function getSquareVisibleRange(
@@ -297,7 +331,7 @@ export function getSquareCellPolygon(
   settings: HeatmapSettings,
 ): Point[] {
   return squareCellGridPolygon(ix, iy, settings).map((point) =>
-    toCanvasSpace(point, settings.canvasSize, settings.orientation),
+    toSettingsCanvasSpace(point, settings),
   );
 }
 
@@ -308,11 +342,7 @@ export function getSquareCellValues(
   const values: CellValues = new Map();
 
   for (const point of points) {
-    const gridPoint = toGridSpace(
-      point,
-      settings.canvasSize,
-      settings.orientation,
-    );
+    const gridPoint = toSettingsGridSpace(point, settings);
     const ix = Math.floor(
       (gridPoint.x - settings.origin.x) / settings.cellSize,
     );
@@ -377,13 +407,12 @@ export function getHexCellCenter(
   settings: HeatmapSettings,
 ): Point {
   const raw = axialToPixel(q, r, settings.cellSize);
-  return toCanvasSpace(
+  return toSettingsCanvasSpace(
     {
       x: settings.origin.x + raw.x,
       y: settings.origin.y + raw.y,
     },
-    settings.canvasSize,
-    settings.orientation,
+    settings,
   );
 }
 
@@ -404,6 +433,8 @@ export function getHexCellPolygon(
 
 export function getVisibleHexCoords(settings: HeatmapSettings) {
   const bounds = getGridBounds(settings);
+  const width = getCanvasWidth(settings);
+  const height = getCanvasHeight(settings);
   const corners = [
     { x: bounds.minX, y: bounds.minY },
     { x: bounds.maxX, y: bounds.minY },
@@ -429,8 +460,8 @@ export function getVisibleHexCoords(settings: HeatmapSettings) {
       if (
         center.x < -settings.cellSize * 2 ||
         center.y < -settings.cellSize * 2 ||
-        center.x > settings.canvasSize + settings.cellSize * 2 ||
-        center.y > settings.canvasSize + settings.cellSize * 2
+        center.x > width + settings.cellSize * 2 ||
+        center.y > height + settings.cellSize * 2
       ) {
         continue;
       }
@@ -447,11 +478,7 @@ export function getHexCellValues(
   const values: CellValues = new Map();
 
   for (const point of points) {
-    const gridPoint = toGridSpace(
-      point,
-      settings.canvasSize,
-      settings.orientation,
-    );
+    const gridPoint = toSettingsGridSpace(point, settings);
     const { q, r } = pointToAxial(
       gridPoint,
       settings.origin,
@@ -495,7 +522,7 @@ export function getTriangleCellPolygon(
   settings: HeatmapSettings,
 ): Point[] {
   return triangleCellGridPolygon(ix, iy, settings).map((point) =>
-    toCanvasSpace(point, settings.canvasSize, settings.orientation),
+    toSettingsCanvasSpace(point, settings),
   );
 }
 
@@ -526,11 +553,7 @@ export function getTriangleCellValues(
   const height = side * TRIANGLE_HEIGHT_RATIO;
 
   for (const point of points) {
-    const gridPoint = toGridSpace(
-      point,
-      settings.canvasSize,
-      settings.orientation,
-    );
+    const gridPoint = toSettingsGridSpace(point, settings);
     const ixBase = Math.floor((gridPoint.x - settings.origin.x) / (side / 2));
     const iyBase = Math.floor((gridPoint.y - settings.origin.y) / height);
     let matchedIx = ixBase;
@@ -609,11 +632,7 @@ function createAxisOffsetResolver(baseSpacing: number, salt: number) {
 }
 
 function toStablePostcodeSpace(point: Point, settings: HeatmapSettings): Point {
-  const gridPoint = toGridSpace(
-    point,
-    settings.canvasSize,
-    settings.orientation,
-  );
+  const gridPoint = toSettingsGridSpace(point, settings);
   return {
     x: gridPoint.x - settings.origin.x,
     y: gridPoint.y - settings.origin.y,
@@ -768,6 +787,8 @@ function getPostcodeSeed(
 
 export function getPostcodeCells(settings: HeatmapSettings) {
   const bounds = getGridBounds(settings);
+  const width = getCanvasWidth(settings);
+  const height = getCanvasHeight(settings);
   const spacing = settings.cellSize * POSTCODE_SPACING_RATIO;
   const margin = 4;
   const gxMin =
@@ -789,11 +810,7 @@ export function getPostcodeCells(settings: HeatmapSettings) {
         resolveColumn,
         resolveRow,
       );
-      const canvasPoint = toCanvasSpace(
-        gridPoint,
-        settings.canvasSize,
-        settings.orientation,
-      );
+      const canvasPoint = toSettingsCanvasSpace(gridPoint, settings);
       seeds.push({
         gx,
         gy,
@@ -811,8 +828,8 @@ export function getPostcodeCells(settings: HeatmapSettings) {
   ).voronoi([
     -settings.cellSize * 2,
     -settings.cellSize * 2,
-    settings.canvasSize + settings.cellSize * 2,
-    settings.canvasSize + settings.cellSize * 2,
+    width + settings.cellSize * 2,
+    height + settings.cellSize * 2,
   ]);
 
   const edgeCache = new Map<string, Point[]>();
@@ -852,7 +869,8 @@ export function getPostcodeCells(settings: HeatmapSettings) {
       if (
         !polygonIntersectsCanvas(
           organicPolygon,
-          settings.canvasSize,
+          width,
+          height,
           settings.cellSize,
         )
       ) {

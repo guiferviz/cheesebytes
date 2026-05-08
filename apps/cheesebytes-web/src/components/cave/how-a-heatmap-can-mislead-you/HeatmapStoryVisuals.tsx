@@ -10,11 +10,15 @@ import {
 
 import { HeatmapCanvas } from "./HeatmapCanvas";
 import {
+  DEFAULT_HEATMAP_CANVAS_HEIGHT,
+  DEFAULT_HEATMAP_CANVAS_WIDTH,
   DEFAULT_HEATMAP_POINT_COUNT,
   DEFAULT_HEATMAP_POINT_SEED,
+  HEATMAP_CANVAS_DIMENSION_STEP,
   HEATMAP_POINT_COUNT_MAX,
   HEATMAP_POINT_COUNT_MIN,
   HEATMAP_POINT_COUNT_STEP,
+  incrementHeatmapCanvasDimension,
   incrementHeatmapPointCount,
   setHeatmapPointState,
   setHeatmapSeed,
@@ -33,7 +37,7 @@ const EXPLORER_GRIDS: readonly GridType[] = [
   "postcode",
 ];
 
-const STORY_CANVAS_SIZE = 340;
+const STORY_CANVAS_SIZE = DEFAULT_HEATMAP_CANVAS_WIDTH;
 const STORY_ORIGIN: Origin = { x: 0, y: 4 };
 const STORY_SHIFTED_ORIGIN: Origin = { x: 40, y: 35 };
 const SEED_DIGIT_KEYS = [
@@ -64,14 +68,20 @@ const CONTROLS_BUTTON_STYLE = {
 
 function fullscreenCanvasStyle(
   isFullscreen: boolean,
+  dimensions: { width: number; height: number },
   size = "min(86vmin, 980px)",
 ): CSSProperties | undefined {
   if (!isFullscreen) {
     return undefined;
   }
+  const isLandscape = dimensions.width >= dimensions.height;
+  const ratio = isLandscape
+    ? dimensions.height / dimensions.width
+    : dimensions.width / dimensions.height;
+
   return {
-    width: size,
-    height: size,
+    width: isLandscape ? size : `calc(${size} * ${ratio.toFixed(4)})`,
+    height: isLandscape ? `calc(${size} * ${ratio.toFixed(4)})` : size,
   };
 }
 
@@ -178,16 +188,34 @@ export function HeatmapPointCloudVisual({
 }: HeatmapPointCloudVisualProps = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef);
+  const { canvasWidth, canvasHeight } = useHeatmapPointState();
 
   useEffect(() => {
     setHeatmapPointState({ pointCount, seed });
   }, [pointCount, seed]);
 
-  const points = useHeatmapArticlePoints(STORY_CANVAS_SIZE);
+  const points = useHeatmapArticlePoints();
 
   const startSeedCommand = useCallback(() => {
     pushSeedDigitPending(setHeatmapSeed, "");
   }, []);
+  const resetPointCloud = useCallback(() => {
+    setHeatmapPointState({
+      pointCount,
+      seed,
+      canvasWidth: DEFAULT_HEATMAP_CANVAS_WIDTH,
+      canvasHeight: DEFAULT_HEATMAP_CANVAS_HEIGHT,
+    });
+  }, [pointCount, seed]);
+  const pointCloudCanvasStyle = useMemo<CSSProperties>(() => {
+    return (
+      fullscreenCanvasStyle(
+        isFullscreen,
+        { width: canvasWidth, height: canvasHeight },
+        "min(82vmin, 900px)",
+      ) ?? {}
+    );
+  }, [canvasHeight, canvasWidth, isFullscreen]);
 
   const commands = useMemo<VimCommand[]>(
     () => [
@@ -202,17 +230,58 @@ export function HeatmapPointCloudVisual({
         run: startSeedCommand,
       },
       {
-        key: "arrowup",
+        key: "-",
+        label: "Fewer points",
+        run: () => incrementHeatmapPointCount(-HEATMAP_POINT_COUNT_STEP),
+      },
+      {
+        key: "=",
         label: "More points",
         run: () => incrementHeatmapPointCount(HEATMAP_POINT_COUNT_STEP),
       },
       {
+        key: "arrowup",
+        label: "Increase height",
+        run: () =>
+          incrementHeatmapCanvasDimension(
+            "canvasHeight",
+            HEATMAP_CANVAS_DIMENSION_STEP,
+          ),
+      },
+      {
         key: "arrowdown",
-        label: "Fewer points",
-        run: () => incrementHeatmapPointCount(-HEATMAP_POINT_COUNT_STEP),
+        label: "Decrease height",
+        run: () =>
+          incrementHeatmapCanvasDimension(
+            "canvasHeight",
+            -HEATMAP_CANVAS_DIMENSION_STEP,
+          ),
+      },
+      {
+        key: "arrowright",
+        label: "Increase width",
+        run: () =>
+          incrementHeatmapCanvasDimension(
+            "canvasWidth",
+            HEATMAP_CANVAS_DIMENSION_STEP,
+          ),
+      },
+      {
+        key: "arrowleft",
+        label: "Decrease width",
+        run: () =>
+          incrementHeatmapCanvasDimension(
+            "canvasWidth",
+            -HEATMAP_CANVAS_DIMENSION_STEP,
+          ),
+      },
+      {
+        key: "d",
+        label: "Reset defaults",
+        run: resetPointCloud,
       },
     ],
-    [startSeedCommand, toggleFullscreen],
+    [resetPointCloud, startSeedCommand, toggleFullscreen],
   );
 
   useScopedVimMode({
@@ -237,14 +306,18 @@ export function HeatmapPointCloudVisual({
     >
       <div
         style={{
-          ...fullscreenInnerStyle(isFullscreen, STORY_CANVAS_SIZE),
+          ...fullscreenInnerStyle(
+            isFullscreen,
+            Math.max(STORY_CANVAS_SIZE, canvasWidth),
+          ),
           display: "flex",
           justifyContent: "center",
         }}
       >
         <HeatmapCanvas
           points={points}
-          canvasSize={STORY_CANVAS_SIZE}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
           gridType="square"
           cellSize={48}
           orientation={0}
@@ -254,14 +327,7 @@ export function HeatmapPointCloudVisual({
           showBorder={false}
           showOrigin={false}
           showPoints={true}
-          style={
-            isFullscreen
-              ? {
-                  height: "min(82vmin, 900px)",
-                  width: "min(82vmin, 900px)",
-                }
-              : undefined
-          }
+          style={pointCloudCanvasStyle}
         />
       </div>
     </div>
@@ -269,7 +335,8 @@ export function HeatmapPointCloudVisual({
 }
 
 export function HeatmapAggregationVisual() {
-  const points = useHeatmapArticlePoints(STORY_CANVAS_SIZE);
+  const { canvasWidth, canvasHeight } = useHeatmapPointState();
+  const points = useHeatmapArticlePoints();
 
   return (
     <StaticVisualShell
@@ -279,7 +346,8 @@ export function HeatmapAggregationVisual() {
       {(isFullscreen) => (
         <HeatmapCanvas
           points={points}
-          canvasSize={STORY_CANVAS_SIZE}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
           gridType="square"
           cellSize={48}
           orientation={0}
@@ -289,7 +357,10 @@ export function HeatmapAggregationVisual() {
           showBorder={false}
           showOrigin={false}
           showPoints={true}
-          style={fullscreenCanvasStyle(isFullscreen)}
+          style={fullscreenCanvasStyle(isFullscreen, {
+            width: canvasWidth,
+            height: canvasHeight,
+          })}
         />
       )}
     </StaticVisualShell>
@@ -297,13 +368,14 @@ export function HeatmapAggregationVisual() {
 }
 
 export function HeatmapShiftComparisonVisual() {
-  const points = useHeatmapArticlePoints(STORY_CANVAS_SIZE);
+  const { canvasWidth, canvasHeight } = useHeatmapPointState();
+  const points = useHeatmapArticlePoints();
 
   return (
     <StaticVisualShell
       title="Move the grid and the hot spots move with it"
       modeId="heatmap-shift-comparison"
-      normalMaxWidth={1140}
+      normalMaxWidth={Math.max(1140, canvasWidth * 2 + 18)}
     >
       {(isFullscreen) => (
         <div
@@ -328,7 +400,8 @@ export function HeatmapShiftComparisonVisual() {
             >
               <HeatmapCanvas
                 points={points}
-                canvasSize={STORY_CANVAS_SIZE}
+                canvasWidth={canvasWidth}
+                canvasHeight={canvasHeight}
                 gridType="square"
                 cellSize={48}
                 orientation={0}
@@ -340,6 +413,7 @@ export function HeatmapShiftComparisonVisual() {
                 showPoints={true}
                 style={fullscreenCanvasStyle(
                   isFullscreen,
+                  { width: canvasWidth, height: canvasHeight },
                   "min(42vw, 78vh, 720px)",
                 )}
               />
@@ -357,13 +431,14 @@ export function HeatmapExplorerVisual() {
   const [gridType, setGridType] = useState<GridType>("square");
   const [cellSize, setCellSize] = useState(48);
   const [orientation, setOrientation] = useState(0);
-  const { pointCount, seed } = useHeatmapPointState();
+  const { pointCount, seed, canvasWidth, canvasHeight } =
+    useHeatmapPointState();
   const [showPoints, setShowPoints] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [origin, setOrigin] = useState<Origin>(() => ({ ...STORY_ORIGIN }));
   const controlsVisible = !isFullscreen && showControls;
 
-  const points = useHeatmapArticlePoints(STORY_CANVAS_SIZE);
+  const points = useHeatmapArticlePoints();
 
   const nudge = (dx: number, dy: number) => {
     setOrigin((current) => nudgeOrigin(current, dx, dy));
@@ -686,7 +761,8 @@ export function HeatmapExplorerVisual() {
           >
             <HeatmapCanvas
               points={points}
-              canvasSize={STORY_CANVAS_SIZE}
+              canvasWidth={canvasWidth}
+              canvasHeight={canvasHeight}
               gridType={gridType}
               cellSize={cellSize}
               orientation={orientation}
@@ -699,6 +775,7 @@ export function HeatmapExplorerVisual() {
               onOriginChange={setOrigin}
               style={fullscreenCanvasStyle(
                 isFullscreen,
+                { width: canvasWidth, height: canvasHeight },
                 "calc(min(100vw, 100vh) - 40px)",
               )}
             />

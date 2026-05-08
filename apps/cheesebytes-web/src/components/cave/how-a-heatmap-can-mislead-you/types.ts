@@ -16,6 +16,8 @@ export interface HeatmapSettings {
   orientation: number;
   origin: Origin;
   canvasSize: number;
+  canvasWidth?: number;
+  canvasHeight?: number;
 }
 
 export type CellValues = Map<string, number>;
