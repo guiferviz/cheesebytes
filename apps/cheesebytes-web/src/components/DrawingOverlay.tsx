@@ -72,6 +72,7 @@ const SIZE_OPTIONS = [
 ];
 
 const MAX_HISTORY = 20;
+const PALETTE_CURSOR_OFFSET = { x: 10, y: 10 } as const;
 
 const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   disableCursorStyles = false,
@@ -159,7 +160,10 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
 
       // Always update ref for sync
       mousePosRef.current = { x, y };
-      cursorPosRef.current = { x: x - 10, y };
+      cursorPosRef.current = {
+        x: x - PALETTE_CURSOR_OFFSET.x,
+        y: y - PALETTE_CURSOR_OFFSET.y,
+      };
 
       // Only force re-render if we need to update the menu position
       if (menuModeRef.current !== "normal") {
@@ -191,7 +195,7 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
   useEffect(() => {
     if (isActive && cursorRef.current) {
       const { x, y } = mousePosRef.current;
-      cursorRef.current.style.transform = `translate3d(${x - 10}px, ${y}px, 0) rotate(-25deg)`;
+      cursorRef.current.style.transform = `translate3d(${x - PALETTE_CURSOR_OFFSET.x}px, ${y - PALETTE_CURSOR_OFFSET.y}px, 0) rotate(-25deg)`;
     }
   }, [isActive, portalHost]);
 
@@ -673,7 +677,10 @@ const DrawingOverlay: React.FC<DrawingOverlayProps> = ({
       const width = strokeWidthRef.current;
 
       // Update cursor ref for the animation loop
-      cursorPosRef.current = { x: e.clientX - 10, y: e.clientY };
+      cursorPosRef.current = {
+        x: e.clientX - PALETTE_CURSOR_OFFSET.x,
+        y: e.clientY - PALETTE_CURSOR_OFFSET.y,
+      };
 
       if (tool === "pen" || tool === "eraser") {
         // Draw all coalesced points

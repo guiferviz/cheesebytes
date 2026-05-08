@@ -169,6 +169,26 @@ function currentOverlayHost(): HTMLElement {
     : document.body;
 }
 
+function closeSearchModalIfOpen(): boolean {
+  const closeSearchModal = (
+    window as Window & {
+      closeSearchModal?: () => boolean | void;
+    }
+  ).closeSearchModal;
+
+  if (typeof closeSearchModal === "function") {
+    return closeSearchModal() !== false;
+  }
+
+  const modal = document.getElementById("search-modal");
+  if (!modal || modal.classList.contains("hidden")) {
+    return false;
+  }
+
+  modal.classList.add("hidden");
+  return true;
+}
+
 function keyboardEventInitFor(key: string): KeyboardEventInit | null {
   const lower = key.toLowerCase();
   if (/^[a-z]$/.test(lower)) {
@@ -235,7 +255,7 @@ function createPalette(): {
   root.setAttribute("aria-label", "Command palette");
   root.style.cssText = `
     position: fixed; inset: 0;
-    z-index: 99999;
+    z-index: 2147483646;
     display: none;
     align-items: flex-start;
     justify-content: center;
@@ -261,18 +281,17 @@ function createPalette(): {
 
   root.appendChild(panel);
 
-  const onWindowPointerDownCapture = (e: PointerEvent) => {
+  const stopPalettePointerEvent = (e: Event) => {
     const target = e.target;
     if (!(target instanceof Node)) return;
     if (!root.contains(target)) return;
-    // Shield palette interactions from all lower capture handlers.
+    // Let the row receive the click first, then keep it away from the app below.
     e.stopPropagation();
-    e.stopImmediatePropagation();
   };
 
-  window.addEventListener("pointerdown", onWindowPointerDownCapture, true);
-
-  root.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
+  root.addEventListener("pointerdown", stopPalettePointerEvent);
+  root.addEventListener("mousedown", stopPalettePointerEvent);
+  root.addEventListener("click", stopPalettePointerEvent);
 
   const ensureHost = () => {
     const host = currentOverlayHost();
@@ -472,7 +491,9 @@ function createPalette(): {
   }
 
   function destroy() {
-    window.removeEventListener("pointerdown", onWindowPointerDownCapture, true);
+    root.removeEventListener("pointerdown", stopPalettePointerEvent);
+    root.removeEventListener("mousedown", stopPalettePointerEvent);
+    root.removeEventListener("click", stopPalettePointerEvent);
     document.removeEventListener("fullscreenchange", ensureHost);
     root.remove();
   }
@@ -872,6 +893,13 @@ export function createVimMode(): VimModeAPI {
     const key = e.key.toLowerCase();
     const entry = getEntry(effectiveMode());
     const passive = entry.passive;
+
+    if (key === "escape" && closeSearchModalIfOpen()) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return;
+    }
 
     // ── Active pending scope ───────────────────────────────────────
     if (activePending) {

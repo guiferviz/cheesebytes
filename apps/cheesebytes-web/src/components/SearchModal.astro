@@ -100,6 +100,13 @@
 
 <script>
   // Inicialización temprana de funciones globales
+  (window as any).closeSearchModal = () => {
+    const modal = document.getElementById("search-modal");
+    if (!modal || modal.classList.contains("hidden")) return false;
+    modal.classList.add("hidden");
+    return true;
+  };
+
   (window as any).openSearchModal = () => {
     const modal = document.getElementById("search-modal");
     const searchInput = document.getElementById("search-input");
@@ -256,7 +263,7 @@
 
     // Añadir event listeners a los resultados
     const resultItems = resultsContainer.querySelectorAll(
-      ".search-result-item"
+      ".search-result-item",
     );
     resultItems.forEach((item) => {
       item.addEventListener("click", () => {
@@ -274,11 +281,11 @@
 
     const regex = new RegExp(
       `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-      "gi"
+      "gi",
     );
     return text.replace(
       regex,
-      '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>'
+      '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>',
     );
   }
 
@@ -301,16 +308,20 @@
   document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("search-modal");
     const searchInput = document.getElementById(
-      "search-input"
+      "search-input",
     ) as HTMLInputElement;
     const closeButton = document.getElementById("close-search");
 
+    const isModalOpen = () => !!modal && !modal.classList.contains("hidden");
+
     // Cerrar modal
     const closeModal = () => {
+      if (!isModalOpen()) return false;
       modal?.classList.add("hidden");
       if (searchInput) searchInput.value = "";
       showEmptyState();
       selectedIndex = -1;
+      return true;
     };
 
     // Función para abrir modal
@@ -323,6 +334,7 @@
     // Exponer funciones globalmente
     (window as any).loadSearchIndex = loadSearchIndex;
     (window as any).openSearchModal = openModal;
+    (window as any).closeSearchModal = closeModal;
 
     closeButton?.addEventListener("click", closeModal);
 

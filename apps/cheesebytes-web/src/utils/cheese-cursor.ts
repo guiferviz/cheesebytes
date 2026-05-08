@@ -9,6 +9,7 @@
 const CURSOR_ID = "customCursor";
 const STYLE_ID = "cheese-cursor-hide";
 const CURSOR_SRC = "/cursors/cursor_64.svg";
+const CURSOR_Z_INDEX = "2147483647";
 
 interface CursorDocument extends Document {
   webkitFullscreenElement?: Element | null;
@@ -53,7 +54,7 @@ function getOrCreateCursor(): HTMLImageElement {
     top: "0",
     left: "0",
     pointerEvents: "none",
-    zIndex: "10001",
+    zIndex: CURSOR_Z_INDEX,
     transition: "opacity 0.3s linear",
     transformOrigin: "top left",
     willChange: "transform",
@@ -141,7 +142,7 @@ export function init() {
 }
 
 export function enable() {
-  const el = getOrCreateCursor();
+  getOrCreateCursor();
   injectHideStyle();
   init();
   syncCursorHost();
@@ -159,7 +160,11 @@ export function disable() {
 }
 
 export function toggle(): boolean {
-  _active ? disable() : enable();
+  if (_active) {
+    disable();
+  } else {
+    enable();
+  }
   return _active;
 }
 

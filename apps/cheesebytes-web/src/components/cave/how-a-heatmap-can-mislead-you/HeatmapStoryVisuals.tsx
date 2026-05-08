@@ -34,8 +34,8 @@ const EXPLORER_GRIDS: readonly GridType[] = [
 ];
 
 const STORY_CANVAS_SIZE = 340;
-const STORY_ORIGIN: Origin = { x: 10, y: 4 };
-const STORY_SHIFTED_ORIGIN: Origin = { x: 40, y: -22 };
+const STORY_ORIGIN: Origin = { x: 0, y: 4 };
+const STORY_SHIFTED_ORIGIN: Origin = { x: 40, y: 35 };
 const SEED_DIGIT_KEYS = [
   "1",
   "2",
@@ -297,7 +297,7 @@ export function HeatmapAggregationVisual() {
 }
 
 export function HeatmapShiftComparisonVisual() {
-  const points = useHeatmapArticlePoints(320);
+  const points = useHeatmapArticlePoints(STORY_CANVAS_SIZE);
 
   return (
     <StaticVisualShell
@@ -328,7 +328,7 @@ export function HeatmapShiftComparisonVisual() {
             >
               <HeatmapCanvas
                 points={points}
-                canvasSize={320}
+                canvasSize={STORY_CANVAS_SIZE}
                 gridType="square"
                 cellSize={48}
                 orientation={0}
