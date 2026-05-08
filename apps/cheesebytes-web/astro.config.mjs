@@ -173,9 +173,6 @@ export default defineConfig({
     resolve: {
       dedupe: VITE_DEDUPE_PACKAGES,
     },
-    optimizeDeps: {
-      exclude: CODEMIRROR_PACKAGES,
-    },
     plugins: [tailwindcss(), resolveExternalDependencies],
   },
   integrations: [mdx(), react()],
