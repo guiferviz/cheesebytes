@@ -1,6 +1,6 @@
 ---
 title: Validating Parentheses with Counting
-marimo-version: 0.13.15
+noteType: "emmental-full"
 ---
 
 Given an expression formed only with standard parentheses `(` and `)`, return
@@ -24,10 +24,8 @@ Because we only have one type of parenthesis, we can solve this by simply
 Try modifying the code below to test your own logic. Test cases are provided and
 automatically run to validate your solution.
 
-```python {.marimo}
-import marimo as mo
-
-is_balanced_code_editor = mo.ui.code_editor("""def is_balanced(expression: str):
+```pyodide auto-run=once height=520 show-run-button=true
+def is_balanced(expression: str):
     balance = 0
     for char in expression:
         if char == "(":
@@ -36,62 +34,51 @@ is_balanced_code_editor = mo.ui.code_editor("""def is_balanced(expression: str):
             balance -= 1
             if balance < 0:
                 return False
-    return balance == 0""", theme="dark")
-is_balanced_code_editor
-```
+    return balance == 0
 
-```python {.marimo}
-import traceback
 
-is_balanced = None
-reverse = None
-with mo.redirect_stderr(), mo.redirect_stdout():
-    try:
-        exec(is_balanced_code_editor.value)
-    except Exception as e:
-        print("Errors in your code:")
-        traceback.print_exc()
-```
+def run_tests():  # FOLD
+    test_cases = [
+        ("", True),
+        ("()", True),
+        ("()()", True),
+        ("(())", True),
+        ("(()(()))", True),
+        (")(", False),
+        ("(()", False),
+        ("())", False),
+        ("(()))(", False),
+        ("()(()())", True),
+        ("((())(()))", True),
+        ("(()(()(())))", True),
+        ("(((((((((())))))))))", True),
+        ("(((((((()", False),
+        ("(()))))", False),
+    ]
 
-```python {.marimo}
-test_cases = [
-    ("", True),
-    ("()", True),
-    ("()()", True),
-    ("(())", True),
-    ("(()(()))", True),
-    (")(", False),
-    ("(()", False),
-    ("())", False),
-    ("(()))(", False),
-    ("()(()())", True),
-    ("((())(()))", True),
-    ("(()(()(())))", True),
-    ("(((((((((())))))))))", True),
-    ("(((((((()", False),
-    ("(()))))", False),
-]
+    failed = False
+    print("Test results:\n")
 
-rows = [
-    "| Input | Expected | Actual | Result |",
-    "|-------|----------|--------|--------|"
-]
+    for s, expected in test_cases:
+        try:
+            actual = is_balanced(s)
+        except Exception as error:
+            actual = None
+            print(f"🔴 {s!r} FAIL (error: {error})")
+            failed = True
+            continue
 
-for s, expected in test_cases:
-    error = None
-    actual = None
-    try:
-        actual = is_balanced(s)
-    except Exception as e:
-        error = e
-    result = "✅" if actual == expected else "❌" if not error else f"💥 {str(error)}"
-    rows.append(f"| `{s}` | `{expected}` | `{actual}` | {result} |")
+        if actual == expected:
+            print(f"🟢 {s!r} PASS")
+        else:
+            print(f"🔴 {s!r} FAIL (expected {expected}, got {actual})")
+            failed = True
 
-mo.md(
-    f"""
-    Test Results:
+    if failed:
+        raise AssertionError("Some test cases failed")
 
-    {"\n".join(rows)}
-    """
-)
+    print("\nAll tests passed!")
+
+
+run_tests()
 ```

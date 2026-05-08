@@ -19,6 +19,7 @@ import React, {
 } from "react";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
+import { foldEffect } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
 import pyodideWorkerContext, {
   type RunResult,
@@ -32,6 +33,28 @@ const fontTheme = EditorView.theme({
   "&": { fontFamily: FONT },
   ".cm-content": { fontFamily: FONT },
   ".cm-gutters": { fontFamily: FONT },
+  ".cm-widgetBuffer": {
+    display: "inline !important",
+    width: "0 !important",
+    height: "0 !important",
+    margin: "0 !important",
+    padding: "0 !important",
+    border: "0 !important",
+    verticalAlign: "baseline !important",
+  },
+  ".cm-gutters .cm-gutterElement": {
+    boxSizing: "border-box",
+    lineHeight: "inherit",
+  },
+  ".cm-lineNumbers .cm-gutterElement": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  ".cm-foldGutter .cm-gutterElement": {
+    display: "grid",
+    placeItems: "center",
+  },
 });
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -351,6 +374,67 @@ function RunButton({
   );
 }
 
+type FoldRange = {
+  from: number;
+  to: number;
+};
+
+function countIndent(text: string) {
+  const match = /^\s*/.exec(text);
+  return match ? match[0].length : 0;
+}
+
+function findMarkedFoldRanges(source: string): FoldRange[] {
+  const lines = source.split("\n");
+  const lineStarts: number[] = [];
+  let offset = 0;
+
+  for (const line of lines) {
+    lineStarts.push(offset);
+    offset += line.length + 1;
+  }
+
+  const ranges: FoldRange[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line.includes("# FOLD")) continue;
+
+    const markerIndent = countIndent(line);
+    let endLine = index;
+
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nextLine = lines[nextIndex];
+      if (nextLine.trim() === "") {
+        endLine = nextIndex;
+        continue;
+      }
+
+      if (countIndent(nextLine) <= markerIndent) break;
+      endLine = nextIndex;
+    }
+
+    while (endLine > index && lines[endLine].trim() === "") {
+      endLine -= 1;
+    }
+
+    const from = lineStarts[index] + line.length;
+    const to = lineStarts[endLine] + lines[endLine].length;
+    if (to > from) ranges.push({ from, to });
+  }
+
+  return ranges;
+}
+
+function foldMarkedRanges(view: EditorView) {
+  const ranges = findMarkedFoldRanges(view.state.doc.toString());
+  if (ranges.length === 0) return;
+
+  view.dispatch({
+    effects: ranges.map((range) => foldEffect.of(range)),
+  });
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 const PyodideWorkerRunner = forwardRef<
@@ -390,7 +474,7 @@ const PyodideWorkerRunner = forwardRef<
     const isDragging = useRef(false);
     const dragStartY = useRef(0);
     const dragStartH = useRef(0);
-    const hasManualEditorHeight = useRef(initialEditorHeight != null);
+    const hasManualEditorHeight = useRef(false);
 
     // ── Cleanup RAF on unmount ──────────────────────────────────────────────
     useEffect(() => {
@@ -524,20 +608,49 @@ const PyodideWorkerRunner = forwardRef<
     const editorHeightRef = useRef(editorHeight);
     editorHeightRef.current = editorHeight;
 
+    const measureVisibleEditorHeight = useCallback((container: HTMLElement) => {
+      const content = container.querySelector(".cm-content");
+      if (!(content instanceof HTMLElement)) return null;
+
+      const lines = content.querySelectorAll(".cm-line");
+      const visibleLineHeight = Array.from(lines).reduce((height, line) => {
+        return height + line.getBoundingClientRect().height;
+      }, 0);
+
+      const contentStyle = window.getComputedStyle(content);
+      const verticalPadding =
+        parseFloat(contentStyle.paddingTop) +
+        parseFloat(contentStyle.paddingBottom);
+
+      return Math.max(80, Math.ceil(visibleLineHeight + verticalPadding + 2));
+    }, []);
+
     const syncEditorHeightToContent = useCallback(() => {
       if (!fitToContent || hasManualEditorHeight.current) return;
 
       const container = editorContainerRef.current;
       if (!container) return;
 
-      const scroller = container.querySelector(".cm-scroller");
-      if (!(scroller instanceof HTMLElement)) return;
+      const nextHeight = measureVisibleEditorHeight(container);
+      if (nextHeight == null) return;
 
-      const nextHeight = Math.max(80, Math.ceil(scroller.scrollHeight + 2));
       if (Math.abs(nextHeight - editorHeightRef.current) > 1) {
         setEditorHeight(nextHeight);
       }
-    }, [fitToContent]);
+    }, [fitToContent, measureVisibleEditorHeight]);
+
+    const handleCreateEditor = useCallback(
+      (view: EditorView) => {
+        foldMarkedRanges(view);
+        requestAnimationFrame(() => {
+          syncEditorHeightToContent();
+          requestAnimationFrame(() => {
+            syncEditorHeightToContent();
+          });
+        });
+      },
+      [syncEditorHeightToContent],
+    );
 
     const onResizeMouseDown = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
@@ -705,6 +818,7 @@ const PyodideWorkerRunner = forwardRef<
             extensions={extensions}
             theme={theme}
             onChange={setCode}
+            onCreateEditor={handleCreateEditor}
             indentWithTab
             basicSetup={{ tabSize: 4 }}
           />
