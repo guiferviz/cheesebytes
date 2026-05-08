@@ -22,6 +22,17 @@ if (!note) {
   throw new Error(`Note not found for slug: ${slug}`);
 }
 
+const notes = await getCollection("notes");
+const noteLinkIcons = notes
+  .map((entry) => ({
+    href: `/${entry.id}`,
+    cheeseImage:
+      typeof entry.data.cheeseImage === "string" ? entry.data.cheeseImage : "",
+    noteType: typeof entry.data.noteType === "string" ? entry.data.noteType : "",
+    title: typeof entry.data.title === "string" ? entry.data.title : entry.id,
+  }))
+  .filter((entry) => entry.cheeseImage.length > 0);
+
 const Content = await render(note).then((result) => result.Content);
 // Note that rendered is undefined when using MDX files, so marimo won't be inyected on MDX if we don't include the second condition.
 const needsMarimo =
@@ -32,7 +43,7 @@ const needsPyodideWorker =
   note.body?.includes("```pyodide");
 ---
 
-<NoteLayout note={note.data}>
+<NoteLayout note={note.data} noteLinkIcons={noteLinkIcons}>
   {
     needsMarimo && (
       <>

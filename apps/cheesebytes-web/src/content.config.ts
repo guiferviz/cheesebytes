@@ -400,6 +400,14 @@ const customLoader: Loader = {
               inboundLinksMap.get(linkedId)!.push({
                 id: item.id,
                 title: (item.data.title as string) || item.id,
+                cheeseImage:
+                  typeof item.data.cheeseImage === "string"
+                    ? item.data.cheeseImage
+                    : null,
+                noteType:
+                  typeof item.data.noteType === "string"
+                    ? item.data.noteType
+                    : null,
               });
             }
           });
@@ -413,6 +421,14 @@ const customLoader: Loader = {
             return {
               id: linkedId,
               title: (linkedItem?.data.title as string) || linkedId,
+              cheeseImage:
+                typeof linkedItem?.data.cheeseImage === "string"
+                  ? linkedItem.data.cheeseImage
+                  : null,
+              noteType:
+                typeof linkedItem?.data.noteType === "string"
+                  ? linkedItem.data.noteType
+                  : null,
             };
           });
 

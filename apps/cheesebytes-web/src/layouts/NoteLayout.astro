@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import BaseLayout from "./BaseLayout.astro";
 import CheeseRain from "../components/CheeseRain.tsx";
 
-const { note } = Astro.props;
+const { note, noteLinkIcons = [] } = Astro.props;
 const cheeseImage =
   typeof note.cheeseImage === "string" && note.cheeseImage.length > 0
     ? note.cheeseImage
@@ -167,6 +167,7 @@ const tooltipInfo = noteType ? getCheeseTooltip(noteType) : null;
       </div>
     </header>
     <article
+      id="note-content"
       class="prose prose-base dark:prose-invert max-w-3xl mx-auto
               prose-headings:font-semibold
               prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-h4:text-lg
@@ -194,8 +195,18 @@ const tooltipInfo = noteType ? getCheeseTooltip(noteType) : null;
                       <li class="text-sm">
                         <a
                           href={`/${link.id}`}
-                          class="text-yellow-600 dark:text-yellow-400 hover:underline hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors"
+                          class="inline-flex items-center gap-1 text-yellow-600 dark:text-yellow-400 hover:underline hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors"
                         >
+                          {
+                            link.cheeseImage && (
+                              <img
+                                src={link.cheeseImage}
+                                alt=""
+                                class="h-4 w-4 shrink-0 object-contain"
+                                aria-hidden="true"
+                              />
+                            )
+                          }
                           {link.title}
                         </a>
                       </li>
@@ -213,8 +224,18 @@ const tooltipInfo = noteType ? getCheeseTooltip(noteType) : null;
                       <li class="text-sm">
                         <a
                           href={`/${link.id}`}
-                          class="text-yellow-600 dark:text-yellow-400 hover:underline hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors"
+                          class="inline-flex items-center gap-1 text-yellow-600 dark:text-yellow-400 hover:underline hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors"
                         >
+                          {
+                            link.cheeseImage && (
+                              <img
+                                src={link.cheeseImage}
+                                alt=""
+                                class="h-4 w-4 shrink-0 object-contain"
+                                aria-hidden="true"
+                              />
+                            )
+                          }
                           {link.title}
                         </a>
                       </li>
@@ -230,4 +251,36 @@ const tooltipInfo = noteType ? getCheeseTooltip(noteType) : null;
       <p class="pt-4">© {new Date().getFullYear()} Cheese 🧀 Bytes</p>
     </footer>
   </main>
+  <script define:vars={{ noteLinkIcons }}>
+    const noteContent = document.getElementById("note-content");
+    const iconByHref = new Map();
+
+    for (const noteLink of noteLinkIcons) {
+      if (!noteLink.href || !noteLink.cheeseImage) continue;
+      iconByHref.set(noteLink.href.replace(/\/+$/, ""), noteLink);
+    }
+
+    if (noteContent && iconByHref.size > 0) {
+      for (const link of noteContent.querySelectorAll("a[href]")) {
+        if (!(link instanceof HTMLAnchorElement)) continue;
+        if (link.querySelector(".cheese-note-link-icon")) continue;
+
+        const url = new URL(link.href, window.location.origin);
+        if (url.origin !== window.location.origin) continue;
+
+        const noteLink = iconByHref.get(url.pathname.replace(/\/+$/, ""));
+        if (!noteLink) continue;
+
+        const icon = document.createElement("img");
+        icon.src = noteLink.cheeseImage;
+        icon.alt = "";
+        icon.setAttribute("aria-hidden", "true");
+        icon.className = "cheese-note-link-icon";
+
+        link.classList.add("cheese-note-link");
+        link.title ||= noteLink.title || "";
+        link.prepend(icon);
+      }
+    }
+  </script>
 </BaseLayout>
