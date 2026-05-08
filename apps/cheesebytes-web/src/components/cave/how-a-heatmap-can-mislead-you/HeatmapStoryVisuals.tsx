@@ -360,7 +360,7 @@ export function HeatmapExplorerVisual() {
   const { pointCount, seed } = useHeatmapPointState();
   const [showPoints, setShowPoints] = useState(true);
   const [showControls, setShowControls] = useState(false);
-  const [origin, setOrigin] = useState<Origin>({ x: 12, y: 6 });
+  const [origin, setOrigin] = useState<Origin>(() => ({ ...STORY_ORIGIN }));
   const controlsVisible = !isFullscreen && showControls;
 
   const points = useHeatmapArticlePoints(STORY_CANVAS_SIZE);
@@ -665,7 +665,7 @@ export function HeatmapExplorerVisual() {
                   {showPoints ? "Hide points" : "Show points"}
                 </HeatmapHudButton>
                 <HeatmapHudButton
-                  onClick={() => setOrigin({ x: 12, y: 6 })}
+                  onClick={() => setOrigin({ ...STORY_ORIGIN })}
                   style={MINIMAL_BUTTON_STYLE}
                 >
                   Reset origin
