@@ -20,23 +20,20 @@ import { fileURLToPath, pathToFileURL } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectConfigUrl = pathToFileURL(path.join(__dirname, 'astro.config.mjs')).href;
 
-const VITE_DEDUPE_PACKAGES = [
-  'react',
-  'react-dom',
-  '@uiw/react-codemirror',
-  '@codemirror/autocomplete',
-  '@codemirror/lang-python',
-  '@codemirror/language',
-  '@codemirror/lint',
-  '@codemirror/search',
+const CODEMIRROR_PACKAGES = [
   '@codemirror/state',
-  '@codemirror/theme-one-dark',
   '@codemirror/view',
-  '@lezer/common',
+  '@codemirror/language',
+  '@codemirror/commands',
+  '@codemirror/theme-one-dark',
   '@lezer/highlight',
-  '@lezer/lr',
-  '@lezer/python',
+  '@lezer/common',
+  '@uiw/react-codemirror',
+  '@codemirror/lang-python',
+  '@codemirror/lang-javascript',
 ];
+
+const VITE_DEDUPE_PACKAGES = ['react', 'react-dom', ...CODEMIRROR_PACKAGES];
 
 const resolveExternalDependencies = {
   name: 'resolve-external-dependencies',
@@ -175,6 +172,9 @@ export default defineConfig({
   vite: {
     resolve: {
       dedupe: VITE_DEDUPE_PACKAGES,
+    },
+    optimizeDeps: {
+      exclude: CODEMIRROR_PACKAGES,
     },
     plugins: [tailwindcss(), resolveExternalDependencies],
   },
