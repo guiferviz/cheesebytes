@@ -21,6 +21,7 @@ import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
 import { foldEffect } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { Decoration, MatchDecorator, ViewPlugin } from "@codemirror/view";
 import pyodideWorkerContext, {
   type RunResult,
   type MemoryStats,
@@ -435,6 +436,28 @@ function foldMarkedRanges(view: EditorView) {
   });
 }
 
+const foldMarkerMatcher = new MatchDecorator({
+  regexp: /\s*# FOLD/g,
+  decoration: Decoration.replace({}),
+});
+
+const hideFoldMarkers = ViewPlugin.fromClass(
+  class {
+    decorations;
+
+    constructor(view: EditorView) {
+      this.decorations = foldMarkerMatcher.createDeco(view);
+    }
+
+    update(update) {
+      this.decorations = foldMarkerMatcher.updateDeco(update, this.decorations);
+    }
+  },
+  {
+    decorations: (plugin) => plugin.decorations,
+  },
+);
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 const PyodideWorkerRunner = forwardRef<
@@ -522,7 +545,10 @@ const PyodideWorkerRunner = forwardRef<
     }, []);
 
     const theme = isDark ? oneDark : undefined;
-    const extensions = useMemo(() => [python(), fontTheme], []);
+    const extensions = useMemo(
+      () => [python(), fontTheme, hideFoldMarkers],
+      [],
+    );
 
     // ── Worker readiness ───────────────────────────────────────────────────
     useEffect(() => {
