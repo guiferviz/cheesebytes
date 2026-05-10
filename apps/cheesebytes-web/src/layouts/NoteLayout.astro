@@ -254,6 +254,13 @@ const tooltipInfo = noteType ? getCheeseTooltip(noteType) : null;
   <script define:vars={{ noteLinkIcons }}>
     const noteContent = document.getElementById("note-content");
     const iconByHref = new Map();
+    const normalizeNoteLabel = (value) =>
+      value
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[()[\]{}'",:;`.]/g, "")
+        .replace(/--+/g, "-")
+        .replace(/^-+|-+$/g, "");
 
     for (const noteLink of noteLinkIcons) {
       if (!noteLink.href || !noteLink.cheeseImage) continue;
@@ -270,6 +277,24 @@ const tooltipInfo = noteType ? getCheeseTooltip(noteType) : null;
 
         const noteLink = iconByHref.get(url.pathname.replace(/\/+$/, ""));
         if (!noteLink) continue;
+
+        const currentLabel = link.textContent?.trim() || "";
+        const fileLabel = noteLink.fileName || "";
+        const hrefLabel = decodeURIComponent(url.pathname)
+          .split("/")
+          .filter(Boolean)
+          .at(-1)
+          ?.replace(/-/g, " ");
+        const isAutomaticLabel =
+          currentLabel &&
+          noteLink.title &&
+          currentLabel !== noteLink.title &&
+          (normalizeNoteLabel(currentLabel) === normalizeNoteLabel(fileLabel) ||
+            normalizeNoteLabel(currentLabel) === normalizeNoteLabel(hrefLabel || ""));
+
+        if (isAutomaticLabel) {
+          link.textContent = noteLink.title;
+        }
 
         const icon = document.createElement("img");
         icon.src = noteLink.cheeseImage;

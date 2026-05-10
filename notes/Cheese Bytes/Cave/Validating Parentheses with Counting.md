@@ -21,8 +21,8 @@ Because we only have one type of parenthesis, we can solve this by simply
    parentheses).
 4. Return `True` if `balance` is 0 at the end.
 
-Try modifying the code below to test your own logic. Test cases are provided and
-automatically run to validate your solution.
+Try modifying the code below to test your own logic. Test cases are provided to
+validate your implementation.
 
 ```pyodide auto-run=once height=520 show-run-button=true
 def is_balanced(expression: str):

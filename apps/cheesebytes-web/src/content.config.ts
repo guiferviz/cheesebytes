@@ -270,6 +270,18 @@ const customLoader: Loader = {
           if (item.filePath) {
             const fileName = nodePath.parse(item.filePath).name;
             titleToIdMap.set(fileName.toLowerCase(), normalizedId);
+            titleToIdMap.set(normalizeUrl(fileName), normalizedId);
+          }
+          if (typeof item.data?.title === "string") {
+            titleToIdMap.set(item.data.title.toLowerCase(), normalizedId);
+            titleToIdMap.set(normalizeUrl(item.data.title), normalizedId);
+          }
+          if (Array.isArray(item.data?.aliases)) {
+            for (const alias of item.data.aliases) {
+              if (typeof alias !== "string") continue;
+              titleToIdMap.set(alias.toLowerCase(), normalizedId);
+              titleToIdMap.set(normalizeUrl(alias), normalizedId);
+            }
           }
           titleToIdMap.set(normalizedId, normalizedId);
         });
@@ -302,10 +314,12 @@ const customLoader: Loader = {
 
           if (item.filePath) {
             fileName = nodePath.parse(item.filePath).name;
-            title = fileName;
+            title =
+              typeof item.data?.title === "string" ? item.data.title : fileName;
           } else if (typeof item.id === "string") {
             fileName = nodePath.basename(item.id, ".md");
-            title = fileName;
+            title =
+              typeof item.data?.title === "string" ? item.data.title : fileName;
           } else {
             fileName = "unknown";
             title = "Unknown";
@@ -375,6 +389,7 @@ const customLoader: Loader = {
               modified,
               wikiLinks: validWikiLinks,
               originalId: originalId,
+              fileName,
               cheeseImage: cheeseImage,
               noteType: noteType,
             },

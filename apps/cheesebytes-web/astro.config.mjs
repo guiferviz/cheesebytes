@@ -85,32 +85,52 @@ function slugify(name) {
 
 const files = import.meta.glob('../../notes/Cheese Bytes/**/*.{md,mdx}');
 
-// Extract frontmatter slug from a file (if present)
-function extractFrontmatterSlug(filePath) {
+// Extract the frontmatter fields needed by the wikilink resolver.
+function extractFrontmatterMeta(filePath) {
   try {
     const abs = path.resolve(__dirname, filePath);
     const content = fs.readFileSync(abs, 'utf8');
     const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
     if (fmMatch) {
-      const slugMatch = fmMatch[1].match(/^slug:\s*(.+)$/m);
-      if (slugMatch) return slugMatch[1].trim();
+      const frontmatter = fmMatch[1];
+      const slugMatch = frontmatter.match(/^slug:\s*(.+)$/m);
+      const titleMatch = frontmatter.match(/^title:\s*(.+)$/m);
+      const aliasesMatch = frontmatter.match(/^aliases:\s*\n((?:\s+-\s*.+\n?)+)/m);
+      const aliases = aliasesMatch
+        ? aliasesMatch[1]
+            .split('\n')
+            .map(line => line.match(/^\s+-\s*(.+)$/)?.[1]?.trim())
+            .filter(Boolean)
+        : [];
+
+      return {
+        slug: slugMatch?.[1]?.trim() || null,
+        title: titleMatch?.[1]?.trim().replace(/^['"]|['"]$/g, '') || null,
+        aliases,
+      };
     }
   } catch { /* ignore */ }
-  return null;
+  return { slug: null, title: null, aliases: [] };
 }
 
 // Build permalinks + a map from normalized title → permalink
 // so wiki-links resolve correctly even when a file overrides its slug
 const titleToPermalink = new Map();
 const permalinks = Object.keys(files).map(filePath => {
-  const frontmatterSlug = extractFrontmatterSlug(filePath);
-  const permalink = frontmatterSlug
-    ? `/${frontmatterSlug.replace(/^\/+/, '')}`
+  const frontmatter = extractFrontmatterMeta(filePath);
+  const permalink = frontmatter.slug
+    ? `/${frontmatter.slug.replace(/^\/+/, '')}`
     : `/${slugify(filePath).replace(/^\/+/, '')}`;
 
   // Map the normalized file name to the permalink
   const fileName = path.parse(filePath).name.replace(/\.(md|mdx)$/i, '');
   titleToPermalink.set(normalizeUrl(fileName), permalink);
+  if (frontmatter.title) {
+    titleToPermalink.set(normalizeUrl(frontmatter.title), permalink);
+  }
+  for (const alias of frontmatter.aliases) {
+    titleToPermalink.set(normalizeUrl(alias), permalink);
+  }
 
   return permalink;
 });

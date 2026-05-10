@@ -30,6 +30,8 @@ const noteLinkIcons = notes
       typeof entry.data.cheeseImage === "string" ? entry.data.cheeseImage : "",
     noteType: typeof entry.data.noteType === "string" ? entry.data.noteType : "",
     title: typeof entry.data.title === "string" ? entry.data.title : entry.id,
+    fileName:
+      typeof entry.data.fileName === "string" ? entry.data.fileName : "",
   }))
   .filter((entry) => entry.cheeseImage.length > 0);
 

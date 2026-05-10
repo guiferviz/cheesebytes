@@ -1,4 +1,5 @@
 ---
+title: Gödel's Prime Number Encoding
 aliases:
   - Gödel Number
 ---

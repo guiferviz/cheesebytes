@@ -55,6 +55,28 @@ const cmSmallFont = EditorView.theme({
     padding: "8px 0",
   },
   ".cm-gutters": { fontSize: "10px" },
+  ".cm-widgetBuffer": {
+    display: "inline !important",
+    width: "0 !important",
+    height: "0 !important",
+    margin: "0 !important",
+    padding: "0 !important",
+    border: "0 !important",
+    verticalAlign: "baseline !important",
+  },
+  ".cm-gutters .cm-gutterElement": {
+    boxSizing: "border-box",
+    lineHeight: "inherit",
+  },
+  ".cm-lineNumbers .cm-gutterElement": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  ".cm-foldGutter .cm-gutterElement": {
+    display: "grid",
+    placeItems: "center",
+  },
 });
 
 const cmExtensions = [python(), EditorView.lineWrapping, cmSmallFont];
@@ -130,7 +152,10 @@ function findTopLevelFunctionFoldRanges(
   return ranges;
 }
 
-function foldNamedFunctions(view: EditorView, functionNames: readonly string[]) {
+function foldNamedFunctions(
+  view: EditorView,
+  functionNames: readonly string[],
+) {
   const ranges = findTopLevelFunctionFoldRanges(
     view.state.doc.toString(),
     functionNames,
@@ -803,275 +828,273 @@ export const MineReplayExplorer: React.FC<MineReplayExplorerProps> = ({
       maxWidth={maxWidth}
       margin="2rem auto"
     >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 16,
-            alignItems: "start",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <MinePanelLabel>Python</MinePanelLabel>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 16,
+          alignItems: "start",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <MinePanelLabel>Python</MinePanelLabel>
+          <div
+            style={{
+              overflow: "hidden",
+              border: `2px solid ${error ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
+              transition: "border-color 0.2s",
+            }}
+          >
+            <CodeMirror
+              value={code}
+              extensions={editorExtensions}
+              theme={isDark ? oneDark : undefined}
+              onChange={handleCodeChange}
+              onCreateEditor={(view) => {
+                foldNamedFunctions(view, initialCollapsedFunctions);
+              }}
+              indentWithTab
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: false,
+                tabSize: 4,
+              }}
+            />
+          </div>
+          {stdout && (
             <div
               style={{
-                overflow: "hidden",
-                border: `2px solid ${error ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
-                transition: "border-color 0.2s",
+                fontSize: 11,
+                color: "var(--goldmine-stdout-fg)",
+                marginTop: 8,
+                fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
+                background: "var(--goldmine-hud-btn-bg)",
+                border: `1px solid var(--goldmine-hud-border)`,
+                padding: "8px 10px",
+                maxHeight: 140,
+                overflowY: "auto",
               }}
             >
-              <CodeMirror
-                value={code}
-                extensions={editorExtensions}
-                theme={isDark ? oneDark : undefined}
-                onChange={handleCodeChange}
-                onCreateEditor={(view) => {
-                  foldNamedFunctions(view, initialCollapsedFunctions);
-                }}
-                indentWithTab
-                basicSetup={{
-                  lineNumbers: true,
-                  foldGutter: false,
-                  tabSize: 4,
-                }}
-              />
+              {stdout}
             </div>
-            {stdout && (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--goldmine-stdout-fg)",
-                  marginTop: 8,
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap",
-                  background: "var(--goldmine-hud-btn-bg)",
-                  border: `1px solid var(--goldmine-hud-border)`,
-                  padding: "8px 10px",
-                  maxHeight: 140,
-                  overflowY: "auto",
-                }}
-              >
-                {stdout}
-              </div>
-            )}
-            {error && (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--goldmine-error-fg)",
-                  marginTop: 8,
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap",
-                  maxHeight: 100,
-                  overflowY: "auto",
-                }}
-              >
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div
-            ref={viewerRootRef}
-            tabIndex={0}
-            style={{ outline: "none", minWidth: 0 }}
-          >
-            <MinePanelLabel>{title}</MinePanelLabel>
-
-            <div style={{ position: "relative" }}>
-              <MineMapViewer
-                mapState={mapState}
-                pathCells={currentFrame?.path ?? []}
-                showMonsterMarker={Boolean(mapState.monsterStart)}
-                joinHudBottom
-              />
-              <MineGridOverlay
-                rows={mapState.rows}
-                cols={mapState.cols}
-                hover={hover}
-                onHover={setHover}
-                showHoverLabel={showHoverCoords}
-                selected={currentFrame?.current ?? null}
-                highlightedKeys={visitedKeys}
-                markers={currentMonsterMarkers}
-              />
-            </div>
-
-            <MineHudBar
+          )}
+          {error && (
+            <div
               style={{
-                display: "grid",
-                gridTemplateRows: "auto auto",
-                gap: 8,
+                fontSize: 11,
+                color: "var(--goldmine-error-fg)",
+                marginTop: 8,
+                fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
+                maxHeight: 100,
+                overflowY: "auto",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  flexWrap: "nowrap",
-                }}
-              >
-                <HudButton
-                  onClick={() => {
-                    void handlePlayPause();
-                    keepViewerFocus();
-                  }}
-                  minWidth={PLAY_BUTTON_WIDTH_PX}
-                  disabled={
-                    running || (!needsRun && frames.length === 1 && !playing)
-                  }
-                  active={playing}
-                  title="Play or pause replay [P]"
-                >
-                  {playing ? (
-                    <ShortcutLabel hotkey="P" label="ause" />
-                  ) : (
-                    <ShortcutLabel hotkey="P" label="lay" />
-                  )}
-                </HudButton>
-                <HudButton
-                  onClick={() => {
-                    void handleStep();
-                    keepViewerFocus();
-                  }}
-                  disabled={
-                    running ||
-                    (!needsRun && frames.length === 0) ||
-                    (frameIndex >= frames.length - 1 && frames.length > 0)
-                  }
-                  title="Advance one step [S]"
-                >
-                  <ShortcutLabel hotkey="S" label="tep" />
-                </HudButton>
-                <HudButton
-                  onClick={() => {
-                    void handleRestart();
-                    keepViewerFocus();
-                  }}
-                  disabled={running}
-                  title="Restart replay [R]"
-                >
-                  <ShortcutLabel hotkey="R" label="estart" />
-                </HudButton>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 3,
-                    padding: "2px 3px",
-                    border: `1px solid ${HUD_THEME.border}`,
-                    background: "rgba(0,0,0,0.14)",
-                  }}
-                >
-                  <span style={{ color: HUD_THEME.muted, fontSize: 10 }}>
-                    Speed
-                  </span>
-                  <SpeedButton
-                    onClick={() => {
-                      speedUp();
-                      keepViewerFocus();
-                    }}
-                    disabled={stepDelayMs <= MIN_STEP_DELAY_MS}
-                    title="Faster replay [ArrowUp]"
-                  >
-                    ▲
-                  </SpeedButton>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={stepDelayMs}
-                    onChange={handleSpeedChange}
-                    style={{
-                      width: 44,
-                      padding: "1px 3px",
-                      border: `1px solid ${HUD_THEME.border}`,
-                      background: "rgba(0,0,0,0.18)",
-                      color: HUD_THEME.accent,
-                      fontFamily: "monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textAlign: "right",
-                      outline: "none",
-                    }}
-                  />
-                  <span style={{ color: HUD_THEME.muted, fontSize: 9 }}>
-                    ms
-                  </span>
-                  <SpeedButton
-                    onClick={() => {
-                      slowDown();
-                      keepViewerFocus();
-                    }}
-                    disabled={stepDelayMs >= MAX_STEP_DELAY_MS}
-                    title="Slower replay [ArrowDown]"
-                  >
-                    ▼
-                  </SpeedButton>
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  minHeight: 20,
-                }}
-              >
-                <span style={{ color: HUD_THEME.muted }}>
-                  {!engineReady
-                    ? "Warming up Python engine..."
-                    : needsRun
-                      ? "Press Play, Step, or Restart to run the search"
-                      : frames.length === 0
-                        ? "No frames captured"
-                        : `Step ${currentFrame?.step ?? 0}/${frames[frames.length - 1]?.step ?? 0}`}
-                </span>
-                {currentFrame && (
-                  <>
-                    {currentFrame.visited !== null && (
-                      <>
-                        <span style={{ color: HUD_THEME.muted }}>Visited</span>
-                        <span
-                          style={{ color: HUD_THEME.accent, fontWeight: 700 }}
-                        >
-                          {currentFrame.visited.length}
-                        </span>
-                      </>
-                    )}
-                    <span style={{ color: HUD_THEME.muted }}>Path</span>
-                    <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
-                      {currentFrame.path.length}
-                    </span>
-                    {currentFrame.currentMonster && (
-                      <>
-                        <span style={{ color: HUD_THEME.muted }}>Monster</span>
-                        <span
-                          style={{ color: HUD_THEME.accent, fontWeight: 700 }}
-                        >
-                          ({currentFrame.currentMonster.r},{" "}
-                          {currentFrame.currentMonster.c})
-                        </span>
-                      </>
-                    )}
-                    {currentFrame.discarded && (
-                      <span
-                        style={{
-                          color: "var(--goldmine-error-fg)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        discarded
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-            </MineHudBar>
-          </div>
+              {error}
+            </div>
+          )}
         </div>
+
+        <div
+          ref={viewerRootRef}
+          tabIndex={0}
+          style={{ outline: "none", minWidth: 0 }}
+        >
+          <MinePanelLabel>{title}</MinePanelLabel>
+
+          <div style={{ position: "relative" }}>
+            <MineMapViewer
+              mapState={mapState}
+              pathCells={currentFrame?.path ?? []}
+              showMonsterMarker={Boolean(mapState.monsterStart)}
+              joinHudBottom
+            />
+            <MineGridOverlay
+              rows={mapState.rows}
+              cols={mapState.cols}
+              hover={hover}
+              onHover={setHover}
+              showHoverLabel={showHoverCoords}
+              selected={currentFrame?.current ?? null}
+              highlightedKeys={visitedKeys}
+              markers={currentMonsterMarkers}
+            />
+          </div>
+
+          <MineHudBar
+            style={{
+              display: "grid",
+              gridTemplateRows: "auto auto",
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                flexWrap: "nowrap",
+              }}
+            >
+              <HudButton
+                onClick={() => {
+                  void handlePlayPause();
+                  keepViewerFocus();
+                }}
+                minWidth={PLAY_BUTTON_WIDTH_PX}
+                disabled={
+                  running || (!needsRun && frames.length === 1 && !playing)
+                }
+                active={playing}
+                title="Play or pause replay [P]"
+              >
+                {playing ? (
+                  <ShortcutLabel hotkey="P" label="ause" />
+                ) : (
+                  <ShortcutLabel hotkey="P" label="lay" />
+                )}
+              </HudButton>
+              <HudButton
+                onClick={() => {
+                  void handleStep();
+                  keepViewerFocus();
+                }}
+                disabled={
+                  running ||
+                  (!needsRun && frames.length === 0) ||
+                  (frameIndex >= frames.length - 1 && frames.length > 0)
+                }
+                title="Advance one step [S]"
+              >
+                <ShortcutLabel hotkey="S" label="tep" />
+              </HudButton>
+              <HudButton
+                onClick={() => {
+                  void handleRestart();
+                  keepViewerFocus();
+                }}
+                disabled={running}
+                title="Restart replay [R]"
+              >
+                <ShortcutLabel hotkey="R" label="estart" />
+              </HudButton>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 3,
+                  padding: "2px 3px",
+                  border: `1px solid ${HUD_THEME.border}`,
+                  background: "rgba(0,0,0,0.14)",
+                }}
+              >
+                <span style={{ color: HUD_THEME.muted, fontSize: 10 }}>
+                  Speed
+                </span>
+                <SpeedButton
+                  onClick={() => {
+                    speedUp();
+                    keepViewerFocus();
+                  }}
+                  disabled={stepDelayMs <= MIN_STEP_DELAY_MS}
+                  title="Faster replay [ArrowUp]"
+                >
+                  ▲
+                </SpeedButton>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={stepDelayMs}
+                  onChange={handleSpeedChange}
+                  style={{
+                    width: 44,
+                    padding: "1px 3px",
+                    border: `1px solid ${HUD_THEME.border}`,
+                    background: "rgba(0,0,0,0.18)",
+                    color: HUD_THEME.accent,
+                    fontFamily: "monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textAlign: "right",
+                    outline: "none",
+                  }}
+                />
+                <span style={{ color: HUD_THEME.muted, fontSize: 9 }}>ms</span>
+                <SpeedButton
+                  onClick={() => {
+                    slowDown();
+                    keepViewerFocus();
+                  }}
+                  disabled={stepDelayMs >= MAX_STEP_DELAY_MS}
+                  title="Slower replay [ArrowDown]"
+                >
+                  ▼
+                </SpeedButton>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+                minHeight: 20,
+              }}
+            >
+              <span style={{ color: HUD_THEME.muted }}>
+                {!engineReady
+                  ? "Warming up Python engine..."
+                  : needsRun
+                    ? "Press Play, Step, or Restart to run the search"
+                    : frames.length === 0
+                      ? "No frames captured"
+                      : `Step ${currentFrame?.step ?? 0}/${frames[frames.length - 1]?.step ?? 0}`}
+              </span>
+              {currentFrame && (
+                <>
+                  {currentFrame.visited !== null && (
+                    <>
+                      <span style={{ color: HUD_THEME.muted }}>Visited</span>
+                      <span
+                        style={{ color: HUD_THEME.accent, fontWeight: 700 }}
+                      >
+                        {currentFrame.visited.length}
+                      </span>
+                    </>
+                  )}
+                  <span style={{ color: HUD_THEME.muted }}>Path</span>
+                  <span style={{ color: HUD_THEME.accent, fontWeight: 700 }}>
+                    {currentFrame.path.length}
+                  </span>
+                  {currentFrame.currentMonster && (
+                    <>
+                      <span style={{ color: HUD_THEME.muted }}>Monster</span>
+                      <span
+                        style={{ color: HUD_THEME.accent, fontWeight: 700 }}
+                      >
+                        ({currentFrame.currentMonster.r},{" "}
+                        {currentFrame.currentMonster.c})
+                      </span>
+                    </>
+                  )}
+                  {currentFrame.discarded && (
+                    <span
+                      style={{
+                        color: "var(--goldmine-error-fg)",
+                        fontWeight: 800,
+                      }}
+                    >
+                      discarded
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          </MineHudBar>
+        </div>
+      </div>
     </MineVisualFrame>
   );
 };
