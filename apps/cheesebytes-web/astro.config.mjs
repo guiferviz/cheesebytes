@@ -34,6 +34,12 @@ const CODEMIRROR_PACKAGES = [
 ];
 
 const VITE_DEDUPE_PACKAGES = ['react', 'react-dom', ...CODEMIRROR_PACKAGES];
+const VITE_OPTIMIZE_DEPS = [
+  'react',
+  'react-dom',
+  'react-dom/client',
+  ...CODEMIRROR_PACKAGES,
+];
 
 const resolveExternalDependencies = {
   name: 'resolve-external-dependencies',
@@ -192,6 +198,9 @@ export default defineConfig({
   vite: {
     resolve: {
       dedupe: VITE_DEDUPE_PACKAGES,
+    },
+    optimizeDeps: {
+      include: VITE_OPTIMIZE_DEPS,
     },
     plugins: [tailwindcss(), resolveExternalDependencies],
   },

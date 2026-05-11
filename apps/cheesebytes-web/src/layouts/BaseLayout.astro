@@ -37,7 +37,7 @@ const { title, description } = Astro.props;
     <!-- Modal de búsqueda -->
     <SearchModal />
 
-    <DrawingOverlay client:load enableKeyboardShortcut={false} />
+    <DrawingOverlay client:only="react" enableKeyboardShortcut={false} />
 
     <!-- VimMode -->
     <script>

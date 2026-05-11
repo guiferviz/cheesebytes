@@ -1,5 +1,5 @@
 {
-  "name": "mechanical-matter",
+  "name": "cheesebytes-web",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -23,8 +23,8 @@
     "@lezer/common": "^1.5.2",
     "@lezer/highlight": "^1.2.3",
     "@tailwindcss/vite": "^4.1.13",
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@types/three": "^0.183.1",
     "@uiw/react-codemirror": "^4.25.2",
     "astro": "^5.13.9",
@@ -37,8 +37,8 @@
     "lunr": "^2.3.9",
     "mermaid": "^11.14.0",
     "phaser": "^3.90.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-plotly.js": "^2.6.0",
     "rehype-katex": "^7.0.1",
     "rehype-mermaid": "^3.0.0",
