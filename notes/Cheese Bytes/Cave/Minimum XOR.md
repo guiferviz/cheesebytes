@@ -74,9 +74,16 @@ run_tests()
 # Solution 2: Trie
 
 Using a trie (prefix tree) is another efficient approach to solve the problem of
-finding the pair of numbers with the minimum XOR value. This method can achieve
-a time complexity of $O(n \cdot b)$, where $b$ is the number of bits required to
-represent the numbers.
+finding the pair of numbers with the minimum XOR value. A binary trie can be
+constructed where each path from the root to a leaf node represents the binary
+representation of a number. By inserting all numbers into the trie, we can then
+find the minimum XOR for each number by traversing the trie in a way that tries
+to match the same bits first (to minimize the XOR result).
+
+This method can be more efficient than sorting for large datasets, especially
+when the range of numbers is limited, as it can achieve a time complexity of
+$O(n \cdot b)$, where $b$ is the number of bits required to represent the
+numbers.
 
 ## Code
 
