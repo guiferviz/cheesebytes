@@ -73,6 +73,7 @@ type ReadyListener = () => void;
 let worker: Worker | null = null;
 let status: WorkerStatus = "idle";
 let nextId = 1;
+let runQueue: Promise<unknown> = Promise.resolve();
 
 const pending = new Map<number, PendingRequest>();
 const readyListeners = new Set<ReadyListener>();
@@ -153,7 +154,10 @@ function ensureWorker(): Worker {
  * @param options - Optional `RunOptions` controlling context injection,
  *                  variable retrieval, and streaming callbacks.
  */
-function run(code: string, options: RunOptions = {}): Promise<RunResult> {
+function runImmediately(
+  code: string,
+  options: RunOptions = {},
+): Promise<RunResult> {
   const {
     context = {},
     returnVars = [],
@@ -167,6 +171,12 @@ function run(code: string, options: RunOptions = {}): Promise<RunResult> {
     pending.set(id, { resolve, reject, onStdoutChunk, onMemoryStats });
     w.postMessage({ type: "run", id, code, context, returnVars });
   });
+}
+
+function run(code: string, options: RunOptions = {}): Promise<RunResult> {
+  const queuedRun = runQueue.then(() => runImmediately(code, options));
+  runQueue = queuedRun.catch(() => {});
+  return queuedRun;
 }
 
 /**
@@ -208,6 +218,7 @@ function dispose(): void {
     worker.terminate();
     worker = null;
     status = "idle";
+    runQueue = Promise.resolve();
   }
 }
 
@@ -231,6 +242,7 @@ function abort(): Promise<void> {
     worker.terminate();
     worker = null;
     status = "idle";
+    runQueue = Promise.resolve();
   }
 
   // 2. Spin up a fresh worker and wait for it to report "ready".
