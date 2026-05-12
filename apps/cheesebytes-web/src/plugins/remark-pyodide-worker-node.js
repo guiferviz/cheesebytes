@@ -1,14 +1,18 @@
 import { visit } from 'unist-util-visit';
 
 /**
- * Transform fenced `pyodide` code blocks into `<pyodide-worker-node>`.
+ * Transform fenced Python code blocks with a `pyodide` meta flag into
+ * `<pyodide-worker-node>`.
  *
  * Usage:
  * ```md
- * ```pyodide auto-run=once height=220 show-run-button=false
+ * ```python pyodide auto-run=once height=220 show-run-button=false
  * print("hello")
  * ```
  * ```
+ *
+ * Legacy `pyodide` language fences are still supported. Plain `python` fences
+ * without the `pyodide` meta flag are left untouched.
  *
  * Meta parsing rules:
  * - `key` -> boolean `true`
@@ -79,13 +83,22 @@ function parseMeta(meta) {
 export default function remarkPyodideWorkerNode() {
   return (tree) => {
     visit(tree, 'code', (node, index, parent) => {
-      if (!parent || index == null || node.lang !== 'pyodide') return;
+      if (!parent || index == null) return;
+
+      const parsedMeta = parseMeta(node.meta);
+      const isLegacyPyodideFence = node.lang === 'pyodide';
+      const isPythonPyodideFence =
+        node.lang === 'python' && parsedMeta.pyodide === true;
+
+      if (!isLegacyPyodideFence && !isPythonPyodideFence) return;
+
+      const { pyodide: _pyodide, ...runnerProps } = parsedMeta;
 
       const encodedCode = encodeURIComponent(node.value.replace(/\s+$/, ''));
       const props = {
         autoRun: false,
         fitToContent: true,
-        ...parseMeta(node.meta),
+        ...runnerProps,
       };
       const encodedProps = encodeURIComponent(JSON.stringify(props));
       const html = `<pyodide-worker-node data-code="${encodedCode}" data-props="${encodedProps}"></pyodide-worker-node>`;

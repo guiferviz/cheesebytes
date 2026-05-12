@@ -21,7 +21,7 @@ After these three operations, the values of `a` and `b` are swapped.
 
 # Code Example
 
-```pyodide auto-run=once height=200 show-run-button=true
+```python pyodide auto-run=once height=200 show-run-button=true
 def xor_swap(a, b):
     print(f"Before swap: a = {a}, b = {b}")
     a = a ^ b

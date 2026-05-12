@@ -13,7 +13,7 @@ similar.
 
 ## Code
 
-```pyodide auto-run=once height=520 show-run-button=true
+```python pyodide auto-run=once height=520 show-run-button=true
 def min_xor_pair(nums):
     if len(nums) < 2:
         return None
@@ -80,7 +80,7 @@ represent the numbers.
 
 ## Code
 
-```pyodide auto-run=once height=520 show-run-button=true
+```python pyodide auto-run=once height=520 show-run-button=true
 class TrieNode:  # FOLD
     def __init__(self):
         self.children = {}

@@ -42,7 +42,7 @@ const needsMarimo =
   note.body?.includes("{.marimo}");
 const needsPyodideWorker =
   note.rendered?.html.includes("<pyodide-worker-node") ||
-  note.body?.includes("```pyodide");
+  /```(?:pyodide\b|python[^\n]*\bpyodide\b)/.test(note.body ?? "");
 ---
 
 <NoteLayout note={note.data} noteLinkIcons={noteLinkIcons}>

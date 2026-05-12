@@ -10,7 +10,7 @@ set bit disappears, while the bits to the left remain unchanged. Each iteration
 clears exactly one set bit, so the total number of iterations matches the number
 of ones in the binary representation.
 
-```pyodide auto-run=true run-delay=1000 show-run-button=true
+```python pyodide auto-run=true run-delay=1000 show-run-button=true
 def count_bits_one(n):
 	count = 0
 	while n:
