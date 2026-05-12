@@ -21,3 +21,10 @@ The XOR operation compares two bits:
 | 0   | 1   | 1       |
 | 1   | 0   | 1       |
 | 1   | 1   | 0       |
+
+# Usage in Programming
+
+- [[XOR Linked List]]
+- [[Swapping Values with XOR]]
+- [[XOR-ing Two Identical Numbers Results in 0]]
+- [[Minimum XOR]]
