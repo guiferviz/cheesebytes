@@ -5,7 +5,7 @@ import {
   fullscreenInnerStyle,
   fullscreenRootStyle,
   useFullscreen,
-} from "../../pathfinding-gold-mine/useFullscreen";
+} from "../shared/useFullscreen";
 
 import { SP500_MONTHLY_INDEX } from "./sp500MonthlyData";
 import { useScopedVimMode } from "./useScopedVimMode";

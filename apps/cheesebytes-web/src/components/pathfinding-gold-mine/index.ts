@@ -56,7 +56,7 @@ export {
   useFullscreen,
   fullscreenRootStyle,
   fullscreenInnerStyle,
-} from "./useFullscreen";
+} from "../cave/shared/useFullscreen";
 
 // Article-scoped store
 export {

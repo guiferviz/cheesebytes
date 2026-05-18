@@ -6,7 +6,7 @@ import {
   fullscreenInnerStyle,
   fullscreenRootStyle,
   useFullscreen,
-} from "../../pathfinding-gold-mine/useFullscreen";
+} from "../shared/useFullscreen";
 
 import { HeatmapCanvas } from "./HeatmapCanvas";
 import {
@@ -375,14 +375,14 @@ export function HeatmapShiftComparisonVisual() {
     <StaticVisualShell
       title="Move the grid and the hot spots move with it"
       modeId="heatmap-shift-comparison"
-      normalMaxWidth={Math.max(1140, canvasWidth * 2 + 18)}
+      normalMaxWidth={Math.max(1280, canvasWidth * 2 + 64)}
     >
       {(isFullscreen) => (
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: isFullscreen ? 28 : 18,
+            gap: isFullscreen ? 80 : 80,
             justifyContent: "center",
           }}
         >

@@ -3,10 +3,12 @@ import {
   parseRawMap,
   MineMapViewer,
   MineGridOverlay,
+} from "../../pathfinding-gold-mine";
+import {
   useFullscreen,
   fullscreenRootStyle,
   fullscreenInnerStyle,
-} from "../../pathfinding-gold-mine";
+} from "../shared/useFullscreen";
 import type { Pos } from "../../pathfinding-gold-mine";
 
 export interface MineGridOverlayVisualProps {

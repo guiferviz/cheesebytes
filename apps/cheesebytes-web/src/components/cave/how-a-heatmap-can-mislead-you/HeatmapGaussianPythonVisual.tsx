@@ -7,7 +7,7 @@ import {
   fullscreenInnerStyle,
   fullscreenRootStyle,
   useFullscreen,
-} from "../../pathfinding-gold-mine/useFullscreen";
+} from "../shared/useFullscreen";
 
 import { HeatmapCanvas } from "./HeatmapCanvas";
 import { buildSquareMatrix, matrixToSquareCellValues } from "./heatmap-core";

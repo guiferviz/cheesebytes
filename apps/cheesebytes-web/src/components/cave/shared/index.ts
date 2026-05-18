@@ -20,3 +20,8 @@ export {
   CheeseCompletionBadge,
   CheeseSlideContainer,
 } from "./CheeseUI";
+export {
+  fullscreenInnerStyle,
+  fullscreenRootStyle,
+  useFullscreen,
+} from "./useFullscreen";

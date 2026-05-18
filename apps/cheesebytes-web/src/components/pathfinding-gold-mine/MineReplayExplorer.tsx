@@ -28,7 +28,7 @@ import { posKey } from "./types";
 import type { Pos } from "./types";
 import { MineGridOverlay } from "./MineGridOverlay";
 import { MineMapViewer } from "./MineMapViewer";
-import { useFullscreen } from "./useFullscreen";
+import { useFullscreen } from "../cave/shared/useFullscreen";
 import { getArticlePrelude, useArticleMap } from "./article-store";
 import {
   MINE_HUD as HUD_THEME,

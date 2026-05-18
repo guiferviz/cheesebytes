@@ -38,9 +38,7 @@ import type { VimModeAPI } from "../../utils/vim-mode";
 import { posKey } from "./types";
 import type { Pos, MineMapState } from "./types";
 import { MineMapViewer } from "./MineMapViewer";
-import {
-  useFullscreen,
-} from "./useFullscreen";
+import { useFullscreen } from "../cave/shared/useFullscreen";
 import { useArticleMap } from "./article-store";
 import { MineGameSprite } from "./MineGameSprite";
 import type { Direction } from "./MineGameSprite";
@@ -861,244 +859,242 @@ export const MineGameVisual: React.FC<MineGameVisualProps> = ({
         }
       `}</style>
 
+      <div
+        style={{
+          position: "relative",
+          width: boardWidth,
+          maxWidth: "100%",
+          margin: "0 auto",
+          // Re-trigger the shake on every bump by alternating between
+          // two identical keyframes (no remount → Phaser stays alive).
+          animation:
+            shakeId > 0
+              ? `${shakeId % 2 === 0 ? "mgv-shake-a" : "mgv-shake-b"} ${SHAKE_DURATION_MS}ms ease-out`
+              : undefined,
+        }}
+      >
         <div
           style={{
             position: "relative",
-            width: boardWidth,
-            maxWidth: "100%",
-            margin: "0 auto",
-            // Re-trigger the shake on every bump by alternating between
-            // two identical keyframes (no remount → Phaser stays alive).
-            animation:
-              shakeId > 0
-                ? `${shakeId % 2 === 0 ? "mgv-shake-a" : "mgv-shake-b"} ${SHAKE_DURATION_MS}ms ease-out`
-                : undefined,
+            overflow: "hidden",
+            border: `2px solid ${HUD.border}`,
+            boxSizing: "border-box",
+            background: "var(--goldmine-fullscreen-bg, #05070a)",
           }}
         >
           <div
             style={{
               position: "relative",
-              overflow: "hidden",
-              border: `2px solid ${HUD.border}`,
-              boxSizing: "border-box",
-              background: "var(--goldmine-fullscreen-bg, #05070a)",
+              width: "100%",
+              transformOrigin: "top left",
+              transform: zoomTransform,
+              transition: `transform ${isMoving ? MOVE_DURATION_MS : ZOOM_TWEEN_MS}ms ease-out`,
+              willChange: "transform",
             }}
           >
-            <div
-              style={{
-                position: "relative",
-                width: "100%",
-                transformOrigin: "top left",
-                transform: zoomTransform,
-                transition: `transform ${isMoving ? MOVE_DURATION_MS : ZOOM_TWEEN_MS}ms ease-out`,
-                willChange: "transform",
-              }}
-            >
-              <MineMapViewer
-                mapState={displayMap}
-                showMonsterMarker={mode === "monster"}
-                width="100%"
-                height={boardHeight}
-                border="none"
-              />
+            <MineMapViewer
+              mapState={displayMap}
+              showMonsterMarker={mode === "monster"}
+              width="100%"
+              height={boardHeight}
+              border="none"
+            />
 
-              {/* Player sprite. */}
+            {/* Player sprite. */}
+            <MineGameSprite
+              kind="miner"
+              facing={state.facing}
+              anim={isMoving && state.status === "playing" ? "walk" : "idle"}
+              row={state.player.r}
+              col={state.player.c}
+              rows={map.rows}
+              cols={map.cols}
+              zIndex={6}
+              transitionMs={MOVE_DURATION_MS}
+            />
+
+            {/* Monster sprite. */}
+            {mode === "monster" && state.monster && (
               <MineGameSprite
-                kind="miner"
-                facing={state.facing}
-                anim={isMoving && state.status === "playing" ? "walk" : "idle"}
-                row={state.player.r}
-                col={state.player.c}
+                kind="monster"
+                facing={state.monsterFacing}
+                anim={
+                  monsterMoving && state.status === "playing" ? "walk" : "idle"
+                }
+                row={state.monster.r}
+                col={state.monster.c}
                 rows={map.rows}
                 cols={map.cols}
-                zIndex={6}
+                zIndex={7}
                 transitionMs={MOVE_DURATION_MS}
               />
+            )}
+          </div>
 
-              {/* Monster sprite. */}
-              {mode === "monster" && state.monster && (
-                <MineGameSprite
-                  kind="monster"
-                  facing={state.monsterFacing}
-                  anim={
-                    monsterMoving && state.status === "playing"
-                      ? "walk"
-                      : "idle"
-                  }
-                  row={state.monster.r}
-                  col={state.monster.c}
-                  rows={map.rows}
-                  cols={map.cols}
-                  zIndex={7}
-                  transitionMs={MOVE_DURATION_MS}
-                />
-              )}
-            </div>
-
-            {/* Click-to-play overlay. */}
-            {!armed && state.status === "playing" && (
+          {/* Click-to-play overlay. */}
+          {!armed && state.status === "playing" && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(5, 7, 10, 0.32)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "none",
+                zIndex: 20,
+              }}
+            >
               <div
+                className="mgv-blink"
                 style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(5, 7, 10, 0.32)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  pointerEvents: "none",
-                  zIndex: 20,
+                  fontFamily: "monospace",
+                  fontWeight: 700,
+                  fontSize: "clamp(11px, 2.6vmin, 18px)",
+                  letterSpacing: "0.05em",
+                  color: "rgba(246,189,96,0.96)",
+                  textShadow: "0 1px 10px rgba(0,0,0,0.5)",
+                  background: "rgba(8, 10, 14, 0.5)",
+                  padding: "8px 14px",
+                  border: "1px solid rgba(246,189,96,0.28)",
                 }}
               >
+                CLICK TO PLAY
+              </div>
+            </div>
+          )}
+
+          {/* Win / lose overlay. */}
+          {state.status !== "playing" && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  state.status === "won"
+                    ? "rgba(8, 30, 12, 0.55)"
+                    : "rgba(40, 6, 8, 0.6)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "none",
+                zIndex: 21,
+                color: "#fff",
+                fontFamily: "monospace",
+                textAlign: "center",
+                padding: 18,
+              }}
+            >
+              <div>
                 <div
-                  className="mgv-blink"
                   style={{
-                    fontFamily: "monospace",
-                    fontWeight: 700,
-                    fontSize: "clamp(11px, 2.6vmin, 18px)",
-                    letterSpacing: "0.05em",
-                    color: "rgba(246,189,96,0.96)",
-                    textShadow: "0 1px 10px rgba(0,0,0,0.5)",
-                    background: "rgba(8, 10, 14, 0.5)",
-                    padding: "8px 14px",
-                    border: "1px solid rgba(246,189,96,0.28)",
+                    fontSize: "clamp(16px, 4vmin, 26px)",
+                    fontWeight: 800,
                   }}
                 >
-                  CLICK TO PLAY
+                  {state.status === "won" ? "✦ ESCAPED ✦" : "✦ CAUGHT ✦"}
+                </div>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: "clamp(11px, 2.4vmin, 15px)",
+                    opacity: 0.92,
+                  }}
+                >
+                  {statusText}
+                </div>
+                <div style={{ marginTop: 10, fontSize: 11, opacity: 0.75 }}>
+                  Press R to play again
                 </div>
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Win / lose overlay. */}
-            {state.status !== "playing" && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    state.status === "won"
-                      ? "rgba(8, 30, 12, 0.55)"
-                      : "rgba(40, 6, 8, 0.6)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  pointerEvents: "none",
-                  zIndex: 21,
-                  color: "#fff",
-                  fontFamily: "monospace",
-                  textAlign: "center",
-                  padding: 18,
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      fontSize: "clamp(16px, 4vmin, 26px)",
-                      fontWeight: 800,
-                    }}
-                  >
-                    {state.status === "won" ? "✦ ESCAPED ✦" : "✦ CAUGHT ✦"}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: "clamp(11px, 2.4vmin, 15px)",
-                      opacity: 0.92,
-                    }}
-                  >
-                    {statusText}
-                  </div>
-                  <div style={{ marginTop: 10, fontSize: 11, opacity: 0.75 }}>
-                    Press R to play again
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+      {/* HUD */}
+      <MineHudBar
+        style={{
+          width: boardWidth,
+          maxWidth: "100%",
+          margin: "0 auto",
+        }}
+      >
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <HudBtn
+            onClick={() => setMusicOn((v) => !v)}
+            active={musicOn}
+            title={musicOn ? "Mute music [M]" : "Enable music [M]"}
+          >
+            <span style={{ textDecoration: "underline" }}>M</span>usic
+          </HudBtn>
+          <HudBtn
+            onClick={() => setSfxOn((v) => !v)}
+            active={sfxOn}
+            title={sfxOn ? "Mute SFX [X]" : "Enable SFX [X]"}
+          >
+            SF<span style={{ textDecoration: "underline" }}>X</span>
+          </HudBtn>
+          <HudBtn
+            onClick={() => toggleFullscreen()}
+            active={isFullscreen}
+            title="Toggle fullscreen [F]"
+          >
+            <span style={{ textDecoration: "underline" }}>F</span>ull
+          </HudBtn>
+          {mode === "collapse" && (
+            <HudBtn onClick={() => tryUndo()} title="Undo last move [U]">
+              <span style={{ textDecoration: "underline" }}>U</span>ndo
+            </HudBtn>
+          )}
+          <HudBtn onClick={() => reset()} title="Restart [R]">
+            <span style={{ textDecoration: "underline" }}>R</span>estart
+          </HudBtn>
         </div>
 
-        {/* HUD */}
-        <MineHudBar
+        <div
           style={{
-            width: boardWidth,
-            maxWidth: "100%",
-            margin: "0 auto",
+            flex: 1,
+            textAlign: "center",
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            color: statusColor,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            padding: "0 6px",
+            minWidth: 120,
           }}
         >
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <HudBtn
-              onClick={() => setMusicOn((v) => !v)}
-              active={musicOn}
-              title={musicOn ? "Mute music [M]" : "Enable music [M]"}
-            >
-              <span style={{ textDecoration: "underline" }}>M</span>usic
-            </HudBtn>
-            <HudBtn
-              onClick={() => setSfxOn((v) => !v)}
-              active={sfxOn}
-              title={sfxOn ? "Mute SFX [X]" : "Enable SFX [X]"}
-            >
-              SF<span style={{ textDecoration: "underline" }}>X</span>
-            </HudBtn>
-            <HudBtn
-              onClick={() => toggleFullscreen()}
-              active={isFullscreen}
-              title="Toggle fullscreen [F]"
-            >
-              <span style={{ textDecoration: "underline" }}>F</span>ull
-            </HudBtn>
-            {mode === "collapse" && (
-              <HudBtn onClick={() => tryUndo()} title="Undo last move [U]">
-                <span style={{ textDecoration: "underline" }}>U</span>ndo
-              </HudBtn>
-            )}
-            <HudBtn onClick={() => reset()} title="Restart [R]">
-              <span style={{ textDecoration: "underline" }}>R</span>estart
-            </HudBtn>
-          </div>
+          {statusText}
+        </div>
 
-          <div
-            style={{
-              flex: 1,
-              textAlign: "center",
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              color: statusColor,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              padding: "0 6px",
-              minWidth: 120,
-            }}
-          >
-            {statusText}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexShrink: 0,
-              color: HUD.muted,
-            }}
-          >
-            {bestSoFar != null && (
-              <span title="Your best on this map this session">
-                BEST {bestSoFar}
-              </span>
-            )}
-            {optimum != null && (optimum as number) >= 0 && (
-              <span
-                title={
-                  mode === "collapse"
-                    ? "Best possible gold (longest simple path)"
-                    : "Shortest path length"
-                }
-              >
-                OPT {optimum as number}
-              </span>
-            )}
-          </div>
-        </MineHudBar>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            flexShrink: 0,
+            color: HUD.muted,
+          }}
+        >
+          {bestSoFar != null && (
+            <span title="Your best on this map this session">
+              BEST {bestSoFar}
+            </span>
+          )}
+          {optimum != null && (optimum as number) >= 0 && (
+            <span
+              title={
+                mode === "collapse"
+                  ? "Best possible gold (longest simple path)"
+                  : "Shortest path length"
+              }
+            >
+              OPT {optimum as number}
+            </span>
+          )}
+        </div>
+      </MineHudBar>
     </MineVisualFrame>
   );
 };

@@ -1,6 +1,9 @@
 import React from "react";
 import "./goldmine-theme.css";
-import { fullscreenInnerStyle, fullscreenRootStyle } from "./useFullscreen";
+import {
+  fullscreenInnerStyle,
+  fullscreenRootStyle,
+} from "../cave/shared/useFullscreen";
 
 export const MINE_HUD = {
   bg: "var(--goldmine-hud-bg)",
@@ -60,8 +63,7 @@ export const MineVisualFrame: React.FC<MineVisualFrameProps> = ({
   </div>
 );
 
-export interface MineHudBarProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface MineHudBarProps extends React.HTMLAttributes<HTMLDivElement> {
   attachedTop?: boolean;
 }
 

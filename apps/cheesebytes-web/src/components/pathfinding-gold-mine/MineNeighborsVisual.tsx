@@ -25,7 +25,7 @@ import { posKey } from "./types";
 import type { Pos } from "./types";
 import { MineGridOverlay } from "./MineGridOverlay";
 import { MineMapViewer } from "./MineMapViewer";
-import { useFullscreen } from "./useFullscreen";
+import { useFullscreen } from "../cave/shared/useFullscreen";
 import {
   getArticleMapPython,
   getArticleMarkersPython,
@@ -280,127 +280,125 @@ export const MineNeighborsVisual: React.FC<MineNeighborsVisualProps> = ({
       maxWidth={maxWidth}
       margin="2rem auto"
     >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 16,
-            alignItems: "start",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <MinePanelLabel>Python</MinePanelLabel>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 16,
+          alignItems: "start",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <MinePanelLabel>Python</MinePanelLabel>
+          <div
+            style={{
+              overflow: "hidden",
+              border: `2px solid ${error ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
+              transition: "border-color 0.2s",
+            }}
+          >
+            <CodeMirror
+              value={code}
+              extensions={cmExtensions}
+              theme={isDark ? oneDark : undefined}
+              onChange={handleCodeChange}
+              indentWithTab
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: false,
+                tabSize: 4,
+              }}
+            />
+          </div>
+          {stdout && (
             <div
               style={{
-                overflow: "hidden",
-                border: `2px solid ${error ? "var(--goldmine-error-fg)" : "var(--goldmine-hud-border)"}`,
-                transition: "border-color 0.2s",
+                fontSize: 11,
+                color: "var(--goldmine-stdout-fg)",
+                marginTop: 8,
+                fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
+                background: "var(--goldmine-hud-btn-bg)",
+                border: `1px solid var(--goldmine-hud-border)`,
+                padding: "8px 10px",
+                maxHeight: 120,
+                overflowY: "auto",
               }}
             >
-              <CodeMirror
-                value={code}
-                extensions={cmExtensions}
-                theme={isDark ? oneDark : undefined}
-                onChange={handleCodeChange}
-                indentWithTab
-                basicSetup={{
-                  lineNumbers: true,
-                  foldGutter: false,
-                  tabSize: 4,
-                }}
-              />
+              {stdout}
             </div>
-            {stdout && (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--goldmine-stdout-fg)",
-                  marginTop: 8,
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap",
-                  background: "var(--goldmine-hud-btn-bg)",
-                  border: `1px solid var(--goldmine-hud-border)`,
-                  padding: "8px 10px",
-                  maxHeight: 120,
-                  overflowY: "auto",
-                }}
-              >
-                {stdout}
-              </div>
-            )}
-            {error && (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--goldmine-error-fg)",
-                  marginTop: 4,
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap",
-                  maxHeight: 80,
-                  overflowY: "auto",
-                }}
-              >
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div style={{ minWidth: 0 }}>
-            <MinePanelLabel>Click a cell to test</MinePanelLabel>
-
-            <div style={{ position: "relative" }}>
-              <MineMapViewer mapState={mapState} joinHudBottom />
-              <MineGridOverlay
-                rows={mapState.rows}
-                cols={mapState.cols}
-                hover={hover}
-                onHover={setHover}
-                onClick={handleCellClick}
-                selected={selected}
-                highlightedKeys={highlighted}
-                cellLabels={highlightedLabels}
-                showHoverLabel={showHoverCoords}
-                cursor="pointer"
-              />
+          )}
+          {error && (
+            <div
+              style={{
+                fontSize: 11,
+                color: "var(--goldmine-error-fg)",
+                marginTop: 4,
+                fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
+                maxHeight: 80,
+                overflowY: "auto",
+              }}
+            >
+              {error}
             </div>
-
-            <MineHudBar style={{ gap: 10 }}>
-              {selected ? (
-                <>
-                  <span style={{ color: HUD_THEME.muted }}>Cell</span>
-                  <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
-                    ({selected.r}, {selected.c})
-                  </span>
-                  <span style={{ color: HUD_THEME.muted, margin: "0 2px" }}>
-                    →
-                  </span>
-                  {running ? (
-                    <span
-                      style={{ color: HUD_THEME.muted, fontStyle: "italic" }}
-                    >
-                      running…
-                    </span>
-                  ) : error ? (
-                    <span style={{ color: "var(--goldmine-error-fg)" }}>
-                      error
-                    </span>
-                  ) : (
-                    <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
-                      {highlighted.size} neighbor
-                      {highlighted.size !== 1 ? "s" : ""}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span style={{ color: HUD_THEME.muted, fontStyle: "italic" }}>
-                  {engineReady
-                    ? "Click any open cell to run neighbors()"
-                    : "Warming up Python engine..."}
-                </span>
-              )}
-            </MineHudBar>
-          </div>
+          )}
         </div>
+
+        <div style={{ minWidth: 0 }}>
+          <MinePanelLabel>Click a cell to test</MinePanelLabel>
+
+          <div style={{ position: "relative" }}>
+            <MineMapViewer mapState={mapState} joinHudBottom />
+            <MineGridOverlay
+              rows={mapState.rows}
+              cols={mapState.cols}
+              hover={hover}
+              onHover={setHover}
+              onClick={handleCellClick}
+              selected={selected}
+              highlightedKeys={highlighted}
+              cellLabels={highlightedLabels}
+              showHoverLabel={showHoverCoords}
+              cursor="pointer"
+            />
+          </div>
+
+          <MineHudBar style={{ gap: 10 }}>
+            {selected ? (
+              <>
+                <span style={{ color: HUD_THEME.muted }}>Cell</span>
+                <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
+                  ({selected.r}, {selected.c})
+                </span>
+                <span style={{ color: HUD_THEME.muted, margin: "0 2px" }}>
+                  →
+                </span>
+                {running ? (
+                  <span style={{ color: HUD_THEME.muted, fontStyle: "italic" }}>
+                    running…
+                  </span>
+                ) : error ? (
+                  <span style={{ color: "var(--goldmine-error-fg)" }}>
+                    error
+                  </span>
+                ) : (
+                  <span style={{ fontWeight: 700, color: HUD_THEME.accent }}>
+                    {highlighted.size} neighbor
+                    {highlighted.size !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span style={{ color: HUD_THEME.muted, fontStyle: "italic" }}>
+                {engineReady
+                  ? "Click any open cell to run neighbors()"
+                  : "Warming up Python engine..."}
+              </span>
+            )}
+          </MineHudBar>
+        </div>
+      </div>
     </MineVisualFrame>
   );
 };

@@ -12,10 +12,12 @@ import pyodideWorkerContext from "../../../utils/pyodideWorkerContext";
 import {
   useArticleMap,
   getArticleMapPython,
+} from "../../pathfinding-gold-mine";
+import {
   useFullscreen,
   fullscreenRootStyle,
   fullscreenInnerStyle,
-} from "../../pathfinding-gold-mine";
+} from "../shared/useFullscreen";
 import type { Pos } from "../../pathfinding-gold-mine";
 
 export const DEFAULT_MARKERS_PYTHON = `type Cell = tuple[int, int]

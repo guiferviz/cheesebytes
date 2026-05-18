@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -19,11 +14,13 @@ import {
   clampInterior,
   MineMapViewer,
   MineGridOverlay,
+  setArticleMap,
+} from "../../pathfinding-gold-mine";
+import {
   useFullscreen,
   fullscreenRootStyle,
   fullscreenInnerStyle,
-  setArticleMap,
-} from "../../pathfinding-gold-mine";
+} from "../shared/useFullscreen";
 import type { Pos, MineMapState } from "../../pathfinding-gold-mine";
 import { generateGreedyMineDfsMaze } from "../greedy-gold-miner/GreedyGoldMineMapEditor";
 
@@ -548,9 +545,7 @@ export const MineMapCodeEditor: React.FC<MineMapCodeEditorProps> = ({
               Visual representation
             </span>
           </div>
-          <MineMapViewer
-            mapState={mapState}
-          >
+          <MineMapViewer mapState={mapState}>
             <MineGridOverlay
               rows={mapState.rows}
               cols={mapState.cols}

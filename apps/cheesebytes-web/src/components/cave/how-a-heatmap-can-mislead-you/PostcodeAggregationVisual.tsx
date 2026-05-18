@@ -7,7 +7,7 @@ import {
   fullscreenInnerStyle,
   fullscreenRootStyle,
   useFullscreen,
-} from "../../pathfinding-gold-mine/useFullscreen";
+} from "../shared/useFullscreen";
 
 import { DEFAULT_HEATMAP_PALETTE, clamp, colorForValue } from "./heatmap-core";
 import {
