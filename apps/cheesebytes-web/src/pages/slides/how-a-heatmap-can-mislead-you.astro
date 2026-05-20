@@ -1,0 +1,89 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+---
+
+<RevealLayout
+  title="How a Heatmap Can Mislead You"
+  description="How a grid-based heatmap can suggest different best locations without changing the underlying demand"
+  theme="dark"
+>
+  <section>
+    <aside class="notes">
+      <p>
+        Imagine you want to open a coffee shop. Choosing the right place is not
+        a small detail. It can be the difference between a busy shop and a very
+        expensive mistake.
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        So instead of guessing, you use a map. You add every clue you can find:
+        searches for coffee, office locations, busy areas, and nearby coffee
+        shops. But at first, it all looks like noise.
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        So you do something very normal: you divide the map into a grid, and you
+        count the demand in each area. And suddenly, you get a clear answer.
+        This area wins. This is where you should open.
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        You almost have the place. You are almost ready to sign. But then one
+        question changes everything: Why did you put the grid exactly there?
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        You move the grid just a little bit. The points are the same. The city
+        is the same. But now the map recommends a different place.
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        And that is the trap. You didn't find the best area. You found the best
+        area for that grid.
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        This is called the Modifiable Areal Unit Problem. When you turn real
+        points into artificial areas, your conclusions can depend on the size,
+        the shape, and the position of those areas.
+      </p>
+      <p>
+        And yes, the same happens with postal code areas. They are also
+        artificial.
+      </p>
+    </aside>
+  </section>
+
+  <section>
+    <aside class="notes">
+      <p>
+        Follow me for the full video, where we will see how to reduce the risk
+        before making decisions with maps.
+      </p>
+    </aside>
+  </section>
+</RevealLayout>
