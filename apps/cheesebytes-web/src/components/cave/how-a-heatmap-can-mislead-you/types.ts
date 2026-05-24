@@ -1,4 +1,5 @@
 export type GridType = "square" | "triangle" | "hex" | "postcode";
+export type PostcodeSubdivisionLevel = 0 | 1 | 2;
 
 export interface Point {
   x: number;
@@ -18,6 +19,7 @@ export interface HeatmapSettings {
   canvasSize: number;
   canvasWidth?: number;
   canvasHeight?: number;
+  postcodeSubdivisionLevel?: PostcodeSubdivisionLevel;
 }
 
 export type CellValues = Map<string, number>;

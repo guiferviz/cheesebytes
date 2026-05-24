@@ -10,9 +10,17 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
   <section>
     <aside class="notes">
       <p>
-        Imagine you want to open a coffee shop. Choosing the right place is not
-        a small detail. It can be the difference between a busy shop and a very
-        expensive mistake.
+        Imagine this is a map of coffee demand in Manhattan. Every dot is
+        someone looking for coffee. So this heatmap should at least point to
+        where demand is stronger. But not so fast.
+      </p>
+      <p>
+        Watch what happens if we move the grid... just a little bit. Now the
+        best location is here instead.
+      </p>
+      <p>
+        Two people can analyze the exact same data, both use perfectly valid
+        methods, and still reach different conclusions. Who's wrong?
       </p>
     </aside>
   </section>
@@ -20,9 +28,34 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
   <section>
     <aside class="notes">
       <p>
-        So instead of guessing, you use a map. You add every clue you can find:
-        searches for coffee, office locations, busy areas, and nearby coffee
-        shops. But at first, it all looks like noise.
+        Maybe nobody is wrong. Because the analysis did not start when we
+        counted the dots. It started earlier. When we decided what counts as one
+        area.
+      </p>
+      <p>
+        A small square grid. Or a larger grid. Hexagons. Postal codes... They
+        look different, but they all do the same thing: they draw lines around
+        the dots. And to see why that matters, let's push it to an extreme.
+      </p>
+      <p>
+        With the same dots, one boundary can split the demand almost evenly.
+        Another boundary can make the left side win. Another one can make the
+        right side win. Same dots. Different grouping. Different story.
+      </p>
+      <p>
+        So the question is not only: what does the map say? It is also: what did
+        we make the map say when we chose these boundaries?
+      </p>
+      <p>
+        And this is not just about coffee shops. We see maps like this
+        everywhere: election results, house prices, Covid cases, population
+        density. So should we stop using them?
+        <pre>
+          https://www.anychart.com/blog/2024/11/08/us-election-maps/
+          https://www.google.com/search?q=house+prices+by+state+us+public+results
+          https://en.wikipedia.org/wiki/COVID-19_pandemic_by_country_and_territory#/media/File:COVID-19_Outbreak_World_Map_Total_Deaths_per_Capita.svg
+          https://studio.foursquare.com/public/5c653399-e79c-4aee-9891-df378da2dd43
+        </pre>
       </p>
     </aside>
   </section>
@@ -30,9 +63,23 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
   <section>
     <aside class="notes">
       <p>
-        To make the map easier to read, you place a grid over the map and count
-        how many signals fall inside each cell. And suddenly, you get a clear
-        answer. This area wins. This is where you should open.
+        No. Maps like this can still be useful. But we need to stop asking only:
+        which area wins? We also need to ask: how easily does the winner change?
+      </p>
+      <p>
+        In this first case, small changes in the grid keep changing the winner.
+        One grid says here. Another grid says there. And after a few versions,
+        the map is full of different answers. That is a fragile result.
+      </p>
+      <p>
+        But now look at this second case. The exact winning cell may move a
+        little, but the same general area keeps coming back. Again. And again.
+        That is a much stronger signal. That is the idea of stability. A
+        conclusion that survives more than one map.
+      </p>
+      <p>
+        But even then, there is another problem: what if we cannot move the
+        boundaries at all?
       </p>
     </aside>
   </section>
@@ -40,8 +87,19 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
   <section>
     <aside class="notes">
       <p>
-        You almost have the place. You are almost ready to sign. But then one
-        question changes everything: Why did you put the grid exactly there?
+        Instead of drawing our own grid, we can aggregate the same points by
+        postal code, by district, or by state. Those boundaries are fixed. We
+        cannot just move them around.
+      </p>
+      <p>
+        But sometimes, you can still change the scale. Look at the same question
+        from far away. Then zoom in. A country becomes states. A state becomes
+        cities. A city becomes neighborhoods.
+      </p>
+      <p>
+        If the story changes completely when you zoom in, be careful. But if the
+        same general pattern survives at different scales, the conclusion
+        becomes easier to trust.
       </p>
     </aside>
   </section>
@@ -49,41 +107,52 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
   <section>
     <aside class="notes">
       <p>
-        You move the grid just a little bit. The points are the same. The city
-        is the same. But now the map recommends a different place.
+        But even changing scale does not solve everything. Because boundaries
+        have another problem: they are sharp, but reality is not.
+      </p>
+      <p>
+        A customer just across the line is still nearby. On the map, the
+        boundary looks sharp. But on the street, there is no wall there. No real
+        break in the city. The line separates areas on the map, not reality on
+        the ground.
+      </p>
+      <p>
+        So a hotspot split by that line is still one hotspot. So instead of
+        treating every cell as completely isolated, we can smooth the map. Each
+        area looks not only at itself, but also at its neighbors.
+      </p>
+      <p>
+        But then you might ask: why use cells at all? Why not remove the grid
+        completely, and use a smooth heatmap? That can help. But it is not
+        magic.
+      </p>
+      <p>
+        Now you have to choose how far each point spreads. Too little smoothing,
+        and the map still looks noisy. Too much smoothing, and different
+        hotspots can melt into one.
+      </p>
+      <p>
+        So again, the goal is not to remove every choice. The goal is to check
+        whether the conclusion survives reasonable choices.
       </p>
     </aside>
   </section>
 
   <section>
     <aside class="notes">
-      <p>
-        And that is the trap. You didn't find the best area. You found the best
-        area for that grid.
-      </p>
+      <p></p>
     </aside>
   </section>
 
   <section>
     <aside class="notes">
-      <p>
-        This is called the Modifiable Areal Unit Problem. When you turn real
-        points into artificial areas, your conclusions can depend on the size,
-        the shape, and the position of those areas.
-      </p>
-      <p>
-        And yes, the same happens with postal code areas. They are also
-        artificial.
-      </p>
+      <p></p>
     </aside>
   </section>
 
   <section>
     <aside class="notes">
-      <p>
-        Follow me for the full video, where we will see how to reduce the risk
-        before making decisions with maps.
-      </p>
+      <p></p>
     </aside>
   </section>
 </RevealLayout>

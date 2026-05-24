@@ -1,12 +1,17 @@
 import { useMemo, useSyncExternalStore } from "react";
 
-import { generateUniformStoryPoints } from "./heatmap-core";
+import {
+  generateSingleHotspotStoryPoints,
+  generateTwoHotspotStoryPoints,
+  generateUniformStoryPoints,
+} from "./heatmap-core";
 import type { Point } from "./types";
 
 export const DEFAULT_HEATMAP_POINT_SEED = 124;
 export const DEFAULT_HEATMAP_POINT_COUNT = 40;
 export const DEFAULT_HEATMAP_CANVAS_WIDTH = 340;
 export const DEFAULT_HEATMAP_CANVAS_HEIGHT = 340;
+export const DEFAULT_HEATMAP_POINT_DISTRIBUTION = "uniform" as const;
 export const HEATMAP_POINT_COUNT_STEP = 1;
 export const HEATMAP_POINT_COUNT_MIN = 10;
 export const HEATMAP_POINT_COUNT_MAX = 320;
@@ -14,11 +19,17 @@ export const HEATMAP_CANVAS_DIMENSION_STEP = 24;
 export const HEATMAP_CANVAS_DIMENSION_MIN = 220;
 export const HEATMAP_CANVAS_DIMENSION_MAX = 560;
 
+export type HeatmapPointDistribution =
+  | "uniform"
+  | "single-hotspot"
+  | "double-hotspot";
+
 interface HeatmapPointState {
   seed: number;
   pointCount: number;
   canvasWidth: number;
   canvasHeight: number;
+  pointDistribution: HeatmapPointDistribution;
 }
 
 let currentPointState: HeatmapPointState = {
@@ -26,6 +37,7 @@ let currentPointState: HeatmapPointState = {
   pointCount: DEFAULT_HEATMAP_POINT_COUNT,
   canvasWidth: DEFAULT_HEATMAP_CANVAS_WIDTH,
   canvasHeight: DEFAULT_HEATMAP_CANVAS_HEIGHT,
+  pointDistribution: DEFAULT_HEATMAP_POINT_DISTRIBUTION,
 };
 
 const listeners = new Set<() => void>();
@@ -51,6 +63,11 @@ function normalizePointState(state: HeatmapPointState): HeatmapPointState {
       HEATMAP_CANVAS_DIMENSION_MAX,
       Math.max(HEATMAP_CANVAS_DIMENSION_MIN, Math.trunc(state.canvasHeight)),
     ),
+    pointDistribution:
+      state.pointDistribution === "single-hotspot" ||
+      state.pointDistribution === "double-hotspot"
+        ? state.pointDistribution
+        : DEFAULT_HEATMAP_POINT_DISTRIBUTION,
   };
 }
 
@@ -74,7 +91,8 @@ export function setHeatmapPointState(
     nextState.seed === currentPointState.seed &&
     nextState.pointCount === currentPointState.pointCount &&
     nextState.canvasWidth === currentPointState.canvasWidth &&
-    nextState.canvasHeight === currentPointState.canvasHeight
+    nextState.canvasHeight === currentPointState.canvasHeight &&
+    nextState.pointDistribution === currentPointState.pointDistribution
   ) {
     return;
   }
@@ -114,20 +132,40 @@ export function useHeatmapPointState(): HeatmapPointState {
 }
 
 export function useHeatmapArticlePoints(padding = 10): Point[] {
-  const { seed, pointCount, canvasWidth, canvasHeight } =
+  const { seed, pointCount, canvasWidth, canvasHeight, pointDistribution } =
     useHeatmapPointState();
-  const reservedPoints = useMemo(
-    () =>
-      generateUniformStoryPoints(
+  const reservedPoints = useMemo(() => {
+    if (pointDistribution === "single-hotspot") {
+      return generateSingleHotspotStoryPoints(
         HEATMAP_POINT_COUNT_MAX,
         canvasWidth,
         seed,
         padding,
         HEATMAP_POINT_COUNT_MAX,
         canvasHeight,
-      ),
-    [canvasHeight, canvasWidth, padding, seed],
-  );
+      );
+    }
+
+    if (pointDistribution === "double-hotspot") {
+      return generateTwoHotspotStoryPoints(
+        HEATMAP_POINT_COUNT_MAX,
+        canvasWidth,
+        seed,
+        padding,
+        HEATMAP_POINT_COUNT_MAX,
+        canvasHeight,
+      );
+    }
+
+    return generateUniformStoryPoints(
+      HEATMAP_POINT_COUNT_MAX,
+      canvasWidth,
+      seed,
+      padding,
+      HEATMAP_POINT_COUNT_MAX,
+      canvasHeight,
+    );
+  }, [canvasHeight, canvasWidth, padding, pointDistribution, seed]);
 
   return useMemo(
     () => reservedPoints.slice(0, pointCount),

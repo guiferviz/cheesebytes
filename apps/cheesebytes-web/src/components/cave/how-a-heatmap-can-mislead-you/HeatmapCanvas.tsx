@@ -8,6 +8,7 @@ import {
   getHexCellPolygon,
   getMaxCellValue,
   getPostcodeCells,
+  getPostcodeLayout,
   getSquareCellPolygon,
   getSquareVisibleRange,
   getTriangleCellPolygon,
@@ -18,7 +19,13 @@ import {
   triangleKey,
   toCanvasSpace,
 } from "./heatmap-core";
-import type { CellValues, GridType, Origin, Point } from "./types";
+import type {
+  CellValues,
+  GridType,
+  Origin,
+  Point,
+  PostcodeSubdivisionLevel,
+} from "./types";
 
 interface HeatmapCanvasProps {
   points: Point[];
@@ -36,6 +43,7 @@ interface HeatmapCanvasProps {
   showBorder?: boolean;
   interactive?: boolean;
   cellValues?: CellValues;
+  postcodeSubdivisionLevel?: PostcodeSubdivisionLevel;
   pointRadius?: number;
   style?: CSSProperties;
   onOriginChange?: Dispatch<SetStateAction<Origin>>;
@@ -190,6 +198,7 @@ export function HeatmapCanvas({
   showBorder = true,
   interactive = false,
   cellValues,
+  postcodeSubdivisionLevel = 0,
   pointRadius = 2.6,
   style,
   onOriginChange,
@@ -312,9 +321,12 @@ export function HeatmapCanvas({
       canvasSize: logicalWidth,
       canvasWidth: logicalWidth,
       canvasHeight: logicalHeight,
+      postcodeSubdivisionLevel,
     };
     const values = cellValues ?? getGridCellValues(points, settings);
     const maxValue = getMaxCellValue(values);
+    const postcodeLayout =
+      gridType === "postcode" ? getPostcodeLayout(settings) : null;
     const emptyFill = isDark
       ? "rgba(255,255,255,0.015)"
       : "rgba(43,34,24,0.025)";
@@ -362,7 +374,9 @@ export function HeatmapCanvas({
           ctx.stroke();
         }
       } else if (gridType === "postcode") {
-        for (const cell of getPostcodeCells(settings)) {
+        const postcodeCells =
+          postcodeLayout?.cells ?? getPostcodeCells(settings);
+        for (const cell of postcodeCells) {
           const value = values.get(cell.key) ?? 0;
           drawPolygon(ctx, cell.polygon);
           ctx.fillStyle =
@@ -373,9 +387,39 @@ export function HeatmapCanvas({
             value > 0 ? 0.18 + 0.76 * (value / Math.max(maxValue, 1)) : 1;
           ctx.fill();
           ctx.globalAlpha = 1;
+        }
+
+        if (postcodeSubdivisionLevel === 0 || !postcodeLayout) {
           ctx.strokeStyle = postcodeStroke;
           ctx.lineWidth = 0.95;
-          ctx.stroke();
+          for (const cell of postcodeCells) {
+            drawPolygon(ctx, cell.polygon);
+            ctx.stroke();
+          }
+        } else {
+          ctx.save();
+          ctx.strokeStyle = postcodeStroke;
+          ctx.lineWidth = 1.05;
+          ctx.setLineDash([]);
+          for (const cell of postcodeLayout.baseCells) {
+            drawPolygon(ctx, cell.polygon);
+            ctx.stroke();
+          }
+
+          for (const line of postcodeLayout.divisionLines) {
+            ctx.beginPath();
+            ctx.moveTo(line.start.x, line.start.y);
+            ctx.lineTo(line.end.x, line.end.y);
+            if (line.level === 1) {
+              ctx.setLineDash([8, 6]);
+              ctx.lineWidth = 1.15;
+            } else {
+              ctx.setLineDash([1.2, 6]);
+              ctx.lineWidth = 1.9;
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
         }
       } else {
         for (const { q, r } of getVisibleHexCoords(settings)) {
@@ -444,6 +488,7 @@ export function HeatmapCanvas({
     logicalWidth,
     orientation,
     origin,
+    postcodeSubdivisionLevel,
     pointRadius,
     points,
     showAggregation,

@@ -13,6 +13,7 @@ import {
   DEFAULT_HEATMAP_CANVAS_HEIGHT,
   DEFAULT_HEATMAP_CANVAS_WIDTH,
   DEFAULT_HEATMAP_POINT_COUNT,
+  DEFAULT_HEATMAP_POINT_DISTRIBUTION,
   DEFAULT_HEATMAP_POINT_SEED,
   HEATMAP_CANVAS_DIMENSION_STEP,
   HEATMAP_POINT_COUNT_MAX,
@@ -25,10 +26,67 @@ import {
   useHeatmapArticlePoints,
   useHeatmapPointState,
 } from "./heatmap-article";
-import { nudgeOrigin } from "./heatmap-core";
+import {
+  nudgeOrigin,
+  getGridCellValues,
+  getMaxCellValue,
+  getSquareCellPolygon,
+  getTriangleCellPolygon,
+  getHexCellPolygon,
+  getPostcodeCells,
+} from "./heatmap-core";
 import { HeatmapHudButton } from "./shared";
-import type { GridType, Origin } from "./types";
+import type {
+  GridType,
+  Origin,
+  Point,
+  HeatmapSettings,
+  PostcodeSubdivisionLevel,
+} from "./types";
 import { useScopedVimMode } from "./useScopedVimMode";
+
+function getPolygonCentroid(polygon: Point[]): Point {
+  let x = 0,
+    y = 0;
+  for (const p of polygon) {
+    x += p.x;
+    y += p.y;
+  }
+  return { x: x / polygon.length, y: y / polygon.length };
+}
+
+function getCenterForCell(
+  key: string,
+  settings: HeatmapSettings,
+): Point | null {
+  if (settings.gridType === "postcode") {
+    const cells = getPostcodeCells(settings);
+    const cell = cells.find((candidate) => candidate.key === key);
+    return cell ? getPolygonCentroid(cell.polygon) : null;
+  }
+
+  const [firstCoord, secondCoord] = key.split(",");
+  const x = Number(firstCoord);
+  const y = Number(secondCoord);
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return null;
+  }
+
+  if (settings.gridType === "square") {
+    const polygon = getSquareCellPolygon(x, y, settings);
+    return getPolygonCentroid(polygon);
+  }
+  if (settings.gridType === "triangle") {
+    const polygon = getTriangleCellPolygon(x, y, settings);
+    return getPolygonCentroid(polygon);
+  }
+
+  const polygon = getHexCellPolygon(x, y, settings);
+  return getPolygonCentroid(polygon);
+
+  return null;
+}
 
 const EXPLORER_GRIDS: readonly GridType[] = [
   "square",
@@ -191,7 +249,11 @@ export function HeatmapPointCloudVisual({
   const { canvasWidth, canvasHeight } = useHeatmapPointState();
 
   useEffect(() => {
-    setHeatmapPointState({ pointCount, seed });
+    setHeatmapPointState({
+      pointCount,
+      seed,
+      pointDistribution: DEFAULT_HEATMAP_POINT_DISTRIBUTION,
+    });
   }, [pointCount, seed]);
 
   const points = useHeatmapArticlePoints();
@@ -205,6 +267,7 @@ export function HeatmapPointCloudVisual({
       seed,
       canvasWidth: DEFAULT_HEATMAP_CANVAS_WIDTH,
       canvasHeight: DEFAULT_HEATMAP_CANVAS_HEIGHT,
+      pointDistribution: DEFAULT_HEATMAP_POINT_DISTRIBUTION,
     });
   }, [pointCount, seed]);
   const pointCloudCanvasStyle = useMemo<CSSProperties>(() => {
@@ -228,6 +291,23 @@ export function HeatmapPointCloudVisual({
         key: "s",
         label: "Set seed",
         run: startSeedCommand,
+      },
+      {
+        key: "0",
+        label: "Uniform random points",
+        run: () => setHeatmapPointState({ pointDistribution: "uniform" }),
+      },
+      {
+        key: "1",
+        label: "Single hotspot",
+        run: () =>
+          setHeatmapPointState({ pointDistribution: "single-hotspot" }),
+      },
+      {
+        key: "2",
+        label: "Two hotspots",
+        run: () =>
+          setHeatmapPointState({ pointDistribution: "double-hotspot" }),
       },
       {
         key: "-",
@@ -429,6 +509,8 @@ export function HeatmapExplorerVisual() {
   const rootRef = useRef<HTMLDivElement>(null);
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef);
   const [gridType, setGridType] = useState<GridType>("square");
+  const [postcodeSubdivisionLevel, setPostcodeSubdivisionLevel] =
+    useState<PostcodeSubdivisionLevel>(0);
   const [cellSize, setCellSize] = useState(48);
   const [orientation, setOrientation] = useState(0);
   const { pointCount, seed, canvasWidth, canvasHeight } =
@@ -438,7 +520,68 @@ export function HeatmapExplorerVisual() {
   const [origin, setOrigin] = useState<Origin>(() => ({ ...STORY_ORIGIN }));
   const controlsVisible = !isFullscreen && showControls;
 
+  const [trackingActive, setTrackingActive] = useState(false);
+  const [markers, setMarkers] = useState<Point[]>([]);
+
   const points = useHeatmapArticlePoints();
+
+  useEffect(() => {
+    if (!trackingActive) return;
+    const settings: HeatmapSettings = {
+      gridType,
+      cellSize,
+      orientation,
+      origin,
+      canvasSize: Math.max(canvasWidth, canvasHeight),
+      canvasWidth,
+      canvasHeight,
+      postcodeSubdivisionLevel,
+    };
+    const values = getGridCellValues(points, settings);
+    const maxValue = getMaxCellValue(values);
+    if (maxValue === 0) return;
+
+    const newMarkers: Point[] = [];
+    for (const [key, value] of values.entries()) {
+      if (value === maxValue) {
+        const center = getCenterForCell(key, settings);
+        if (center) newMarkers.push(center);
+      }
+    }
+
+    if (newMarkers.length > 0) {
+      setMarkers((prev) => {
+        const added = [...prev];
+        // Porcentaje de solapamiento permitido (0.25 = 25% del tamaño de la celda)
+        // Puedes cambiar este valor al porcentaje que prefieras para evitar saturar el mapa.
+        const MIN_DISTANCE_RATIO = 0.25;
+        const minDistanceSq =
+          cellSize * MIN_DISTANCE_RATIO * (cellSize * MIN_DISTANCE_RATIO);
+
+        for (const nm of newMarkers) {
+          const isTooClose = added.some((m) => {
+            const dx = m.x - nm.x;
+            const dy = m.y - nm.y;
+            return dx * dx + dy * dy < minDistanceSq;
+          });
+          if (!isTooClose) {
+            added.push(nm);
+          }
+        }
+        return added;
+      });
+    }
+  }, [
+    trackingActive,
+    gridType,
+    cellSize,
+    orientation,
+    origin,
+    canvasWidth,
+    canvasHeight,
+    points,
+    postcodeSubdivisionLevel,
+  ]);
 
   const nudge = (dx: number, dy: number) => {
     setOrigin((current) => nudgeOrigin(current, dx, dy));
@@ -454,12 +597,32 @@ export function HeatmapExplorerVisual() {
     });
   };
 
-  const commands = useMemo<VimCommand[]>(
-    () => [
+  const cyclePostcodeSubdivision = () => {
+    if (gridType !== "postcode") {
+      return;
+    }
+
+    setPostcodeSubdivisionLevel(
+      (current) => ((current + 1) % 3) as PostcodeSubdivisionLevel,
+    );
+  };
+
+  const commands = useMemo<VimCommand[]>(() => {
+    const nextCommands: VimCommand[] = [
       {
         key: "f",
         label: "Toggle fullscreen",
         run: toggleFullscreen,
+      },
+      {
+        key: "m",
+        label: "Toggle MAUP Tracking",
+        run: () => {
+          setTrackingActive((prev) => {
+            setMarkers([]);
+            return !prev;
+          });
+        },
       },
       {
         key: "g",
@@ -552,9 +715,18 @@ export function HeatmapExplorerVisual() {
         hidden: true,
         run: () => nudge(0, 12),
       },
-    ],
-    [toggleFullscreen],
-  );
+    ];
+
+    if (gridType === "postcode") {
+      nextCommands.splice(3, 0, {
+        key: "s",
+        label: "Cycle postcode subdivisions",
+        run: cyclePostcodeSubdivision,
+      });
+    }
+
+    return nextCommands;
+  }, [gridType, toggleFullscreen]);
   useScopedVimMode({
     rootRef,
     modeId: "heatmap-explorer",
@@ -647,6 +819,17 @@ export function HeatmapExplorerVisual() {
               >
                 Postcode
               </HeatmapHudButton>
+              {gridType === "postcode" && (
+                <HeatmapHudButton
+                  active={postcodeSubdivisionLevel > 0}
+                  onClick={cyclePostcodeSubdivision}
+                  style={MINIMAL_BUTTON_STYLE}
+                >
+                  {postcodeSubdivisionLevel === 0
+                    ? "Subdivisions: none"
+                    : `Subdivisions: ${postcodeSubdivisionLevel}`}
+                </HeatmapHudButton>
+              )}
               <HeatmapHudButton
                 onClick={() => setShowControls((current) => !current)}
                 style={CONTROLS_BUTTON_STYLE}
@@ -679,6 +862,24 @@ export function HeatmapExplorerVisual() {
                   onChange={(event) => setCellSize(Number(event.target.value))}
                 />
               </label>
+
+              {gridType === "postcode" && (
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span>Postcode subdivisions: {postcodeSubdivisionLevel}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={1}
+                    value={postcodeSubdivisionLevel}
+                    onChange={(event) =>
+                      setPostcodeSubdivisionLevel(
+                        Number(event.target.value) as PostcodeSubdivisionLevel,
+                      )
+                    }
+                  />
+                </label>
+              )}
 
               <label style={{ display: "grid", gap: 6 }}>
                 <span>Points: {pointCount}</span>
@@ -759,26 +960,66 @@ export function HeatmapExplorerVisual() {
               width: isFullscreen ? "100%" : undefined,
             }}
           >
-            <HeatmapCanvas
-              points={points}
-              canvasWidth={canvasWidth}
-              canvasHeight={canvasHeight}
-              gridType={gridType}
-              cellSize={cellSize}
-              orientation={orientation}
-              origin={origin}
-              showAggregation={true}
-              showBackdrop={false}
-              showBorder={false}
-              showPoints={showPoints}
-              interactive={true}
-              onOriginChange={setOrigin}
-              style={fullscreenCanvasStyle(
-                isFullscreen,
-                { width: canvasWidth, height: canvasHeight },
-                "calc(min(100vw, 100vh) - 40px)",
-              )}
-            />
+            <div
+              style={{
+                position: "relative",
+                width: canvasWidth,
+                height: canvasHeight,
+                ...fullscreenCanvasStyle(
+                  isFullscreen,
+                  { width: canvasWidth, height: canvasHeight },
+                  "calc(min(100vw, 100vh) - 40px)",
+                ),
+              }}
+            >
+              <HeatmapCanvas
+                points={points}
+                canvasWidth={canvasWidth}
+                canvasHeight={canvasHeight}
+                gridType={gridType}
+                cellSize={cellSize}
+                orientation={orientation}
+                origin={origin}
+                postcodeSubdivisionLevel={postcodeSubdivisionLevel}
+                showAggregation={true}
+                showBackdrop={false}
+                showBorder={false}
+                showPoints={showPoints}
+                interactive={true}
+                onOriginChange={setOrigin}
+                style={{ width: "100%", height: "100%" }}
+              />
+              <svg
+                viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  pointerEvents: "none",
+                }}
+              >
+                {trackingActive
+                  ? markers.map((m, i) => (
+                      <g key={i} transform={`translate(${m.x}, ${m.y})`}>
+                        <path
+                          d="M0 0 C -8 -10 -12 -16 -12 -22 A 12 12 0 1 1 12 -22 C 12 -16 8 -10 0 0 Z"
+                          fill="var(--heatmapviz-accent, rgba(239, 68, 68, 0.9))"
+                          stroke="var(--heatmapviz-panel-bg, #fff)"
+                          strokeWidth={1.5}
+                        />
+                        <circle
+                          cx={0}
+                          cy={-22}
+                          r={4}
+                          fill="var(--heatmapviz-panel-bg, #fff)"
+                          stroke="none"
+                        />
+                      </g>
+                    ))
+                  : null}
+              </svg>
+            </div>
           </div>
         </div>
       </div>

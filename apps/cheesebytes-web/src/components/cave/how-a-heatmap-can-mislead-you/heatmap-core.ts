@@ -6,6 +6,7 @@ import type {
   HeatmapSettings,
   Origin,
   Point,
+  PostcodeSubdivisionLevel,
 } from "./types";
 
 const SQRT3 = Math.sqrt(3);
@@ -32,6 +33,25 @@ interface PostcodeSeed {
   key: string;
   gridPoint: Point;
   canvasPoint: [number, number];
+}
+
+interface PostcodeCell {
+  key: string;
+  baseKey: string;
+  polygon: Point[];
+  level: PostcodeSubdivisionLevel;
+}
+
+interface PostcodeDivisionLine {
+  start: Point;
+  end: Point;
+  level: 1 | 2;
+}
+
+interface PostcodeLayout {
+  baseCells: PostcodeCell[];
+  cells: PostcodeCell[];
+  divisionLines: PostcodeDivisionLine[];
 }
 
 export const DEFAULT_HEATMAP_PALETTE = [
@@ -288,6 +308,133 @@ export function generateUniformStoryPoints(
       y: clamp(padding + v * usableHeight, padding, canvasHeight - padding),
     };
   });
+}
+
+interface HeatmapHotspot {
+  x: number;
+  y: number;
+  spread: number;
+  weight: number;
+}
+
+function generateHotspotStoryPoints(
+  count: number,
+  canvasWidth: number,
+  hotspots: readonly HeatmapHotspot[],
+  seed = 124,
+  padding = 10,
+  layoutCount = count,
+  canvasHeight = canvasWidth,
+  hotspotRatio = 0.28,
+): Point[] {
+  const reservedCount = Math.max(count, layoutCount);
+  const rand = mulberry32(seed + 9973);
+  const usableWidth = canvasWidth - padding * 2;
+  const usableHeight = canvasHeight - padding * 2;
+  const totalWeight = hotspots.reduce(
+    (sum, hotspot) => sum + hotspot.weight,
+    0,
+  );
+  const minBackgroundCount = Math.max(6, hotspots.length * 4);
+  const desiredHotspotCount = Math.max(
+    Math.round(reservedCount * hotspotRatio),
+    hotspots.length * 4,
+  );
+  const hotspotCount = Math.min(
+    desiredHotspotCount,
+    Math.max(0, reservedCount - minBackgroundCount),
+  );
+  const backgroundCount = reservedCount - hotspotCount;
+
+  const pickHotspot = () => {
+    const roll = rand() * totalWeight;
+    let cumulative = 0;
+    for (const hotspot of hotspots) {
+      cumulative += hotspot.weight;
+      if (roll <= cumulative) {
+        return hotspot;
+      }
+    }
+    return hotspots[hotspots.length - 1];
+  };
+
+  const points = generateUniformStoryPoints(
+    backgroundCount,
+    canvasWidth,
+    seed,
+    padding,
+    backgroundCount,
+    canvasHeight,
+  );
+
+  for (let index = 0; index < hotspotCount; index += 1) {
+    const hotspot = pickHotspot();
+    points.push({
+      x: clamp(
+        padding + usableWidth * (hotspot.x + randomBell(rand) * hotspot.spread),
+        padding,
+        canvasWidth - padding,
+      ),
+      y: clamp(
+        padding +
+          usableHeight * (hotspot.y + randomBell(rand) * hotspot.spread),
+        padding,
+        canvasHeight - padding,
+      ),
+    });
+  }
+
+  for (let index = points.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(rand() * (index + 1));
+    const current = points[index];
+    points[index] = points[swapIndex];
+    points[swapIndex] = current;
+  }
+
+  return points;
+}
+
+export function generateSingleHotspotStoryPoints(
+  count: number,
+  canvasWidth: number,
+  seed = 124,
+  padding = 10,
+  layoutCount = count,
+  canvasHeight = canvasWidth,
+): Point[] {
+  return generateHotspotStoryPoints(
+    count,
+    canvasWidth,
+    [{ x: 0.58, y: 0.42, spread: 0.1, weight: 1 }],
+    seed,
+    padding,
+    layoutCount,
+    canvasHeight,
+    0.28,
+  );
+}
+
+export function generateTwoHotspotStoryPoints(
+  count: number,
+  canvasWidth: number,
+  seed = 124,
+  padding = 10,
+  layoutCount = count,
+  canvasHeight = canvasWidth,
+): Point[] {
+  return generateHotspotStoryPoints(
+    count,
+    canvasWidth,
+    [
+      { x: 0.3, y: 0.34, spread: 0.08, weight: 0.52 },
+      { x: 0.74, y: 0.66, spread: 0.08, weight: 0.48 },
+    ],
+    seed,
+    padding,
+    layoutCount,
+    canvasHeight,
+    0.34,
+  );
 }
 
 export function getSquareVisibleRange(
@@ -747,6 +894,276 @@ function buildPostcodePolygonFromEdges(
   return rebuilt;
 }
 
+function polygonArea(polygon: Point[]) {
+  if (polygon.length < 3) {
+    return 0;
+  }
+
+  let area = 0;
+  for (let index = 0; index < polygon.length; index += 1) {
+    const current = polygon[index];
+    const next = polygon[(index + 1) % polygon.length];
+    area += current.x * next.y - next.x * current.y;
+  }
+
+  return Math.abs(area) / 2;
+}
+
+function polygonCentroid(polygon: Point[]): Point {
+  if (polygon.length === 0) {
+    return { x: 0, y: 0 };
+  }
+
+  let twiceArea = 0;
+  let x = 0;
+  let y = 0;
+
+  for (let index = 0; index < polygon.length; index += 1) {
+    const current = polygon[index];
+    const next = polygon[(index + 1) % polygon.length];
+    const cross = current.x * next.y - next.x * current.y;
+    twiceArea += cross;
+    x += (current.x + next.x) * cross;
+    y += (current.y + next.y) * cross;
+  }
+
+  if (Math.abs(twiceArea) < 1e-6) {
+    const average = polygon.reduce(
+      (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
+      { x: 0, y: 0 },
+    );
+    return {
+      x: average.x / polygon.length,
+      y: average.y / polygon.length,
+    };
+  }
+
+  return {
+    x: x / (3 * twiceArea),
+    y: y / (3 * twiceArea),
+  };
+}
+
+function dedupePolygonPoints(points: Point[], tolerance = 0.75) {
+  const deduped: Point[] = [];
+
+  for (const point of points) {
+    const previous = deduped[deduped.length - 1];
+    if (
+      previous &&
+      Math.hypot(previous.x - point.x, previous.y - point.y) <= tolerance
+    ) {
+      continue;
+    }
+
+    deduped.push(point);
+  }
+
+  if (deduped.length > 1) {
+    const first = deduped[0];
+    const last = deduped[deduped.length - 1];
+    if (Math.hypot(first.x - last.x, first.y - last.y) <= tolerance) {
+      deduped.pop();
+    }
+  }
+
+  return deduped;
+}
+
+function signedDistanceToLine(point: Point, linePoint: Point, normal: Point) {
+  return (
+    (point.x - linePoint.x) * normal.x + (point.y - linePoint.y) * normal.y
+  );
+}
+
+function interpolateIntersection(
+  start: Point,
+  end: Point,
+  startDistance: number,
+  endDistance: number,
+) {
+  const denominator = startDistance - endDistance;
+  if (Math.abs(denominator) < 1e-6) {
+    return start;
+  }
+
+  const t = startDistance / denominator;
+  return {
+    x: start.x + (end.x - start.x) * t,
+    y: start.y + (end.y - start.y) * t,
+  };
+}
+
+function clipPolygonToHalfPlane(
+  polygon: Point[],
+  linePoint: Point,
+  normal: Point,
+  keepPositive: boolean,
+) {
+  const clipped: Point[] = [];
+  const epsilon = 1e-6;
+
+  for (let index = 0; index < polygon.length; index += 1) {
+    const current = polygon[index];
+    const next = polygon[(index + 1) % polygon.length];
+    const currentDistance = signedDistanceToLine(current, linePoint, normal);
+    const nextDistance = signedDistanceToLine(next, linePoint, normal);
+    const currentInside = keepPositive
+      ? currentDistance >= -epsilon
+      : currentDistance <= epsilon;
+    const nextInside = keepPositive
+      ? nextDistance >= -epsilon
+      : nextDistance <= epsilon;
+
+    if (currentInside && nextInside) {
+      clipped.push(next);
+      continue;
+    }
+
+    if (currentInside && !nextInside) {
+      clipped.push(
+        interpolateIntersection(current, next, currentDistance, nextDistance),
+      );
+      continue;
+    }
+
+    if (!currentInside && nextInside) {
+      clipped.push(
+        interpolateIntersection(current, next, currentDistance, nextDistance),
+      );
+      clipped.push(next);
+    }
+  }
+
+  return dedupePolygonPoints(clipped);
+}
+
+function findLineSegmentInsidePolygon(
+  polygon: Point[],
+  linePoint: Point,
+  normal: Point,
+) {
+  const epsilon = 1e-6;
+  const intersections: Point[] = [];
+
+  for (let index = 0; index < polygon.length; index += 1) {
+    const start = polygon[index];
+    const end = polygon[(index + 1) % polygon.length];
+    const startDistance = signedDistanceToLine(start, linePoint, normal);
+    const endDistance = signedDistanceToLine(end, linePoint, normal);
+
+    if (Math.abs(startDistance) <= epsilon) {
+      intersections.push(start);
+    }
+    if (Math.abs(endDistance) <= epsilon) {
+      intersections.push(end);
+    }
+    if (startDistance * endDistance < -epsilon * epsilon) {
+      intersections.push(
+        interpolateIntersection(start, end, startDistance, endDistance),
+      );
+    }
+  }
+
+  const unique = dedupePolygonPoints(intersections, 1.2);
+  if (unique.length < 2) {
+    return null;
+  }
+
+  let bestPair: [Point, Point] | null = null;
+  let bestDistance = 0;
+
+  for (let leftIndex = 0; leftIndex < unique.length; leftIndex += 1) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < unique.length;
+      rightIndex += 1
+    ) {
+      const left = unique[leftIndex];
+      const right = unique[rightIndex];
+      const distance = Math.hypot(left.x - right.x, left.y - right.y);
+      if (distance > bestDistance) {
+        bestDistance = distance;
+        bestPair = [left, right];
+      }
+    }
+  }
+
+  return bestPair;
+}
+
+function getPolygonBoundsBox(polygon: Point[]) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  for (const point of polygon) {
+    minX = Math.min(minX, point.x);
+    maxX = Math.max(maxX, point.x);
+    minY = Math.min(minY, point.y);
+    maxY = Math.max(maxY, point.y);
+  }
+
+  return { minX, maxX, minY, maxY };
+}
+
+function splitPostcodePolygon(
+  polygon: Point[],
+  splitSeed: string,
+  level: 1 | 2,
+) {
+  const totalArea = polygonArea(polygon);
+  if (totalArea < 24) {
+    return null;
+  }
+
+  const center = polygonCentroid(polygon);
+  const bounds = getPolygonBoundsBox(polygon);
+  const span = Math.max(
+    bounds.maxX - bounds.minX,
+    bounds.maxY - bounds.minY,
+    1,
+  );
+  const minChildArea = totalArea * 0.18;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const rand = mulberry32(
+      hashString(`${splitSeed}:level-${level}:attempt-${attempt}`),
+    );
+    const angle = rand() * Math.PI;
+    const tangent = { x: Math.cos(angle), y: Math.sin(angle) };
+    const normal = { x: -tangent.y, y: tangent.x };
+    const offset = (rand() - 0.5) * span * (attempt === 0 ? 0 : 0.18);
+    const linePoint = {
+      x: center.x + normal.x * offset,
+      y: center.y + normal.y * offset,
+    };
+
+    const positive = clipPolygonToHalfPlane(polygon, linePoint, normal, true);
+    const negative = clipPolygonToHalfPlane(polygon, linePoint, normal, false);
+    const segment = findLineSegmentInsidePolygon(polygon, linePoint, normal);
+
+    if (
+      positive.length < 3 ||
+      negative.length < 3 ||
+      polygonArea(positive) < minChildArea ||
+      polygonArea(negative) < minChildArea ||
+      !segment ||
+      Math.hypot(segment[0].x - segment[1].x, segment[0].y - segment[1].y) < 12
+    ) {
+      continue;
+    }
+
+    return {
+      polygons: [positive, negative] as const,
+      line: { start: segment[0], end: segment[1], level },
+    };
+  }
+
+  return null;
+}
+
 function getPostcodeSeed(
   gx: number,
   gy: number,
@@ -785,7 +1202,7 @@ function getPostcodeSeed(
   };
 }
 
-export function getPostcodeCells(settings: HeatmapSettings) {
+function getBasePostcodeCells(settings: HeatmapSettings): PostcodeCell[] {
   const bounds = getGridBounds(settings);
   const width = getCanvasWidth(settings);
   const height = getCanvasHeight(settings);
@@ -879,10 +1296,87 @@ export function getPostcodeCells(settings: HeatmapSettings) {
 
       return {
         key: seed.key,
+        baseKey: seed.key,
+        level: 0,
         polygon: organicPolygon,
       };
     })
-    .filter((cell): cell is { key: string; polygon: Point[] } => cell !== null);
+    .filter((cell): cell is PostcodeCell => cell !== null);
+}
+
+export function getPostcodeLayout(settings: HeatmapSettings): PostcodeLayout {
+  const baseCells = getBasePostcodeCells(settings);
+  const subdivisionLevel = settings.postcodeSubdivisionLevel ?? 0;
+
+  if (subdivisionLevel === 0) {
+    return {
+      baseCells,
+      cells: baseCells,
+      divisionLines: [],
+    };
+  }
+
+  const divisionLines: PostcodeDivisionLine[] = [];
+  const levelOneCells: PostcodeCell[] = [];
+
+  for (const baseCell of baseCells) {
+    const split = splitPostcodePolygon(baseCell.polygon, baseCell.key, 1);
+    if (!split) {
+      levelOneCells.push(baseCell);
+      continue;
+    }
+
+    divisionLines.push(split.line);
+    split.polygons.forEach((polygon, index) => {
+      levelOneCells.push({
+        key: `${baseCell.key}::a${index}`,
+        baseKey: baseCell.baseKey,
+        polygon,
+        level: 1,
+      });
+    });
+  }
+
+  if (subdivisionLevel === 1) {
+    return {
+      baseCells,
+      cells: levelOneCells,
+      divisionLines,
+    };
+  }
+
+  const levelTwoCells: PostcodeCell[] = [];
+  for (const levelOneCell of levelOneCells) {
+    const split = splitPostcodePolygon(
+      levelOneCell.polygon,
+      levelOneCell.key,
+      2,
+    );
+    if (!split) {
+      levelTwoCells.push(levelOneCell);
+      continue;
+    }
+
+    divisionLines.push(split.line);
+    split.polygons.forEach((polygon, index) => {
+      levelTwoCells.push({
+        key: `${levelOneCell.key}::b${index}`,
+        baseKey: levelOneCell.baseKey,
+        polygon,
+        level: 2,
+      });
+    });
+  }
+
+  return {
+    baseCells,
+    cells: levelTwoCells,
+    divisionLines,
+  };
+}
+
+export function getPostcodeCells(settings: HeatmapSettings) {
+  return getPostcodeLayout(settings).cells;
 }
 
 export function getPostcodeCellValues(
