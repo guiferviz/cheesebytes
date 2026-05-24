@@ -4,7 +4,10 @@ import {
   HeatmapPointCloudVisual,
   HeatmapShiftComparisonVisual,
 } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/HeatmapStoryVisuals";
-import { HeatmapGaussianPythonVisual } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/HeatmapGaussianPythonVisual";
+import {
+  HeatmapContinuousScaleVisual,
+  HeatmapGaussianPythonVisual as HeatmapSmoothingVisual,
+} from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/HeatmapSmoothingVisuals";
 import { TemporalAggregationVisual } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/TemporalAggregationVisual";
 
 Imagine you want to open a small coffee shop in your city. You do not want to
@@ -82,7 +85,9 @@ Those choices can look cosmetic. They are not. They decide which points become
 neighbors and which ones are split apart.
 
 Try it below. Drag the grid around. Make the cells larger or smaller. Rotate the
-overlay. Swap squares for triangles, hexagons, or postcode-like regions.
+overlay. Swap squares for triangles, hexagons, or postcode-like regions. In
+postcode mode, you can also subdivide those official-looking regions and watch
+the summary change again inside the same outer boundary.
 
 The points stay the same. The summary does not.
 
@@ -184,12 +189,23 @@ That usually makes the surface cleaner. But it does not make the MAUP disappear.
 The smoothing happens after we already chose the grid. It can soften the edges,
 but it still inherits the partition we started with.
 
-The last visual lets you edit a small Python implementation of a Gaussian
-filter. The map on the right updates from the code on the left. Move the grid
-around and notice that the smoothed surface still changes, because the counts it
-smooths came from a particular aggregation.
+The visual below compares the raw aggregation with a smoothed version. Drag the
+grid and notice that the smoother picture still shifts, because the smoothing
+happens after the aggregation.
 
-<HeatmapGaussianPythonVisual client:only="react" />
+<HeatmapSmoothingVisual client:only="react" />
+
+If we push that idea further, we can remove the visible grid entirely and move
+toward a continuous heatmap. This is the same family of idea as a kernel
+density estimate (KDE). That can feel less arbitrary because the borders are
+gone, but the arbitrariness has not disappeared. We still have to choose a
+scale. A narrow scale keeps local peaks separate. A wider scale blends them
+together.
+
+Even without visible borders, there are still parameters and modeling choices
+that affect the analysis.
+
+<HeatmapContinuousScaleVisual client:only="react" />
 
 # What To Do in Practice
 
