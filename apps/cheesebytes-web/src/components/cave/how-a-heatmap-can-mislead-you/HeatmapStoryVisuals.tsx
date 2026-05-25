@@ -916,6 +916,37 @@ export function HeatmapExplorerVisual() {
     [canvasHeight, canvasWidth, partitionStrokes, points],
   );
 
+  const partitionFillDataUrl = useMemo(() => {
+    if (
+      partitionLayout.regions.length === 0 ||
+      typeof document === "undefined"
+    ) {
+      return null;
+    }
+    const { cellSize, cols, rows: rasterRows, regions } = partitionLayout;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    for (const region of regions) {
+      if (region.fillOpacity <= 0) continue;
+      ctx.globalAlpha = region.fillOpacity;
+      ctx.fillStyle = region.fill;
+      for (const { col, row } of region.cells) {
+        const x = col * cellSize;
+        const y = row * cellSize;
+        ctx.fillRect(
+          x,
+          y,
+          Math.min(cellSize, canvasWidth - x),
+          Math.min(cellSize, canvasHeight - y),
+        );
+      }
+    }
+    return canvas.toDataURL();
+  }, [partitionLayout, canvasWidth, canvasHeight]);
+
   const resetPartitionDraft = useCallback(() => {
     partitionPointerIdRef.current = null;
     setIsPartitionDrawing(false);
@@ -1593,31 +1624,16 @@ export function HeatmapExplorerVisual() {
                 onPointerUp={handlePartitionPointerUp}
                 onPointerCancel={handlePartitionPointerCancel}
               >
-                {partitionMode && partitionLayout.regions.length > 0
-                  ? partitionLayout.regions.flatMap((region) =>
-                      region.cells.map(({ col, row }) => {
-                        const x = col * partitionLayout.cellSize;
-                        const y = row * partitionLayout.cellSize;
-                        return (
-                          <rect
-                            key={`${region.id}:${col}:${row}`}
-                            x={x}
-                            y={y}
-                            width={Math.min(
-                              partitionLayout.cellSize,
-                              canvasWidth - x,
-                            )}
-                            height={Math.min(
-                              partitionLayout.cellSize,
-                              canvasHeight - y,
-                            )}
-                            fill={region.fill}
-                            fillOpacity={region.fillOpacity}
-                          />
-                        );
-                      }),
-                    )
-                  : null}
+                {partitionMode && partitionFillDataUrl ? (
+                  <image
+                    href={partitionFillDataUrl}
+                    x={0}
+                    y={0}
+                    width={canvasWidth}
+                    height={canvasHeight}
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                ) : null}
 
                 {partitionMode && showPoints
                   ? points.map((point, index) => (
