@@ -408,8 +408,13 @@ export function HeatmapCanvas({
 
           for (const line of postcodeLayout.divisionLines) {
             ctx.beginPath();
-            ctx.moveTo(line.start.x, line.start.y);
-            ctx.lineTo(line.end.x, line.end.y);
+            line.points.forEach((point, index) => {
+              if (index === 0) {
+                ctx.moveTo(point.x, point.y);
+                return;
+              }
+              ctx.lineTo(point.x, point.y);
+            });
             if (line.level === 1) {
               ctx.setLineDash([8, 6]);
               ctx.lineWidth = 1.15;

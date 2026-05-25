@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 
 import type { VimCommand, VimModeAPI } from "../../../utils/vim-mode";
 import {
@@ -27,6 +27,8 @@ import {
   useHeatmapPointState,
 } from "./heatmap-article";
 import {
+  colorForValue,
+  DEFAULT_HEATMAP_PALETTE,
   nudgeOrigin,
   getGridCellValues,
   getMaxCellValue,
@@ -86,6 +88,376 @@ function getCenterForCell(
   return getPolygonCentroid(polygon);
 
   return null;
+}
+
+interface PartitionStroke {
+  id: number;
+  points: Point[];
+}
+
+interface PartitionRegionOverlay {
+  id: number;
+  centroid: Point;
+  cells: Array<{ col: number; row: number }>;
+  fill: string;
+  fillOpacity: number;
+  pixelCount: number;
+  pointCount: number;
+}
+
+interface PartitionLayout {
+  cellSize: number;
+  cols: number;
+  rows: number;
+  regions: PartitionRegionOverlay[];
+}
+
+const PARTITION_POINT_STEP = 4;
+const PARTITION_RASTER_CELL_SIZE = 2;
+const PARTITION_MIN_SPAN = 10;
+const PARTITION_SNAP_DISTANCE = 14;
+const PARTITION_STROKE_COLOR = "rgba(250, 204, 21, 0.96)";
+const PARTITION_STROKE_WIDTH = 5;
+
+function distanceSquared(left: Point, right: Point) {
+  const deltaX = left.x - right.x;
+  const deltaY = left.y - right.y;
+  return deltaX * deltaX + deltaY * deltaY;
+}
+
+function appendPartitionPoint(points: Point[], nextPoint: Point) {
+  if (points.length === 0) {
+    return [nextPoint];
+  }
+
+  const lastPoint = points[points.length - 1];
+  if (
+    distanceSquared(lastPoint, nextPoint) <
+    PARTITION_POINT_STEP * PARTITION_POINT_STEP
+  ) {
+    return points;
+  }
+
+  return [...points, nextPoint];
+}
+
+function polylinePath(points: Point[]) {
+  if (points.length === 0) {
+    return "";
+  }
+
+  const [firstPoint, ...rest] = points;
+  return [
+    `M ${firstPoint.x.toFixed(1)} ${firstPoint.y.toFixed(1)}`,
+    ...rest.map((point) => `L ${point.x.toFixed(1)} ${point.y.toFixed(1)}`),
+  ]
+    .join(" ")
+    .trim();
+}
+
+function projectPointToSegment(point: Point, start: Point, end: Point): Point {
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const lengthSquared = deltaX * deltaX + deltaY * deltaY;
+
+  if (lengthSquared === 0) {
+    return start;
+  }
+
+  const t = Math.max(
+    0,
+    Math.min(
+      1,
+      ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) /
+        lengthSquared,
+    ),
+  );
+
+  return {
+    x: start.x + deltaX * t,
+    y: start.y + deltaY * t,
+  };
+}
+
+function snapPointToExistingEdge(
+  point: Point,
+  canvasWidth: number,
+  canvasHeight: number,
+  strokes: PartitionStroke[],
+): Point {
+  const clampedPoint = {
+    x: Math.max(0, Math.min(canvasWidth, point.x)),
+    y: Math.max(0, Math.min(canvasHeight, point.y)),
+  };
+
+  const candidates: Array<{ distance: number; point: Point }> = [
+    { distance: clampedPoint.x, point: { x: 0, y: clampedPoint.y } },
+    {
+      distance: Math.abs(canvasWidth - clampedPoint.x),
+      point: { x: canvasWidth, y: clampedPoint.y },
+    },
+    { distance: clampedPoint.y, point: { x: clampedPoint.x, y: 0 } },
+    {
+      distance: Math.abs(canvasHeight - clampedPoint.y),
+      point: { x: clampedPoint.x, y: canvasHeight },
+    },
+  ];
+
+  for (const stroke of strokes) {
+    for (let index = 1; index < stroke.points.length; index += 1) {
+      const snappedPoint = projectPointToSegment(
+        clampedPoint,
+        stroke.points[index - 1],
+        stroke.points[index],
+      );
+      candidates.push({
+        distance: Math.sqrt(distanceSquared(clampedPoint, snappedPoint)),
+        point: snappedPoint,
+      });
+    }
+  }
+
+  const closest = candidates.reduce((best, candidate) =>
+    candidate.distance < best.distance ? candidate : best,
+  );
+
+  return closest.distance <= PARTITION_SNAP_DISTANCE
+    ? closest.point
+    : clampedPoint;
+}
+
+function clientPointToCanvasPoint(
+  element: SVGSVGElement,
+  clientX: number,
+  clientY: number,
+  canvasWidth: number,
+  canvasHeight: number,
+): Point {
+  const bounds = element.getBoundingClientRect();
+  const pixelsToCanvasX = bounds.width > 0 ? canvasWidth / bounds.width : 1;
+  const pixelsToCanvasY = bounds.height > 0 ? canvasHeight / bounds.height : 1;
+
+  return {
+    x: Math.max(
+      0,
+      Math.min(canvasWidth, (clientX - bounds.left) * pixelsToCanvasX),
+    ),
+    y: Math.max(
+      0,
+      Math.min(canvasHeight, (clientY - bounds.top) * pixelsToCanvasY),
+    ),
+  };
+}
+
+function findRegionIdNearCell(
+  regionIds: Int32Array,
+  cols: number,
+  rows: number,
+  startCol: number,
+  startRow: number,
+) {
+  const indexFor = (col: number, row: number) => row * cols + col;
+  const initialIndex = indexFor(startCol, startRow);
+  if (regionIds[initialIndex] >= 0) {
+    return regionIds[initialIndex];
+  }
+
+  for (let radius = 1; radius <= 3; radius += 1) {
+    for (let row = startRow - radius; row <= startRow + radius; row += 1) {
+      for (let col = startCol - radius; col <= startCol + radius; col += 1) {
+        if (
+          col < 0 ||
+          row < 0 ||
+          col >= cols ||
+          row >= rows ||
+          (Math.abs(col - startCol) !== radius &&
+            Math.abs(row - startRow) !== radius)
+        ) {
+          continue;
+        }
+
+        const regionId = regionIds[indexFor(col, row)];
+        if (regionId >= 0) {
+          return regionId;
+        }
+      }
+    }
+  }
+
+  return -1;
+}
+
+function buildPartitionLayout(
+  strokes: PartitionStroke[],
+  points: Point[],
+  canvasWidth: number,
+  canvasHeight: number,
+): PartitionLayout {
+  const cellSize = PARTITION_RASTER_CELL_SIZE;
+  const cols = Math.max(1, Math.ceil(canvasWidth / cellSize));
+  const rows = Math.max(1, Math.ceil(canvasHeight / cellSize));
+
+  if (strokes.length === 0 || typeof document === "undefined") {
+    return { cellSize, cols, rows, regions: [] };
+  }
+
+  const raster = document.createElement("canvas");
+  raster.width = cols;
+  raster.height = rows;
+
+  const ctx = raster.getContext("2d");
+  if (!ctx) {
+    return { cellSize, cols, rows, regions: [] };
+  }
+
+  const scaleX = cols / canvasWidth;
+  const scaleY = rows / canvasHeight;
+  ctx.clearRect(0, 0, cols, rows);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = Math.max(1, 3 / cellSize);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  for (const stroke of strokes) {
+    ctx.beginPath();
+    stroke.points.forEach((point, index) => {
+      const x = point.x * scaleX;
+      const y = point.y * scaleY;
+      if (index === 0) {
+        ctx.moveTo(x, y);
+        return;
+      }
+      ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  const imageData = ctx.getImageData(0, 0, cols, rows).data;
+  const blocked = new Uint8Array(cols * rows);
+  for (let index = 0; index < cols * rows; index += 1) {
+    blocked[index] = imageData[index * 4 + 3] > 0 ? 1 : 0;
+  }
+
+  const regionIds = new Int32Array(cols * rows).fill(-1);
+  const regions: Array<{
+    id: number;
+    centroid: Point;
+    cells: Array<{ col: number; row: number }>;
+    pixelCount: number;
+  }> = [];
+  const queue: Array<{ col: number; row: number }> = [];
+  const indexFor = (col: number, row: number) => row * cols + col;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const originIndex = indexFor(col, row);
+      if (blocked[originIndex] || regionIds[originIndex] >= 0) {
+        continue;
+      }
+
+      const regionId = regions.length;
+      let queueIndex = 0;
+      let sumX = 0;
+      let sumY = 0;
+      const cells: Array<{ col: number; row: number }> = [];
+
+      queue.length = 0;
+      queue.push({ col, row });
+      regionIds[originIndex] = regionId;
+
+      while (queueIndex < queue.length) {
+        const current = queue[queueIndex];
+        queueIndex += 1;
+
+        cells.push(current);
+        sumX += Math.min(canvasWidth, current.col * cellSize + cellSize / 2);
+        sumY += Math.min(canvasHeight, current.row * cellSize + cellSize / 2);
+
+        for (const [deltaCol, deltaRow] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const nextCol = current.col + deltaCol;
+          const nextRow = current.row + deltaRow;
+          if (
+            nextCol < 0 ||
+            nextRow < 0 ||
+            nextCol >= cols ||
+            nextRow >= rows
+          ) {
+            continue;
+          }
+
+          const nextIndex = indexFor(nextCol, nextRow);
+          if (blocked[nextIndex] || regionIds[nextIndex] >= 0) {
+            continue;
+          }
+
+          regionIds[nextIndex] = regionId;
+          queue.push({ col: nextCol, row: nextRow });
+        }
+      }
+
+      regions.push({
+        id: regionId,
+        centroid: {
+          x: sumX / cells.length,
+          y: sumY / cells.length,
+        },
+        cells,
+        pixelCount: cells.length,
+      });
+    }
+  }
+
+  const pointCounts = new Array(regions.length).fill(0);
+  for (const point of points) {
+    const col = Math.max(0, Math.min(cols - 1, Math.floor(point.x / cellSize)));
+    const row = Math.max(0, Math.min(rows - 1, Math.floor(point.y / cellSize)));
+    const regionId = findRegionIdNearCell(regionIds, cols, rows, col, row);
+    if (regionId >= 0) {
+      pointCounts[regionId] += 1;
+    }
+  }
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const cellIndex = indexFor(col, row);
+      if (!blocked[cellIndex]) {
+        continue;
+      }
+
+      const regionId = findRegionIdNearCell(regionIds, cols, rows, col, row);
+      if (regionId < 0) {
+        continue;
+      }
+
+      regions[regionId].cells.push({ col, row });
+      regions[regionId].pixelCount += 1;
+    }
+  }
+
+  const maxPointCount = Math.max(0, ...pointCounts);
+
+  return {
+    cellSize,
+    cols,
+    rows,
+    regions: regions.map((region) => {
+      const pointCount = pointCounts[region.id] ?? 0;
+      return {
+        ...region,
+        pointCount,
+        fill: colorForValue(pointCount, maxPointCount, DEFAULT_HEATMAP_PALETTE),
+        fillOpacity:
+          pointCount > 0
+            ? 0.18 + 0.76 * (pointCount / Math.max(maxPointCount, 1))
+            : 0,
+      };
+    }),
+  };
 }
 
 const EXPLORER_GRIDS: readonly GridType[] = [
@@ -518,15 +890,194 @@ export function HeatmapExplorerVisual() {
   const [showPoints, setShowPoints] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [origin, setOrigin] = useState<Origin>(() => ({ ...STORY_ORIGIN }));
+  const [partitionMode, setPartitionMode] = useState(false);
+  const [partitionStrokes, setPartitionStrokes] = useState<PartitionStroke[]>(
+    [],
+  );
+  const [draftPartitionPoints, setDraftPartitionPoints] = useState<Point[]>([]);
+  const [isPartitionDrawing, setIsPartitionDrawing] = useState(false);
   const controlsVisible = !isFullscreen && showControls;
 
   const [trackingActive, setTrackingActive] = useState(false);
   const [markers, setMarkers] = useState<Point[]>([]);
+  const partitionDraftPointsRef = useRef<Point[]>([]);
+  const partitionPointerIdRef = useRef<number | null>(null);
+  const nextPartitionStrokeIdRef = useRef(1);
 
   const points = useHeatmapArticlePoints();
 
   useEffect(() => {
-    if (!trackingActive) return;
+    partitionDraftPointsRef.current = draftPartitionPoints;
+  }, [draftPartitionPoints]);
+
+  const partitionLayout = useMemo(
+    () =>
+      buildPartitionLayout(partitionStrokes, points, canvasWidth, canvasHeight),
+    [canvasHeight, canvasWidth, partitionStrokes, points],
+  );
+
+  const resetPartitionDraft = useCallback(() => {
+    partitionPointerIdRef.current = null;
+    setIsPartitionDrawing(false);
+    setDraftPartitionPoints([]);
+  }, []);
+
+  const commitPartitionStroke = useCallback(
+    (strokePoints: Point[]) => {
+      if (strokePoints.length < 2) {
+        resetPartitionDraft();
+        return;
+      }
+
+      const startPoint = snapPointToExistingEdge(
+        strokePoints[0],
+        canvasWidth,
+        canvasHeight,
+        partitionStrokes,
+      );
+      const endPoint = snapPointToExistingEdge(
+        strokePoints[strokePoints.length - 1],
+        canvasWidth,
+        canvasHeight,
+        partitionStrokes,
+      );
+
+      if (
+        distanceSquared(startPoint, endPoint) <
+        PARTITION_MIN_SPAN * PARTITION_MIN_SPAN
+      ) {
+        resetPartitionDraft();
+        return;
+      }
+
+      const normalizedPoints = [
+        startPoint,
+        ...strokePoints.slice(1, -1),
+        endPoint,
+      ].reduce<Point[]>(
+        (current, point) => appendPartitionPoint(current, point),
+        [],
+      );
+
+      if (normalizedPoints.length < 2) {
+        resetPartitionDraft();
+        return;
+      }
+
+      setPartitionStrokes((current) => [
+        ...current,
+        {
+          id: nextPartitionStrokeIdRef.current++,
+          points: normalizedPoints,
+        },
+      ]);
+      resetPartitionDraft();
+    },
+    [canvasHeight, canvasWidth, partitionStrokes, resetPartitionDraft],
+  );
+
+  const closePartitionStroke = useCallback(() => {
+    commitPartitionStroke(partitionDraftPointsRef.current);
+  }, [commitPartitionStroke]);
+
+  const undoPartitionStroke = useCallback(() => {
+    if (partitionDraftPointsRef.current.length > 0) {
+      resetPartitionDraft();
+      return;
+    }
+
+    setPartitionStrokes((current) => current.slice(0, -1));
+  }, [resetPartitionDraft]);
+
+  const togglePartitionMode = useCallback(() => {
+    partitionPointerIdRef.current = null;
+    setIsPartitionDrawing(false);
+    setDraftPartitionPoints([]);
+    setPartitionStrokes([]);
+    setPartitionMode((current) => !current);
+  }, []);
+
+  const handlePartitionPointerDown = useCallback(
+    (event: ReactPointerEvent<SVGSVGElement>) => {
+      if (!partitionMode) {
+        return;
+      }
+
+      event.preventDefault();
+      const startPoint = snapPointToExistingEdge(
+        clientPointToCanvasPoint(
+          event.currentTarget,
+          event.clientX,
+          event.clientY,
+          canvasWidth,
+          canvasHeight,
+        ),
+        canvasWidth,
+        canvasHeight,
+        partitionStrokes,
+      );
+
+      partitionPointerIdRef.current = event.pointerId;
+      setIsPartitionDrawing(true);
+      setDraftPartitionPoints([startPoint]);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [canvasHeight, canvasWidth, partitionMode, partitionStrokes],
+  );
+
+  const handlePartitionPointerMove = useCallback(
+    (event: ReactPointerEvent<SVGSVGElement>) => {
+      if (
+        !partitionMode ||
+        partitionPointerIdRef.current === null ||
+        partitionPointerIdRef.current !== event.pointerId
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      const nextPoint = snapPointToExistingEdge(
+        clientPointToCanvasPoint(
+          event.currentTarget,
+          event.clientX,
+          event.clientY,
+          canvasWidth,
+          canvasHeight,
+        ),
+        canvasWidth,
+        canvasHeight,
+        partitionStrokes,
+      );
+      setDraftPartitionPoints((current) =>
+        appendPartitionPoint(current, nextPoint),
+      );
+    },
+    [canvasHeight, canvasWidth, partitionMode, partitionStrokes],
+  );
+
+  const handlePartitionPointerUp = useCallback(
+    (event: ReactPointerEvent<SVGSVGElement>) => {
+      if (partitionPointerIdRef.current !== event.pointerId) {
+        return;
+      }
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+
+      partitionPointerIdRef.current = null;
+      setIsPartitionDrawing(false);
+      commitPartitionStroke(partitionDraftPointsRef.current);
+    },
+    [commitPartitionStroke],
+  );
+
+  const handlePartitionPointerCancel = useCallback(() => {
+    resetPartitionDraft();
+  }, [resetPartitionDraft]);
+
+  useEffect(() => {
+    if (!trackingActive || partitionMode) return;
     const settings: HeatmapSettings = {
       gridType,
       cellSize,
@@ -580,6 +1131,7 @@ export function HeatmapExplorerVisual() {
     canvasWidth,
     canvasHeight,
     points,
+    partitionMode,
     postcodeSubdivisionLevel,
   ]);
 
@@ -615,8 +1167,34 @@ export function HeatmapExplorerVisual() {
         run: toggleFullscreen,
       },
       {
+        key: "z",
+        label: partitionMode
+          ? "Exit custom split mode"
+          : "Enter custom split mode",
+        run: togglePartitionMode,
+      },
+      {
+        key: "enter",
+        label: "Commit current cut",
+        hidden: !partitionMode,
+        run: closePartitionStroke,
+      },
+      {
+        key: "escape",
+        label: "Cancel current cut",
+        hidden: !partitionMode,
+        run: resetPartitionDraft,
+      },
+      {
+        key: "backspace",
+        label: "Undo last cut",
+        hidden: !partitionMode,
+        run: undoPartitionStroke,
+      },
+      {
         key: "m",
         label: "Toggle MAUP Tracking",
+        hidden: partitionMode,
         run: () => {
           setTrackingActive((prev) => {
             setMarkers([]);
@@ -627,6 +1205,7 @@ export function HeatmapExplorerVisual() {
       {
         key: "g",
         label: "Toggle grid shape",
+        hidden: partitionMode,
         run: cycleGridType,
       },
       {
@@ -650,27 +1229,32 @@ export function HeatmapExplorerVisual() {
       {
         key: "-",
         label: "Finer cells",
+        hidden: partitionMode,
         run: () => setCellSize((current) => Math.max(26, current - 4)),
       },
       {
         key: "=",
         label: "Coarser cells",
+        hidden: partitionMode,
         run: () => setCellSize((current) => Math.min(72, current + 4)),
       },
       {
         key: "q",
         label: "Rotate left",
+        hidden: partitionMode,
         run: () => rotate(-5),
       },
       {
         key: "e",
         label: "Rotate right",
+        hidden: partitionMode,
         run: () => rotate(5),
       },
       {
         key: "h",
         label: "Move grid left",
         altKeys: ["LEFT"],
+        hidden: partitionMode,
         run: () => nudge(-12, 0),
       },
       {
@@ -683,6 +1267,7 @@ export function HeatmapExplorerVisual() {
         key: "l",
         label: "Move grid right",
         altKeys: ["RIGHT"],
+        hidden: partitionMode,
         run: () => nudge(12, 0),
       },
       {
@@ -695,6 +1280,7 @@ export function HeatmapExplorerVisual() {
         key: "k",
         label: "Move grid up",
         altKeys: ["UP"],
+        hidden: partitionMode,
         run: () => nudge(0, -12),
       },
       {
@@ -705,6 +1291,7 @@ export function HeatmapExplorerVisual() {
       },
       {
         key: "j",
+        hidden: partitionMode,
         label: "Move grid down",
         altKeys: ["DOWN"],
         run: () => nudge(0, 12),
@@ -721,12 +1308,22 @@ export function HeatmapExplorerVisual() {
       nextCommands.splice(3, 0, {
         key: "s",
         label: "Cycle postcode subdivisions",
+        hidden: partitionMode,
         run: cyclePostcodeSubdivision,
       });
     }
 
     return nextCommands;
-  }, [gridType, toggleFullscreen]);
+  }, [
+    closePartitionStroke,
+    gridType,
+    partitionMode,
+    resetPartitionDraft,
+    togglePartitionMode,
+    toggleFullscreen,
+    undoPartitionStroke,
+  ]);
+
   useScopedVimMode({
     rootRef,
     modeId: "heatmap-explorer",
@@ -792,36 +1389,46 @@ export function HeatmapExplorerVisual() {
               }}
             >
               <HeatmapHudButton
-                active={gridType === "square"}
+                active={!partitionMode && gridType === "square"}
+                disabled={partitionMode}
                 onClick={() => setGridType("square")}
                 style={MINIMAL_BUTTON_STYLE}
               >
                 Square
               </HeatmapHudButton>
               <HeatmapHudButton
-                active={gridType === "triangle"}
+                active={!partitionMode && gridType === "triangle"}
+                disabled={partitionMode}
                 onClick={() => setGridType("triangle")}
                 style={MINIMAL_BUTTON_STYLE}
               >
                 Triangle
               </HeatmapHudButton>
               <HeatmapHudButton
-                active={gridType === "hex"}
+                active={!partitionMode && gridType === "hex"}
+                disabled={partitionMode}
                 onClick={() => setGridType("hex")}
                 style={MINIMAL_BUTTON_STYLE}
               >
                 Hex
               </HeatmapHudButton>
               <HeatmapHudButton
-                active={gridType === "postcode"}
+                active={!partitionMode && gridType === "postcode"}
+                disabled={partitionMode}
                 onClick={() => setGridType("postcode")}
                 style={MINIMAL_BUTTON_STYLE}
               >
                 Postcode
               </HeatmapHudButton>
+              {partitionMode && (
+                <HeatmapHudButton active style={MINIMAL_BUTTON_STYLE}>
+                  Custom split
+                </HeatmapHudButton>
+              )}
               {gridType === "postcode" && (
                 <HeatmapHudButton
-                  active={postcodeSubdivisionLevel > 0}
+                  active={!partitionMode && postcodeSubdivisionLevel > 0}
+                  disabled={partitionMode}
                   onClick={cyclePostcodeSubdivision}
                   style={MINIMAL_BUTTON_STYLE}
                 >
@@ -862,24 +1469,6 @@ export function HeatmapExplorerVisual() {
                   onChange={(event) => setCellSize(Number(event.target.value))}
                 />
               </label>
-
-              {gridType === "postcode" && (
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span>Postcode subdivisions: {postcodeSubdivisionLevel}</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={2}
-                    step={1}
-                    value={postcodeSubdivisionLevel}
-                    onChange={(event) =>
-                      setPostcodeSubdivisionLevel(
-                        Number(event.target.value) as PostcodeSubdivisionLevel,
-                      )
-                    }
-                  />
-                </label>
-              )}
 
               <label style={{ display: "grid", gap: 6 }}>
                 <span>Points: {pointCount}</span>
@@ -981,11 +1570,11 @@ export function HeatmapExplorerVisual() {
                 orientation={orientation}
                 origin={origin}
                 postcodeSubdivisionLevel={postcodeSubdivisionLevel}
-                showAggregation={true}
+                showAggregation={!partitionMode}
                 showBackdrop={false}
                 showBorder={false}
-                showPoints={showPoints}
-                interactive={true}
+                showPoints={!partitionMode && showPoints}
+                interactive={!partitionMode}
                 onOriginChange={setOrigin}
                 style={{ width: "100%", height: "100%" }}
               />
@@ -996,10 +1585,151 @@ export function HeatmapExplorerVisual() {
                   inset: 0,
                   width: "100%",
                   height: "100%",
-                  pointerEvents: "none",
+                  pointerEvents: partitionMode ? "auto" : "none",
+                  cursor: partitionMode ? "crosshair" : "default",
                 }}
+                onPointerDown={handlePartitionPointerDown}
+                onPointerMove={handlePartitionPointerMove}
+                onPointerUp={handlePartitionPointerUp}
+                onPointerCancel={handlePartitionPointerCancel}
               >
-                {trackingActive
+                {partitionMode && partitionLayout.regions.length > 0
+                  ? partitionLayout.regions.flatMap((region) =>
+                      region.cells.map(({ col, row }) => {
+                        const x = col * partitionLayout.cellSize;
+                        const y = row * partitionLayout.cellSize;
+                        return (
+                          <rect
+                            key={`${region.id}:${col}:${row}`}
+                            x={x}
+                            y={y}
+                            width={Math.min(
+                              partitionLayout.cellSize,
+                              canvasWidth - x,
+                            )}
+                            height={Math.min(
+                              partitionLayout.cellSize,
+                              canvasHeight - y,
+                            )}
+                            fill={region.fill}
+                            fillOpacity={region.fillOpacity}
+                          />
+                        );
+                      }),
+                    )
+                  : null}
+
+                {partitionMode && showPoints
+                  ? points.map((point, index) => (
+                      <circle
+                        key={`partition-point-${index}`}
+                        cx={point.x}
+                        cy={point.y}
+                        r={2.6}
+                        fill="var(--heatmapviz-ink)"
+                        fillOpacity={0.88}
+                      />
+                    ))
+                  : null}
+
+                {partitionMode && partitionStrokes.length > 0 ? (
+                  <g>
+                    <rect
+                      x={1}
+                      y={1}
+                      width={canvasWidth - 2}
+                      height={canvasHeight - 2}
+                      fill="none"
+                      stroke={PARTITION_STROKE_COLOR}
+                      strokeWidth={PARTITION_STROKE_WIDTH}
+                    />
+                    {partitionStrokes.map((stroke) => (
+                      <path
+                        key={stroke.id}
+                        d={polylinePath(stroke.points)}
+                        fill="none"
+                        stroke={PARTITION_STROKE_COLOR}
+                        strokeWidth={PARTITION_STROKE_WIDTH}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    ))}
+                  </g>
+                ) : partitionMode ? (
+                  <rect
+                    x={1}
+                    y={1}
+                    width={canvasWidth - 2}
+                    height={canvasHeight - 2}
+                    fill="none"
+                    stroke={PARTITION_STROKE_COLOR}
+                    strokeWidth={PARTITION_STROKE_WIDTH}
+                  />
+                ) : null}
+
+                {partitionMode
+                  ? partitionLayout.regions.map((region) => {
+                      if (region.pixelCount < 12) {
+                        return null;
+                      }
+
+                      const labelText = `${region.pointCount}`;
+                      const labelWidth = Math.max(
+                        24,
+                        labelText.length * 8 + 12,
+                      );
+                      return (
+                        <g
+                          key={`partition-label-${region.id}`}
+                          transform={`translate(${region.centroid.x}, ${region.centroid.y})`}
+                        >
+                          <rect
+                            x={-labelWidth / 2}
+                            y={-12}
+                            width={labelWidth}
+                            height={24}
+                            rx={12}
+                            fill="rgba(15, 23, 42, 0.86)"
+                            stroke={PARTITION_STROKE_COLOR}
+                            strokeWidth={1.25}
+                          />
+                          <text
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill="#fef3c7"
+                            fontFamily="'IosevkaTermSlab Nerd Font Mono', monospace"
+                            fontSize="12"
+                            fontWeight="800"
+                          >
+                            {labelText}
+                          </text>
+                        </g>
+                      );
+                    })
+                  : null}
+
+                {partitionMode && draftPartitionPoints.length > 0 ? (
+                  <g>
+                    <path
+                      d={polylinePath(draftPartitionPoints)}
+                      fill="none"
+                      stroke={PARTITION_STROKE_COLOR}
+                      strokeWidth={PARTITION_STROKE_WIDTH}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle
+                      cx={draftPartitionPoints[0].x}
+                      cy={draftPartitionPoints[0].y}
+                      r={5}
+                      fill="rgba(255,255,255,0.08)"
+                      stroke={PARTITION_STROKE_COLOR}
+                      strokeWidth={2}
+                    />
+                  </g>
+                ) : null}
+
+                {trackingActive && !partitionMode
                   ? markers.map((m, i) => (
                       <g key={i} transform={`translate(${m.x}, ${m.y})`}>
                         <path

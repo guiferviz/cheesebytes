@@ -43,8 +43,7 @@ interface PostcodeCell {
 }
 
 interface PostcodeDivisionLine {
-  start: Point;
-  end: Point;
+  points: Point[];
   level: 1 | 2;
 }
 
@@ -1092,6 +1091,103 @@ function findLineSegmentInsidePolygon(
   return bestPair;
 }
 
+function findPolygonEdgeIndex(
+  polygon: Point[],
+  start: Point,
+  end: Point,
+  tolerance = 1.5,
+) {
+  for (let index = 0; index < polygon.length; index += 1) {
+    const current = polygon[index];
+    const next = polygon[(index + 1) % polygon.length];
+    if (
+      Math.hypot(current.x - start.x, current.y - start.y) <= tolerance &&
+      Math.hypot(next.x - end.x, next.y - end.y) <= tolerance
+    ) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function rebuildPolygonWithReplacementEdge(
+  polygon: Point[],
+  edgeIndex: number,
+  replacement: Point[],
+) {
+  const nextIndex = (edgeIndex + 1) % polygon.length;
+  const rebuilt: Point[] = [polygon[edgeIndex], ...replacement.slice(1, -1)];
+  let cursor = nextIndex;
+
+  while (true) {
+    rebuilt.push(polygon[cursor]);
+    cursor = (cursor + 1) % polygon.length;
+    if (cursor === edgeIndex) {
+      break;
+    }
+  }
+
+  return dedupePolygonPoints(rebuilt);
+}
+
+function replacePolygonEdgeWithOrganicLine(
+  polygon: Point[],
+  segment: readonly [Point, Point],
+  organicLine: Point[],
+) {
+  const forwardIndex = findPolygonEdgeIndex(polygon, segment[0], segment[1]);
+  if (forwardIndex !== -1) {
+    return rebuildPolygonWithReplacementEdge(
+      polygon,
+      forwardIndex,
+      orientEdgeLine(organicLine, segment[0]),
+    );
+  }
+
+  const reverseIndex = findPolygonEdgeIndex(polygon, segment[1], segment[0]);
+  if (reverseIndex !== -1) {
+    return rebuildPolygonWithReplacementEdge(
+      polygon,
+      reverseIndex,
+      orientEdgeLine(organicLine, segment[1]),
+    );
+  }
+
+  return polygon;
+}
+
+function buildOrganicSplitLine(
+  segment: readonly [Point, Point],
+  polygon: Point[],
+  splitSeed: string,
+  level: 1 | 2,
+) {
+  const polygonTuples = polygon.map(
+    (point) => [point.x, point.y] as [number, number],
+  );
+  const roughnessOptions = level === 1 ? [2, 1] : [1];
+
+  for (const roughness of roughnessOptions) {
+    const line = generatePostcodeEdgeLine(
+      segment[0],
+      segment[1],
+      roughness,
+      `${splitSeed}:subdivision:${level}`,
+    );
+    const interiorPoints = line.slice(1, -1);
+    if (
+      interiorPoints.every((point) =>
+        d3.polygonContains(polygonTuples, [point.x, point.y]),
+      )
+    ) {
+      return line;
+    }
+  }
+
+  return [segment[0], segment[1]];
+}
+
 function getPolygonBoundsBox(polygon: Point[]) {
   let minX = Infinity;
   let maxX = -Infinity;
@@ -1155,9 +1251,26 @@ function splitPostcodePolygon(
       continue;
     }
 
+    const organicLine = buildOrganicSplitLine(
+      segment,
+      polygon,
+      splitSeed,
+      level,
+    );
+    const positiveOrganic = replacePolygonEdgeWithOrganicLine(
+      positive,
+      segment,
+      organicLine,
+    );
+    const negativeOrganic = replacePolygonEdgeWithOrganicLine(
+      negative,
+      segment,
+      organicLine,
+    );
+
     return {
-      polygons: [positive, negative] as const,
-      line: { start: segment[0], end: segment[1], level },
+      polygons: [positiveOrganic, negativeOrganic] as const,
+      line: { points: organicLine, level },
     };
   }
 
