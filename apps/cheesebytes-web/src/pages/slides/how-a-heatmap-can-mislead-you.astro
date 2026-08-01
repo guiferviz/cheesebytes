@@ -10,9 +10,10 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
   <section>
     <aside class="notes">
       <p>
-        Imagine this is a map of coffee demand in Manhattan. Every dot is
-        someone looking for coffee. So this heatmap should at least point to
-        where demand is stronger. But not so fast.
+        <!-- Max size, grid 72 px and 66 points, in lambda (4 points similar to a lambda constellation) -->
+        Imagine this is a map of coffee demand in Manhattan. Every dot is someone
+        looking for coffee. So this heatmap should at least point to where demand
+        is stronger. But not so fast.
       </p>
       <p>
         Watch what happens if we move the grid... just a little bit. Now the
@@ -165,6 +166,7 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
         January to December, and you get one story. Move the year boundary from
         December to November, and the story can change. Same data. Different
         cut. Different conclusion.
+        <!-- 2018! Mover a la izquierda. -->
       </p>
       <p>
         There are many versions of this warning. Sometimes it is a map that
@@ -199,15 +201,20 @@ import RevealLayout from "../../layouts/PresentationLayout.astro";
         of where we decided the year begins and ends.
       </p>
       <p>
-        So the lesson is not: never trust aggregations. The lesson is: do not
-        forget that every aggregation has human choices behind it.
+        So the point is not to stop trusting aggregations. It is to remember
+        that they are not just summaries of the data. They are summaries of the
+        data, after someone decided how to group it.
       </p>
     </aside>
   </section>
 
   <section>
     <aside class="notes">
-      <p>Play with all these visuals from the web.</p>
+      <p>
+        Now try it yourself. Move the grid. Change the scale. Smooth the map.
+        Watch how the answer changes. Same data. Different boundaries. Different
+        story.
+      </p>
     </aside>
   </section>
 </RevealLayout>
