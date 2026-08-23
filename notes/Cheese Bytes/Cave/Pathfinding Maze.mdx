@@ -26,14 +26,16 @@ pick an algorithm, and hit **Run** to watch it explore.
 ## BFS (Breadth-First Search)
 
 BFS explores in all directions equally, layer by layer, like ripples in a pond.
-It always finds the **shortest path** in an unweighted grid because it visits
-all cells at distance $d$ before any cell at distance $d+1$.
+It keeps the next cells to explore in a [[Queue|queue]], so older discoveries are
+processed first. It always finds the **shortest path** in an unweighted grid
+because it visits all cells at distance $d$ before any cell at distance $d+1$.
 
 ## DFS (Depth-First Search)
 
-DFS dives deep into one direction before backtracking. It can find a path
-quickly, but that path is often far from optimal — it meanders through the grid
-like someone exploring a maze by always turning left.
+DFS dives deep into one direction before backtracking. It can be implemented
+with a [[Stack|stack]], so the most recently discovered branch is explored first.
+It can find a path quickly, but that path is often far from optimal — it
+meanders through the grid like someone exploring a maze by always turning left.
 
 ## IDDFS (Iterative Deepening Depth-First Search)
 
