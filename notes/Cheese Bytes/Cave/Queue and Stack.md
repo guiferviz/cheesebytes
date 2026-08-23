@@ -1,7 +1,3 @@
----
-noteType: "parmigiano-wedge"
----
-
 A **queue** and a **stack** describe access rules, not a particular memory layout.
 
 A **queue** is **FIFO** (_first in, first out_): the first element inserted is the
