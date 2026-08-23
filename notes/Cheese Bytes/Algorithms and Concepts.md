@@ -19,7 +19,8 @@ Concepts:
 - [[One-Liner]]
 - [[Polynomial Rolling Hash Collision Demo]]
 - [[Python Deque Implementation]]
-- [[Queue and Stack]]
+- [[Queue]]
+- [[Stack]]
 - [[Unicode Transformation Format 8-bit (UTF-8)]]
 
 Then jump into applied explorations:
