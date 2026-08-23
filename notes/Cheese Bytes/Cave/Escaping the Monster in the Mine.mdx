@@ -65,7 +65,7 @@ The first idea that comes to mind is to run BFS on the cave grid, just like we
 did in the previous note. The only difference is that now we have to check, for
 every candidate move, whether the monster's next step would land on the same
 cell as the player. If it does, we discard that move and do not add it to the
-BFS queue.
+BFS [[Queue|queue]].
 
 Watch that first attempt below. BFS expands from `S` and discovers new player
 cells. Every time it considers a new cell, it also computes where the monster
