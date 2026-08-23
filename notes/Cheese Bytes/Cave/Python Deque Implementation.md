@@ -1,7 +1,3 @@
----
-noteType: "parmigiano-wedge"
----
-
 Python's `collections.deque` is not implemented as a classic linked list with
 one node per element. CPython stores elements in a **doubly-linked sequence of
 fixed-size blocks**.
