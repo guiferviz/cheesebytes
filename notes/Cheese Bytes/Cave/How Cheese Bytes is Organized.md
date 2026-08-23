@@ -13,7 +13,7 @@ the same topic, then, and only then, I may consider adding a a new MoC.
 
 What I do not do is force a structure on myself before I know whether I actually
 need it. I prefer to let the organization emerge. The (link graph)[/cave-graph]
-is my compass. The connections show me how I think.
+is my compass. The connections show me how I think :)
 
 > [!IMPORTANT] Key Insight
 >
