@@ -123,7 +123,7 @@ stack.pop()
 
 Those operations are $O(1)$ amortized, and indexing is $O(1)$.
 
-Removing from the front with `list.pop(0)` is $O(N)` because the remaining
+Removing from the front with `list.pop(0)` is $O(N)$ because the remaining
 references have to be shifted. That is why FIFO algorithms such as BFS normally
 use:
 
