@@ -79,7 +79,7 @@ It only knows "go deeper, backtrack on dead ends".
 # DFS Without Recursion
 
 The recursive version is the most natural one to write, but recursion is not
-what makes DFS work. The real engine is a stack.
+what makes DFS work. The real engine is a [[Stack|stack]].
 
 Every recursive call pushes a new frame onto Python's call stack, and every
 return pops one back off. So in a very literal sense, recursive DFS is already a
@@ -131,7 +131,7 @@ risk of hitting Python's recursion limit on large maps.
 To find the **shortest** path we need to explore cells in order of distance from
 the start, not in order of how recently we discovered them.
 
-That is exactly what swapping the stack for a queue achieves. Each iteration of
+That is exactly what swapping the stack for a [[Queue|queue]] achieves. Each iteration of
 BFS pops the **oldest** unexplored cell and expands its neighbors. As a
 consequence, every cell is reached for the first time via a shortest path from
 the start.
