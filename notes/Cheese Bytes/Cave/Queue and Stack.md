@@ -1,4 +1,4 @@
-A **queue** and a **stack** describe access rules, not a particular memory layout.
+A **queue** and a **stack** are [[Abstract Data Type (ADT)|abstract data types]] that describe access rules, not a particular memory layout.
 
 A **queue** is **FIFO** (_first in, first out_): the first element inserted is the
 first one removed. Conceptually it only needs two operations:
@@ -48,4 +48,4 @@ through `put()` and `get()`. It is primarily designed for synchronized
 communication between threads, so for ordinary algorithms such as BFS,
 `collections.deque` is usually the lighter choice.
 
-Related: [[Deque]], [[Python Deque Implementation]].
+Related: [[Abstract Data Type (ADT)]], [[Deque]], [[Python Deque Implementation]].
