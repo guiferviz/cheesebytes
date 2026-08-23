@@ -1,7 +1,3 @@
----
-noteType: "parmigiano-wedge"
----
-
 A **deque** (_double-ended queue_) is a queue-like abstract data type that allows
 insertion and removal at **both ends**.
 
