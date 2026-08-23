@@ -129,5 +129,3 @@ from collections import deque
 queue.append(x)
 queue.popleft()
 ```
-
-Related: [[Deque]], [[Queue and Stack]], [[Amortized Cost in Algorithm Analysis]].
