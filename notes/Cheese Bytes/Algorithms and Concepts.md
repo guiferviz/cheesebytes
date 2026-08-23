@@ -8,6 +8,7 @@ Foundations:
 
 Concepts:
 
+- [[Abstract Data Type (ADT)]]
 - [[Abstract Syntax Tree (AST)]]
 - [[Closure VS. Function]]
 - [[CORS - How The Browser Protects You]]
