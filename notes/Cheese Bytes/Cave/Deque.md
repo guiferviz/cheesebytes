@@ -43,5 +43,3 @@ from the same end, producing LIFO-like behavior rather than FIFO behavior.
 
 A deque is therefore more general than a queue, while supporting a queue almost
 for free once efficient operations at both ends already exist.
-
-Related: [[Abstract Data Type (ADT)]], [[Queue and Stack]], [[Python Deque Implementation]].
