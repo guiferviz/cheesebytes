@@ -29,7 +29,7 @@ moves the left index and stores the new reference:
 appendleft(X)
 
 [ _ X A B C D ]
-   ^
+  ^
 left index
 ```
 
