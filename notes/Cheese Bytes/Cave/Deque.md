@@ -1,7 +1,7 @@
 A **deque** (_double-ended queue_) is a queue-like [[Abstract Data Type (ADT)|abstract data type]] that allows
 insertion and removal at **both ends**.
 
-A regular [[Queue and Stack|queue]] is FIFO and only needs to insert at one end
+A regular [[Queue|queue]] is FIFO and only needs to insert at one end
 and remove from the other. A deque generalizes that interface:
 
 - insert right
