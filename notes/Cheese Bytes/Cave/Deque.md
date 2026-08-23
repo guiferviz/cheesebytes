@@ -1,4 +1,4 @@
-A **deque** (_double-ended queue_) is a queue-like abstract data type that allows
+A **deque** (_double-ended queue_) is a queue-like [[Abstract Data Type (ADT)|abstract data type]] that allows
 insertion and removal at **both ends**.
 
 A regular [[Queue and Stack|queue]] is FIFO and only needs to insert at one end
@@ -44,4 +44,4 @@ from the same end, producing LIFO-like behavior rather than FIFO behavior.
 A deque is therefore more general than a queue, while supporting a queue almost
 for free once efficient operations at both ends already exist.
 
-Related: [[Queue and Stack]], [[Python Deque Implementation]].
+Related: [[Abstract Data Type (ADT)]], [[Queue and Stack]], [[Python Deque Implementation]].
