@@ -47,5 +47,3 @@ Python also provides `queue.Queue`, which exposes a more explicit FIFO interface
 through `put()` and `get()`. It is primarily designed for synchronized
 communication between threads, so for ordinary algorithms such as BFS,
 `collections.deque` is usually the lighter choice.
-
-Related: [[Abstract Data Type (ADT)]], [[Deque]], [[Python Deque Implementation]].
