@@ -109,7 +109,7 @@ The circular-buffer case also connects directly to [[Amortized Cost in Algorithm
 
 ## `list` vs `deque` in Python
 
-A Python `list` is a dynamic array. It is ideal for stack-like access at the
+A Python `list` is a dynamic array. It is ideal for [[Stack|stack]]-like access at the
 right end:
 
 ```python
@@ -121,7 +121,7 @@ Those operations are $O(1)$ amortized, and indexing is $O(1)$.
 
 Removing from the front with `list.pop(0)` is $O(N)$ because the remaining
 references have to be shifted. That is why FIFO algorithms such as BFS normally
-use:
+use a [[Queue|queue]] backed by `deque`:
 
 ```python
 from collections import deque
