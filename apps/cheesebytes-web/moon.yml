@@ -1,0 +1,24 @@
+language: javascript
+
+# Astro has a build script but no generic test script, so don't inherit the
+# TypeScript test/build pair blindly.
+workspace:
+  inheritedTasks:
+    exclude:
+      - test
+      - build
+
+tasks:
+  build:
+    command: "pnpm build"
+    inputs:
+      - "src/**/*"
+      - "public/**/*"
+      - "package.json"
+      - "astro.config.*"
+      - "tsconfig.json"
+      - "/pnpm-lock.yaml"
+    outputs:
+      - "dist/**/*"
+    options:
+      runInCI: affected
