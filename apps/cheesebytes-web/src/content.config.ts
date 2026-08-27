@@ -8,6 +8,22 @@ const notesPattern = "**/*.{md,mdx}";
 const notesBase = "../../notes/Cheese Bytes";
 const registeredWatchers = new WeakSet<object>();
 
+function runGit(args: string[], maxBuffer?: number): string {
+  const gitResult = spawnSync("git", args, {
+    encoding: "utf8",
+    ...(maxBuffer ? { maxBuffer } : {}),
+  });
+
+  if (gitResult.error) throw gitResult.error;
+  if (gitResult.status !== 0) {
+    throw new Error(
+      `git ${args[0]} failed with exit code ${gitResult.status}: ${gitResult.stderr.trim()}`,
+    );
+  }
+
+  return gitResult.stdout;
+}
+
 // Función para normalizar URLs
 function normalizeUrl(path: string): string {
   if (!path) return "";
@@ -51,9 +67,7 @@ function batchGitData(
 
   try {
     // 1) Get git repo root so we can match --name-only output → original paths
-    const gitRoot = spawnSync("git", ["rev-parse", "--show-toplevel"], {
-      encoding: "utf8",
-    }).stdout.trim();
+    const gitRoot = runGit(["rev-parse", "--show-toplevel"]).trim();
 
     const relToOriginal = new Map<string, string>();
     for (const fp of filePaths) {
@@ -63,14 +77,13 @@ function batchGitData(
     }
 
     // 2) ONE git-log call for every file: dates + file names
-    const gitResult = spawnSync(
-      "git",
+    const gitLog = runGit(
       ["log", "--format=__COMMIT__%aI", "--name-only", "--", ...filePaths],
-      { encoding: "utf8", maxBuffer: 50 * 1024 * 1024 },
+      50 * 1024 * 1024,
     );
 
     let currentDate = "";
-    for (const line of gitResult.stdout.split("\n")) {
+    for (const line of gitLog.split("\n")) {
       if (line.startsWith("__COMMIT__")) {
         currentDate = line.slice("__COMMIT__".length);
       } else if (line.trim() && currentDate) {
@@ -89,6 +102,7 @@ function batchGitData(
     );
   } catch (err) {
     console.error("Error in batchGitData:", err);
+    if (process.env.CI) throw err;
   }
 
   return result;
@@ -497,6 +511,7 @@ const customLoader: Loader = {
       }
     } catch (error) {
       console.error("Error in customLoader:", error);
+      if (process.env.CI) throw error;
     }
   },
 };

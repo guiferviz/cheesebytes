@@ -18,6 +18,13 @@ tasks:
       - "astro.config.*"
       - "tsconfig.json"
       - "/pnpm-lock.yaml"
+      - "/notes/Cheese Bytes/**/*"
+    checks:
+      # The generated metadata includes each note's authored dates and edit
+      # count, so content hashes alone are insufficient after history edits.
+      - check: fingerprint
+        script: 'ROOT="$(git rev-parse --show-toplevel)"; git -C "$ROOT" log --format="__COMMIT__%aI" --name-only -- "notes/Cheese Bytes" | git hash-object --stdin'
+        hash: stdout
     outputs:
       - "dist/**/*"
     options:
