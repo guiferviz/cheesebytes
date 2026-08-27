@@ -22,3 +22,26 @@ tasks:
       - "dist/**/*"
     options:
       runInCI: affected
+
+  publish-to-repo:
+    command: "bash ../../.moon/scripts/publish_cheesebytes_web.sh"
+    inputs:
+      - "**/*"
+      - "/notes/Cheese Bytes/**/*"
+      - "/.moon/scripts/publish_cheesebytes_web.sh"
+    deps:
+      - build
+    options:
+      cache: false
+      runInCI: false
+
+  record-audio:
+    command: "uv run python .moon/scripts/record_cheesebytes_audio.py"
+    inputs: []
+    preset: utility
+    options:
+      runFromWorkspaceRoot: true
+
+  dev:
+    command: "pnpm run dev"
+    preset: server
