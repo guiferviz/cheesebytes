@@ -9,6 +9,25 @@ workspace:
       - build
 
 tasks:
+  test:
+    script: |
+      set -euo pipefail
+      pnpm exec vitest run src/components/cave/how-a-heatmap-can-mislead-you/video/definition.test.ts
+      pnpm exec astro build
+      rm -rf dist
+    inputs:
+      - "src/**/*"
+      - "public/**/*"
+      - "package.json"
+      - "astro.config.*"
+      - "tsconfig.json"
+      - "/pnpm-lock.yaml"
+      - "/notes/Cheese Bytes/**/*"
+    deps:
+      - cheese_bytes_video:test
+    options:
+      runInCI: affected
+
   build:
     command: "pnpm build"
     inputs:
@@ -27,6 +46,8 @@ tasks:
         hash: stdout
     outputs:
       - "dist/**/*"
+    deps:
+      - cheese_bytes_video:build
     options:
       runInCI: affected
 
@@ -52,3 +73,17 @@ tasks:
   dev:
     command: "pnpm run dev"
     preset: server
+
+  preview_video:
+    command: "pnpm exec cheese-bytes-video preview"
+    preset: server
+    options:
+      cache: false
+      runInCI: false
+
+  create_video:
+    command: "pnpm exec cheese-bytes-video create"
+    preset: utility
+    options:
+      cache: false
+      runInCI: false

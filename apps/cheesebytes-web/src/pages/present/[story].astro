@@ -1,0 +1,27 @@
+---
+import RevealLayout from "../../layouts/PresentationLayout.astro";
+
+export function getStaticPaths() {
+  const storyModules = import.meta.glob("../../stories/*.astro");
+  return Object.keys(storyModules).map((path) => ({
+    params: {
+      story: path.split("/").at(-1)?.replace(/\.astro$/, ""),
+    },
+  }));
+}
+
+const stories = import.meta.glob<{ default: any }>("../../stories/*.astro");
+const storyName = Astro.params.story;
+const path = "../../stories/" + storyName + ".astro";
+const loader = stories[path];
+if (!loader) throw new Error("Unknown Cheese Bytes story: " + storyName);
+const Story = (await loader()).default;
+---
+
+<RevealLayout
+  title={storyName}
+  description="Cheese Bytes story"
+  theme="dark"
+>
+  <Story />
+</RevealLayout>

@@ -27,11 +27,9 @@ import { useScopedVimMode } from "./useScopedVimMode";
 const FILTER_ORIGIN: Origin = { x: 10, y: 4 };
 const FILTER_CELL_SIZE = 48;
 const FILTER_ORIENTATION = 0;
-const GAUSSIAN_KERNEL = [
-  [1, 2, 1],
-  [2, 4, 2],
-  [1, 2, 1],
-] as const;
+const SMOOTHING_RADIUS_MIN = 1;
+const SMOOTHING_RADIUS_MAX = 4;
+const SMOOTHING_RADIUS_DEFAULT = 1;
 const CONTINUOUS_SCALE_MIN = 18;
 const CONTINUOUS_SCALE_MAX = 96;
 const CONTINUOUS_SCALE_STEP = 2;
@@ -60,36 +58,68 @@ function fullscreenCanvasStyle(
   };
 }
 
-function buildGaussianPreviewMatrix(matrix: number[][]) {
+function buildGaussianPreviewMatrix(
+  matrix: number[][],
+  radius: number,
+) {
   const rows = matrix.length;
   const columns = matrix[0]?.length ?? 0;
+  const sigma = Math.max(0.85, radius * 0.82);
+  const twoSigmaSquared = 2 * sigma * sigma;
 
   return matrix.map((row, rowIndex) =>
     row.map((_, columnIndex) => {
       let acc = 0;
       let weight = 0;
 
-      for (let kernelRow = -1; kernelRow <= 1; kernelRow += 1) {
-        for (let kernelColumn = -1; kernelColumn <= 1; kernelColumn += 1) {
-          const sourceRow = rowIndex + kernelRow;
-          const sourceColumn = columnIndex + kernelColumn;
+      for (let rowOffset = -radius; rowOffset <= radius; rowOffset += 1) {
+        for (
+          let columnOffset = -radius;
+          columnOffset <= radius;
+          columnOffset += 1
+        ) {
+          const sourceRow = rowIndex + rowOffset;
+          const sourceColumn = columnIndex + columnOffset;
+
           if (
-            sourceRow >= 0 &&
-            sourceRow < rows &&
-            sourceColumn >= 0 &&
-            sourceColumn < columns
+            sourceRow < 0 ||
+            sourceRow >= rows ||
+            sourceColumn < 0 ||
+            sourceColumn >= columns
           ) {
-            const kernelWeight =
-              GAUSSIAN_KERNEL[kernelRow + 1][kernelColumn + 1];
-            acc += matrix[sourceRow][sourceColumn] * kernelWeight;
-            weight += kernelWeight;
+            continue;
           }
+
+          const distanceSquared =
+            rowOffset * rowOffset + columnOffset * columnOffset;
+          const kernelWeight = Math.exp(-distanceSquared / twoSigmaSquared);
+          acc += matrix[sourceRow][sourceColumn] * kernelWeight;
+          weight += kernelWeight;
         }
       }
 
       return weight ? acc / weight : 0;
     }),
   );
+}
+
+function smoothingNeighborCount(radius: number) {
+  return (radius * 2 + 1) ** 2 - 1;
+}
+
+function smoothingNeighborOffsets(radius: number) {
+  const offsets: Array<{ dx: number; dy: number }> = [];
+
+  for (let dy = -radius; dy <= radius; dy += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      if (dx === 0 && dy === 0) {
+        continue;
+      }
+      offsets.push({ dx, dy });
+    }
+  }
+
+  return offsets;
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -273,6 +303,92 @@ function MarkerOverlay({
             </g>
           ))
         : null}
+    </svg>
+  );
+}
+
+function SmoothingNeighborhoodOverlay({
+  hoveredCell,
+  radius,
+  origin,
+  canvasWidth,
+  canvasHeight,
+  range,
+}: {
+  hoveredCell: { ix: number; iy: number } | null;
+  radius: number;
+  origin: Origin;
+  canvasWidth: number;
+  canvasHeight: number;
+  range: { ixMin: number; ixMax: number; iyMin: number; iyMax: number };
+}) {
+  if (!hoveredCell) {
+    return null;
+  }
+
+  const settings = {
+    gridType: "square" as const,
+    cellSize: FILTER_CELL_SIZE,
+    orientation: FILTER_ORIENTATION,
+    origin,
+    canvasSize: canvasWidth,
+    canvasWidth,
+    canvasHeight,
+  };
+
+  const neighbors = smoothingNeighborOffsets(radius)
+    .map(({ dx, dy }) => ({
+      ix: hoveredCell.ix + dx,
+      iy: hoveredCell.iy + dy,
+    }))
+    .filter(
+      ({ ix, iy }) =>
+        ix >= range.ixMin &&
+        ix <= range.ixMax &&
+        iy >= range.iyMin &&
+        iy <= range.iyMax,
+    );
+
+  const currentPolygon = getSquareCellPolygon(
+    hoveredCell.ix,
+    hoveredCell.iy,
+    settings,
+  );
+
+  return (
+    <svg
+      viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+      }}
+    >
+      {neighbors.map(({ ix, iy }) => {
+        const polygon = getSquareCellPolygon(ix, iy, settings);
+        const points = polygon.map((point) => `${point.x},${point.y}`).join(" ");
+
+        return (
+          <polygon
+            key={`neighbor-${ix}-${iy}`}
+            points={points}
+            fill="rgba(249, 115, 22, 0.32)"
+            stroke="rgba(249, 115, 22, 0.95)"
+            strokeWidth={2}
+          />
+        );
+      })}
+      <polygon
+        points={currentPolygon
+          .map((point) => `${point.x},${point.y}`)
+          .join(" ")}
+        fill="rgba(250, 204, 21, 0.42)"
+        stroke="rgba(250, 204, 21, 1)"
+        strokeWidth={2.5}
+      />
     </svg>
   );
 }
@@ -500,6 +616,13 @@ export function HeatmapGaussianPythonVisual() {
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef);
   const [showPoints, setShowPoints] = useState(true);
   const [trackingActive, setTrackingActive] = useState(false);
+  const [smoothingRadius, setSmoothingRadius] = useState(
+    SMOOTHING_RADIUS_DEFAULT,
+  );
+  const [hoveredSmoothedCell, setHoveredSmoothedCell] = useState<{
+    ix: number;
+    iy: number;
+  } | null>(null);
   const [rawMarkers, setRawMarkers] = useState<Point[]>([]);
   const [smoothedMarkers, setSmoothedMarkers] = useState<Point[]>([]);
   const [origin, setOrigin] = useState(FILTER_ORIGIN);
@@ -524,8 +647,12 @@ export function HeatmapGaussianPythonVisual() {
     [matrix, range],
   );
   const smoothedCellValues = useMemo(
-    () => matrixToSquareCellValues(buildGaussianPreviewMatrix(matrix), range),
-    [matrix, range],
+    () =>
+      matrixToSquareCellValues(
+        buildGaussianPreviewMatrix(matrix, smoothingRadius),
+        range,
+      ),
+    [matrix, range, smoothingRadius],
   );
 
   useEffect(() => {
@@ -591,9 +718,36 @@ export function HeatmapGaussianPythonVisual() {
         run: () => setShowPoints((current) => !current),
       },
       {
+        key: "-",
+        label: "Fewer smoothing neighbors",
+        run: () =>
+          setSmoothingRadius((current) =>
+            clamp(
+              current - 1,
+              SMOOTHING_RADIUS_MIN,
+              SMOOTHING_RADIUS_MAX,
+            ),
+          ),
+      },
+      {
+        key: "=",
+        label: "More smoothing neighbors",
+        run: () =>
+          setSmoothingRadius((current) =>
+            clamp(
+              current + 1,
+              SMOOTHING_RADIUS_MIN,
+              SMOOTHING_RADIUS_MAX,
+            ),
+          ),
+      },
+      {
         key: "d",
-        label: "Reset grid alignment",
-        run: () => setOrigin(FILTER_ORIGIN),
+        label: "Reset grid and smoothing",
+        run: () => {
+          setOrigin(FILTER_ORIGIN);
+          setSmoothingRadius(SMOOTHING_RADIUS_DEFAULT);
+        },
       },
     ],
     [toggleFullscreen],
@@ -618,14 +772,45 @@ export function HeatmapGaussianPythonVisual() {
       <div style={fullscreenInnerStyle(isFullscreen, 1140)}>
         <div
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 18,
-            alignItems: "start",
-            justifyContent: "center",
+            display: "grid",
+            gap: 14,
             width: "100%",
           }}
         >
+          <label
+            style={{
+              display: "grid",
+              gap: 6,
+              width: "min(100%, 560px)",
+              margin: "0 auto",
+            }}
+          >
+            <span>
+              Neighbors included: {smoothingNeighborCount(smoothingRadius)} (
+              {smoothingRadius}-cell radius)
+            </span>
+            <input
+              type="range"
+              min={SMOOTHING_RADIUS_MIN}
+              max={SMOOTHING_RADIUS_MAX}
+              step={1}
+              value={smoothingRadius}
+              onChange={(event) =>
+                setSmoothingRadius(Number(event.target.value))
+              }
+            />
+          </label>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 18,
+              alignItems: "start",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
           <div style={{ display: "grid", gap: 8, justifyItems: "center" }}>
             <VisualLabel>Raw Aggregation</VisualLabel>
             <div
@@ -670,6 +855,26 @@ export function HeatmapGaussianPythonVisual() {
           <div style={{ display: "grid", gap: 8, justifyItems: "center" }}>
             <VisualLabel>Neighbor-Smoothed Grid</VisualLabel>
             <div
+              onPointerMove={(event) => {
+                const bounds = event.currentTarget.getBoundingClientRect();
+                if (bounds.width <= 0 || bounds.height <= 0) {
+                  return;
+                }
+
+                const logicalX =
+                  (event.clientX - bounds.left) * (canvasWidth / bounds.width);
+                const logicalY =
+                  (event.clientY - bounds.top) * (canvasHeight / bounds.height);
+                const ix = Math.floor(
+                  (logicalX - origin.x) / FILTER_CELL_SIZE,
+                );
+                const iy = Math.floor(
+                  (logicalY - origin.y) / FILTER_CELL_SIZE,
+                );
+
+                setHoveredSmoothedCell({ ix, iy });
+              }}
+              onPointerLeave={() => setHoveredSmoothedCell(null)}
               style={{
                 position: "relative",
                 width: canvasWidth,
@@ -699,6 +904,14 @@ export function HeatmapGaussianPythonVisual() {
                 onOriginChange={setOrigin}
                 style={{ width: "100%", height: "100%" }}
               />
+              <SmoothingNeighborhoodOverlay
+                hoveredCell={hoveredSmoothedCell}
+                radius={smoothingRadius}
+                origin={origin}
+                canvasWidth={canvasWidth}
+                canvasHeight={canvasHeight}
+                range={range}
+              />
               <MarkerOverlay
                 active={trackingActive}
                 markers={smoothedMarkers}
@@ -707,6 +920,7 @@ export function HeatmapGaussianPythonVisual() {
               />
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

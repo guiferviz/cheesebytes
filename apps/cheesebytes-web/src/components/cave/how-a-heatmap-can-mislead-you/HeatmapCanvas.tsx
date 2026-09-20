@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, Dispatch, SetStateAction } from "react";
+import type {
+  CanvasHTMLAttributes,
+  CSSProperties,
+  Dispatch,
+  RefObject,
+  SetStateAction,
+} from "react";
 
 import {
   colorForValue,
@@ -27,6 +33,28 @@ import type {
   PostcodeSubdivisionLevel,
 } from "./types";
 
+export type HeatmapCanvasLayer =
+  | "backdrop"
+  | "aggregation"
+  | "points"
+  | "origin"
+  | "border";
+
+export const HEATMAP_CANVAS_LAYER_ORDER: readonly HeatmapCanvasLayer[] = [
+  "backdrop",
+  "aggregation",
+  "points",
+  "origin",
+  "border",
+];
+
+export type HeatmapCanvasLayerAttributes = Omit<
+  CanvasHTMLAttributes<HTMLCanvasElement>,
+  "children" | "height" | "width"
+> & {
+  [attribute: `data-${string}`]: string | number | undefined;
+};
+
 interface HeatmapCanvasProps {
   points: Point[];
   canvasSize?: number;
@@ -46,6 +74,9 @@ interface HeatmapCanvasProps {
   postcodeSubdivisionLevel?: PostcodeSubdivisionLevel;
   pointRadius?: number;
   style?: CSSProperties;
+  layerAttributes?: Partial<
+    Record<HeatmapCanvasLayer, HeatmapCanvasLayerAttributes>
+  >;
   onOriginChange?: Dispatch<SetStateAction<Origin>>;
 }
 
@@ -67,7 +98,6 @@ function drawCityBackdrop(
   canvasHeight: number,
   isDark: boolean,
 ) {
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   ctx.fillStyle = isDark ? "#0c1320" : "#fffaf2";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
@@ -182,6 +212,40 @@ function canvasDeltaToGridDelta(
   };
 }
 
+function prepareLayer(
+  canvas: HTMLCanvasElement | null,
+  displayWidth: number,
+  displayHeight: number,
+  logicalWidth: number,
+  logicalHeight: number,
+) {
+  if (!canvas) return null;
+
+  const ratio = window.devicePixelRatio || 1;
+  const bufferWidth = Math.max(1, Math.round(displayWidth * ratio));
+  const bufferHeight = Math.max(1, Math.round(displayHeight * ratio));
+  canvas.width = bufferWidth;
+  canvas.height = bufferHeight;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.setTransform(
+    bufferWidth / logicalWidth,
+    0,
+    0,
+    bufferHeight / logicalHeight,
+    0,
+    0,
+  );
+  ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
+  return ctx;
+}
+
 export function HeatmapCanvas({
   points,
   canvasSize = 320,
@@ -201,11 +265,27 @@ export function HeatmapCanvas({
   postcodeSubdivisionLevel = 0,
   pointRadius = 2.6,
   style,
+  layerAttributes,
   onOriginChange,
 }: HeatmapCanvasProps) {
   const logicalWidth = canvasWidth ?? canvasSize;
   const logicalHeight = canvasHeight ?? canvasSize;
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLCanvasElement>(null);
+  const aggregationRef = useRef<HTMLCanvasElement>(null);
+  const pointsRef = useRef<HTMLCanvasElement>(null);
+  const originRef = useRef<HTMLCanvasElement>(null);
+  const borderRef = useRef<HTMLCanvasElement>(null);
+  const layerRefs: Record<
+    HeatmapCanvasLayer,
+    RefObject<HTMLCanvasElement>
+  > = {
+    backdrop: backdropRef,
+    aggregation: aggregationRef,
+    points: pointsRef,
+    origin: originRef,
+    border: borderRef,
+  };
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -221,13 +301,11 @@ export function HeatmapCanvas({
   const isDark = useDarkModeFlag();
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
+    const root = rootRef.current;
+    if (!root) return;
 
     const updateDisplaySize = () => {
-      const bounds = canvas.getBoundingClientRect();
+      const bounds = root.getBoundingClientRect();
       const width = bounds.width || logicalWidth;
       const height = bounds.height || logicalHeight;
 
@@ -251,7 +329,7 @@ export function HeatmapCanvas({
     }
 
     const observer = new ResizeObserver(updateDisplaySize);
-    observer.observe(canvas);
+    observer.observe(root);
     window.addEventListener("resize", updateDisplaySize);
 
     return () => {
@@ -261,8 +339,8 @@ export function HeatmapCanvas({
   }, [logicalHeight, logicalWidth]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !interactive || !onOriginChange || gridType !== "postcode") {
+    const root = rootRef.current;
+    if (!root || !interactive || !onOriginChange || gridType !== "postcode") {
       return;
     }
 
@@ -275,42 +353,59 @@ export function HeatmapCanvas({
       }));
     };
 
-    canvas.addEventListener("wheel", handleWheel, { passive: false });
-    return () => canvas.removeEventListener("wheel", handleWheel);
+    root.addEventListener("wheel", handleWheel, { passive: false });
+    return () => root.removeEventListener("wheel", handleWheel);
   }, [gridType, interactive, onOriginChange]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const ratio = window.devicePixelRatio || 1;
-    const bufferWidth = Math.max(1, Math.round(displaySize.width * ratio));
-    const bufferHeight = Math.max(1, Math.round(displaySize.height * ratio));
-    canvas.width = bufferWidth;
-    canvas.height = bufferHeight;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return;
-    }
-
-    ctx.setTransform(
-      bufferWidth / logicalWidth,
-      0,
-      0,
-      bufferHeight / logicalHeight,
-      0,
-      0,
+    const backdrop = prepareLayer(
+      backdropRef.current,
+      displaySize.width,
+      displaySize.height,
+      logicalWidth,
+      logicalHeight,
     );
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    const aggregation = prepareLayer(
+      aggregationRef.current,
+      displaySize.width,
+      displaySize.height,
+      logicalWidth,
+      logicalHeight,
+    );
+    const pointLayer = prepareLayer(
+      pointsRef.current,
+      displaySize.width,
+      displaySize.height,
+      logicalWidth,
+      logicalHeight,
+    );
+    const originLayer = prepareLayer(
+      originRef.current,
+      displaySize.width,
+      displaySize.height,
+      logicalWidth,
+      logicalHeight,
+    );
+    const borderLayer = prepareLayer(
+      borderRef.current,
+      displaySize.width,
+      displaySize.height,
+      logicalWidth,
+      logicalHeight,
+    );
+
+    if (
+      !backdrop ||
+      !aggregation ||
+      !pointLayer ||
+      !originLayer ||
+      !borderLayer
+    ) {
+      return;
+    }
 
     if (showBackdrop) {
-      drawCityBackdrop(ctx, logicalWidth, logicalHeight, isDark);
-    } else {
-      ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+      drawCityBackdrop(backdrop, logicalWidth, logicalHeight, isDark);
     }
 
     const settings = {
@@ -342,116 +437,118 @@ export function HeatmapCanvas({
           for (let ix = range.ixMin; ix <= range.ixMax; ix += 1) {
             const value = values.get(squareKey(ix, iy)) ?? 0;
             const polygon = getSquareCellPolygon(ix, iy, settings);
-            drawPolygon(ctx, polygon);
-            ctx.fillStyle =
+            drawPolygon(aggregation, polygon);
+            aggregation.fillStyle =
               value > 0
                 ? colorForValue(value, maxValue, DEFAULT_HEATMAP_PALETTE)
                 : emptyFill;
-            ctx.globalAlpha =
+            aggregation.globalAlpha =
               value > 0 ? 0.18 + 0.76 * (value / Math.max(maxValue, 1)) : 1;
-            ctx.fill();
-            ctx.globalAlpha = 1;
-            ctx.strokeStyle = stroke;
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            aggregation.fill();
+            aggregation.globalAlpha = 1;
+            aggregation.strokeStyle = stroke;
+            aggregation.lineWidth = 1;
+            aggregation.stroke();
           }
         }
       } else if (gridType === "triangle") {
         for (const { ix, iy } of getVisibleTriangleCoords(settings)) {
           const value = values.get(triangleKey(ix, iy)) ?? 0;
           const polygon = getTriangleCellPolygon(ix, iy, settings);
-          drawPolygon(ctx, polygon);
-          ctx.fillStyle =
+          drawPolygon(aggregation, polygon);
+          aggregation.fillStyle =
             value > 0
               ? colorForValue(value, maxValue, DEFAULT_HEATMAP_PALETTE)
               : emptyFill;
-          ctx.globalAlpha =
+          aggregation.globalAlpha =
             value > 0 ? 0.18 + 0.76 * (value / Math.max(maxValue, 1)) : 1;
-          ctx.fill();
-          ctx.globalAlpha = 1;
-          ctx.strokeStyle = stroke;
-          ctx.lineWidth = 1;
-          ctx.stroke();
+          aggregation.fill();
+          aggregation.globalAlpha = 1;
+          aggregation.strokeStyle = stroke;
+          aggregation.lineWidth = 1;
+          aggregation.stroke();
         }
       } else if (gridType === "postcode") {
         const postcodeCells =
           postcodeLayout?.cells ?? getPostcodeCells(settings);
         for (const cell of postcodeCells) {
           const value = values.get(cell.key) ?? 0;
-          drawPolygon(ctx, cell.polygon);
-          ctx.fillStyle =
+          drawPolygon(aggregation, cell.polygon);
+          aggregation.fillStyle =
             value > 0
               ? colorForValue(value, maxValue, DEFAULT_HEATMAP_PALETTE)
               : emptyFill;
-          ctx.globalAlpha =
+          aggregation.globalAlpha =
             value > 0 ? 0.18 + 0.76 * (value / Math.max(maxValue, 1)) : 1;
-          ctx.fill();
-          ctx.globalAlpha = 1;
+          aggregation.fill();
+          aggregation.globalAlpha = 1;
         }
 
         if (postcodeSubdivisionLevel === 0 || !postcodeLayout) {
-          ctx.strokeStyle = postcodeStroke;
-          ctx.lineWidth = 0.95;
+          aggregation.strokeStyle = postcodeStroke;
+          aggregation.lineWidth = 0.95;
           for (const cell of postcodeCells) {
-            drawPolygon(ctx, cell.polygon);
-            ctx.stroke();
+            drawPolygon(aggregation, cell.polygon);
+            aggregation.stroke();
           }
         } else {
-          ctx.save();
-          ctx.strokeStyle = postcodeStroke;
-          ctx.lineWidth = 1.05;
-          ctx.setLineDash([]);
+          aggregation.save();
+          aggregation.strokeStyle = postcodeStroke;
+          aggregation.lineWidth = 1.05;
+          aggregation.setLineDash([]);
           for (const cell of postcodeLayout.baseCells) {
-            drawPolygon(ctx, cell.polygon);
-            ctx.stroke();
+            drawPolygon(aggregation, cell.polygon);
+            aggregation.stroke();
           }
 
           for (const line of postcodeLayout.divisionLines) {
-            ctx.beginPath();
+            aggregation.beginPath();
             line.points.forEach((point, index) => {
               if (index === 0) {
-                ctx.moveTo(point.x, point.y);
+                aggregation.moveTo(point.x, point.y);
                 return;
               }
-              ctx.lineTo(point.x, point.y);
+              aggregation.lineTo(point.x, point.y);
             });
             if (line.level === 1) {
-              ctx.setLineDash([8, 6]);
-              ctx.lineWidth = 1.15;
+              aggregation.setLineDash([8, 6]);
+              aggregation.lineWidth = 1.15;
             } else {
-              ctx.setLineDash([1.2, 6]);
-              ctx.lineWidth = 1.9;
+              aggregation.setLineDash([1.2, 6]);
+              aggregation.lineWidth = 1.9;
             }
-            ctx.stroke();
+            aggregation.stroke();
           }
-          ctx.restore();
+          aggregation.restore();
         }
       } else {
         for (const { q, r } of getVisibleHexCoords(settings)) {
           const value = values.get(hexKey(q, r)) ?? 0;
           const polygon = getHexCellPolygon(q, r, settings);
-          drawPolygon(ctx, polygon);
-          ctx.fillStyle =
+          drawPolygon(aggregation, polygon);
+          aggregation.fillStyle =
             value > 0
               ? colorForValue(value, maxValue, DEFAULT_HEATMAP_PALETTE)
               : emptyFill;
-          ctx.globalAlpha =
+          aggregation.globalAlpha =
             value > 0 ? 0.18 + 0.76 * (value / Math.max(maxValue, 1)) : 1;
-          ctx.fill();
-          ctx.globalAlpha = 1;
-          ctx.strokeStyle = stroke;
-          ctx.lineWidth = 1;
-          ctx.stroke();
+          aggregation.fill();
+          aggregation.globalAlpha = 1;
+          aggregation.strokeStyle = stroke;
+          aggregation.lineWidth = 1;
+          aggregation.stroke();
         }
       }
     }
 
     if (showPoints) {
-      ctx.fillStyle = isDark ? "rgba(248,250,252,0.88)" : "rgba(40,31,22,0.78)";
+      pointLayer.fillStyle = isDark
+        ? "rgba(248,250,252,0.88)"
+        : "rgba(40,31,22,0.78)";
       points.forEach((point) => {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, pointRadius, 0, Math.PI * 2);
-        ctx.fill();
+        pointLayer.beginPath();
+        pointLayer.arc(point.x, point.y, pointRadius, 0, Math.PI * 2);
+        pointLayer.fill();
       });
     }
 
@@ -462,25 +559,44 @@ export function HeatmapCanvas({
         orientation,
         logicalHeight,
       );
-      ctx.beginPath();
-      ctx.arc(transformedOrigin.x, transformedOrigin.y, 4.2, 0, Math.PI * 2);
-      ctx.fillStyle = isDark ? "rgba(255,157,92,0.95)" : "rgba(185,93,30,0.88)";
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(transformedOrigin.x, transformedOrigin.y, 8.5, 0, Math.PI * 2);
-      ctx.strokeStyle = isDark
+      originLayer.beginPath();
+      originLayer.arc(
+        transformedOrigin.x,
+        transformedOrigin.y,
+        4.2,
+        0,
+        Math.PI * 2,
+      );
+      originLayer.fillStyle = isDark
+        ? "rgba(255,157,92,0.95)"
+        : "rgba(185,93,30,0.88)";
+      originLayer.fill();
+      originLayer.beginPath();
+      originLayer.arc(
+        transformedOrigin.x,
+        transformedOrigin.y,
+        8.5,
+        0,
+        Math.PI * 2,
+      );
+      originLayer.strokeStyle = isDark
         ? "rgba(255,157,92,0.34)"
         : "rgba(185,93,30,0.28)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      originLayer.lineWidth = 1.5;
+      originLayer.stroke();
     }
 
     if (showBorder) {
-      ctx.strokeStyle = isDark
+      borderLayer.strokeStyle = isDark
         ? "rgba(255,255,255,0.1)"
         : "rgba(60,46,31,0.12)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(0.5, 0.5, logicalWidth - 1, logicalHeight - 1);
+      borderLayer.lineWidth = 1;
+      borderLayer.strokeRect(
+        0.5,
+        0.5,
+        logicalWidth - 1,
+        logicalHeight - 1,
+      );
     }
   }, [
     cellSize,
@@ -504,27 +620,26 @@ export function HeatmapCanvas({
   ]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={logicalWidth}
-      height={logicalHeight}
+    <div
+      ref={rootRef}
       style={{
         width: logicalWidth,
         height: logicalHeight,
         borderRadius: showBorder || showBackdrop ? 20 : 0,
-        display: "block",
         cursor: interactive
           ? dragRef.current
             ? "grabbing"
             : "grab"
           : "default",
+        display: "block",
+        overflow: "hidden",
+        position: "relative",
         touchAction: "none",
         ...style,
       }}
       onPointerDown={(event) => {
-        if (!interactive || !onOriginChange) {
-          return;
-        }
+        if (!interactive || !onOriginChange) return;
+
         const bounds = event.currentTarget.getBoundingClientRect();
         dragRef.current = {
           pointerId: event.pointerId,
@@ -538,16 +653,19 @@ export function HeatmapCanvas({
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={(event) => {
-        if (!interactive || !onOriginChange || !dragRef.current) {
-          return;
-        }
+        if (!interactive || !onOriginChange || !dragRef.current) return;
+
         const deltaX =
           (event.clientX - dragRef.current.startX) *
           dragRef.current.pixelsToCanvasX;
         const deltaY =
           (event.clientY - dragRef.current.startY) *
           dragRef.current.pixelsToCanvasY;
-        const gridDelta = canvasDeltaToGridDelta(deltaX, deltaY, orientation);
+        const gridDelta = canvasDeltaToGridDelta(
+          deltaX,
+          deltaY,
+          orientation,
+        );
         onOriginChange({
           x: dragRef.current.origin.x + gridDelta.x,
           y: dragRef.current.origin.y + gridDelta.y,
@@ -562,6 +680,32 @@ export function HeatmapCanvas({
       onPointerCancel={() => {
         dragRef.current = null;
       }}
-    />
+    >
+      {HEATMAP_CANVAS_LAYER_ORDER.map((layer) => {
+        const attributes = layerAttributes?.[layer] ?? {};
+        const { style: layerStyle, ...rest } = attributes;
+
+        return (
+          <canvas
+            {...rest}
+            key={layer}
+            ref={layerRefs[layer]}
+            aria-hidden="true"
+            data-heatmap-layer={layer}
+            width={logicalWidth}
+            height={logicalHeight}
+            style={{
+              display: "block",
+              height: "100%",
+              inset: 0,
+              pointerEvents: "none",
+              position: "absolute",
+              width: "100%",
+              ...layerStyle,
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }

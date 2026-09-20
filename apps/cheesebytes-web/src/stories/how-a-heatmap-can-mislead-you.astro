@@ -1,0 +1,349 @@
+---
+import { HeatmapVideoVisual, heatmapVideoDefinition } from "../components/cave/how-a-heatmap-can-mislead-you/video/HeatmapVideoVisual";
+import Mark from "@guiferviz/cheese-bytes-video/astro/Mark.astro";
+import StorySection from "@guiferviz/cheese-bytes-video/astro/StorySection.astro";
+import VideoVisual from "@guiferviz/cheese-bytes-video/astro/VideoVisual.astro";
+---
+
+<StorySection
+  id="coffee-demand"
+  timeline={(t) => {
+    const heatmap = t.visual("heatmap", heatmapVideoDefinition);
+    const original = t.visual("original", heatmapVideoDefinition);
+
+    t.fadeIn(heatmap, { from: "show-heatmap" });
+    t.fadeIn(heatmap.aggregation, { to: "show-aggregation" });
+
+    t.action(heatmap.shiftGrid, {
+      from: "move-grid",
+      to: "show-winner",
+      ease: "power2.inOut",
+      params: { x: 39, y: 36 },
+    });
+    t.action(heatmap.showWinner, { at: "show-winner" });
+
+    t.split([original, heatmap], {
+      from: "compare-results",
+      duration: 0.8,
+    });
+    t.slideIn(original, {
+      from: "compare-results",
+      direction: "left",
+      duration: 0.8,
+      distance: "100%",
+    });
+  }}
+>
+  <aside class="notes">
+    <p>
+      <Mark id="show-heatmap" />Imagine this is a map of coffee demand in
+      Manhattan. Every dot is someone looking for coffee. So this <Mark
+        id="show-aggregation"
+      />heat map should at least point to where demand is stronger. But not so
+      fast.
+    </p>
+    <p>
+      Watch what happens if we <Mark id="move-grid" />move the grid just a
+      little bit. Now the best location is <Mark id="show-winner" />here
+      instead.
+    </p>
+    <p>
+      <Mark id="compare-results" />Two people can analyze the exact same data.
+      Both use perfectly valid methods and still reach different conclusions.
+      Who's wrong?
+    </p>
+  </aside>
+
+  <VideoVisual id="heatmap">
+    <HeatmapVideoVisual
+      initial={{
+        origin: { x: 11, y: 21 },
+        showPoints: true,
+        showAggregation: true,
+        showWinner: false,
+        gridType: "square",
+        cellSize: 48,
+        question: 0,
+      }}
+      client:only="react"
+    />
+  </VideoVisual>
+
+  <VideoVisual id="original" videoOnly>
+    <HeatmapVideoVisual
+      initial={{
+        origin: { x: 11, y: 21 },
+        showPoints: true,
+        showAggregation: true,
+        showWinner: true,
+        gridType: "square",
+        cellSize: 48,
+        question: 0,
+      }}
+      client:only="react"
+    />
+  </VideoVisual>
+</StorySection>
+
+<StorySection
+  id="boundary-choices"
+  timeline={(t) => {
+    const heatmap = t.visual("heatmap", heatmapVideoDefinition);
+
+    t.action(heatmap.setCellSize, {
+      at: "boundary-choice",
+      params: { size: 32 },
+    });
+    t.action(heatmap.animateCellSize, {
+      from: "large-squares",
+      to: "hexagons",
+      ease: "power2.inOut",
+      params: { size: 72 },
+    });
+    t.action(heatmap.setGridType, {
+      at: "hexagons",
+      params: { gridType: "hex" },
+    });
+    t.action(heatmap.setCellSize, {
+      at: "hexagons",
+      params: { size: 48 },
+    });
+    t.action(heatmap.setGridType, {
+      at: "postal-codes",
+      params: { gridType: "postcode" },
+    });
+    t.action(heatmap.setGridType, {
+      at: "different-boundaries",
+      params: { gridType: "square" },
+    });
+    t.action(heatmap.setCellSize, {
+      at: "different-boundaries",
+      params: { size: 72 },
+    });
+    t.action(heatmap.showWinner, {
+      at: "different-boundaries",
+    });
+    t.action(heatmap.shiftGrid, {
+      from: "different-boundaries",
+      to: "different-story",
+      ease: "power2.inOut",
+      params: { x: 12, y: 4 },
+    });
+    t.action(heatmap.setQuestion, {
+      at: "question-map",
+      params: { question: 1 },
+    });
+    t.action(heatmap.setQuestion, {
+      at: "question-choice",
+      params: { question: 2 },
+    });
+  }}
+>
+  <aside class="notes">
+    <p>
+      Maybe nobody is wrong because the analysis didn't start when we counted
+      the dots. It started earlier when we decided what counts as an area.
+    </p>
+    <p>
+      <Mark id="boundary-choice" />Small square grid or a
+      <Mark id="large-squares" />larger grid, <Mark id="hexagons" />hexagons,
+      <Mark id="postal-codes" />postal codes, they looked different. But they
+      all do the same thing. They draw lines around the dots. And to see why
+      that matters, let's push it to an extreme.
+    </p>
+    <p>
+      <Mark id="different-boundaries" />With the same dots, one boundary can
+      split the demand almost evenly. Another boundary can make the left side
+      win. Another one can make the right side win.
+      <Mark id="different-story" />Same dots. Different grouping. Different
+      story.
+    </p>
+    <p>
+      So the question is not only: <Mark id="question-map" />what does the map
+      say? It is also: <Mark id="question-choice" />what did we make the map say
+      when we chose these boundaries?
+    </p>
+    <p>
+      And this is not just about coffee shops. We see maps like this everywhere:
+      election results, house prices, Covid cases, population density. So should
+      we stop using them?<Mark id="end" />
+      <pre
+        data-video-ignore>
+        https://www.anychart.com/blog/2024/11/08/us-election-maps/
+        https://www.google.com/search?q=house+prices+by+state+us+public+results
+        https://en.wikipedia.org/wiki/COVID-19_pandemic_by_country_and_territory#/media/File:COVID-19_Outbreak_World_Map_Total_Deaths_per_Capita.svg
+        https://studio.foursquare.com/public/5c653399-e79c-4aee-9891-df378da2dd43
+      </pre>
+    </p>
+  </aside>
+
+  <VideoVisual id="heatmap">
+    <HeatmapVideoVisual
+      initial={{
+        origin: { x: 24, y: 4 },
+        showPoints: true,
+        showAggregation: true,
+        showWinner: false,
+        gridType: "square",
+        cellSize: 48,
+        question: 0,
+      }}
+      client:only="react"
+    />
+  </VideoVisual>
+</StorySection>
+
+<StorySection id="stability" video={false}>
+  <aside class="notes">
+    <p>
+      No. Maps like this can still be useful. But we need to stop asking only:
+      which area wins? We also need to ask: how easily does the winner change?
+    </p>
+    <p>
+      In this first case, small changes in the grid keep changing the winner.
+      One grid says here. Another grid says there. And after a few versions, the
+      map is full of different answers. That is a fragile result.
+    </p>
+    <p>
+      But now look at this second case. The exact winning cell may move a
+      little, but the same general area keeps coming back. Again. And again.
+      That is a much stronger signal. That is the idea of stability. A
+      conclusion that survives more than one map.
+    </p>
+    <p>
+      But even then, there is another problem: what if we cannot move the
+      boundaries at all?
+    </p>
+  </aside>
+</StorySection>
+
+<StorySection id="fixed-boundaries" video={false}>
+  <aside class="notes">
+    <p>
+      Instead of drawing our own grid, we can aggregate the same points by
+      postal code, by district, or by state. Those boundaries are fixed. We
+      cannot just move them around.
+    </p>
+    <p>
+      But sometimes, you can still change the scale. Look at the same question
+      from far away. Then zoom in. A country becomes states. A state becomes
+      cities. A city becomes neighborhoods.
+    </p>
+    <p>
+      If the story changes completely when you zoom in, be careful. But if the
+      same general pattern survives at different scales, the conclusion becomes
+      easier to trust.
+    </p>
+  </aside>
+</StorySection>
+
+<StorySection id="smoothing" video={false}>
+  <aside class="notes">
+    <p>
+      But even changing scale does not solve everything. Because boundaries have
+      another problem: they are sharp, but reality is not.
+    </p>
+    <p>
+      A customer just across the line is still nearby. On the map, the boundary
+      looks sharp. But on the street, there is no wall there. No real break in
+      the city. The line separates areas on the map, not reality on the ground.
+    </p>
+    <p>
+      So a hotspot split by that line is still one hotspot. So instead of
+      treating every cell as completely isolated, we can smooth the map. Each
+      area looks not only at itself, but also at its neighbors.
+    </p>
+    <p>
+      But then you might ask: why use cells at all? Why not remove the grid
+      completely, and use a smooth heatmap? That can help. But it is not magic.
+    </p>
+    <p>
+      Now you have to choose how far each point spreads. Too little smoothing,
+      and the map still looks noisy. Too much smoothing, and different hotspots
+      can melt into one.
+    </p>
+    <p>
+      So again, the goal is not to remove every choice. The goal is to check
+      whether the conclusion survives reasonable choices.
+    </p>
+  </aside>
+</StorySection>
+
+<StorySection id="reasonable-choices" video={false}>
+  <aside class="notes">
+    <p>
+      So whether we move the grid, change the scale, smooth with neighbors, or
+      use a continuous heatmap, we are not removing choices. We are testing
+      whether the conclusion survives them.
+    </p>
+  </aside>
+</StorySection>
+
+<StorySection id="time-boundaries" video={false}>
+  <aside class="notes">
+    <p>
+      And this is where it stops being just about maps. Because the real issue
+      is not the map. It is the grouping. Every time we group data, we create
+      boundaries.
+    </p>
+    <p>
+      Sometimes those boundaries are drawn on a map. Sometimes they are
+      categories. Sometimes they are dates. They may not be physical walls, but
+      they still decide what gets grouped together.
+    </p>
+    <p>
+      In a stock chart, for example, the boundary can be a line in time. For
+      example, take the same monthly stock movements. Measure the year from
+      January to December, and you get one story. Move the year boundary from
+      December to November, and the story can change. Same data. Different cut.
+      Different conclusion.
+    </p>
+    <p>
+      There are many versions of this warning. Sometimes it is a map that
+      changes its answer. Sometimes it is a chart that changes its story.
+      Sometimes it is a statistic that looks obvious, until you ask how the
+      groups were made.
+    </p>
+    <p>
+      Different examples. Same warning: aggregation can hide as much as it
+      reveals.
+    </p>
+  </aside>
+</StorySection>
+
+<StorySection id="analysis-choices" video={false}>
+  <aside class="notes">
+    <p>
+      But most of the time, we are not the ones doing the analysis. We just see
+      the final map, the final chart, or the headline. And that does not mean
+      everything is fake. But it does mean something important: the analysis is
+      making choices for us.
+    </p>
+    <p>
+      It chooses the boundaries. It chooses the scale. It chooses what gets
+      averaged together. And each choice can change what feels obvious. A state
+      can look like one single political opinion, even if most of the result
+      comes from one city.
+    </p>
+    <p>
+      A postal code can look expensive, even if only one town inside it is
+      driving the average. A chart can make a year look terrible, just because
+      of where we decided the year begins and ends.
+    </p>
+    <p>
+      So the point is not to stop trusting aggregations. It is to remember that
+      they are not just summaries of the data. They are summaries of the data,
+      after someone decided how to group it.
+    </p>
+  </aside>
+</StorySection>
+
+<StorySection id="try-it" video={false}>
+  <aside class="notes">
+    <p>
+      Now try it yourself. Move the grid. Change the scale. Smooth the map.
+      Watch how the answer changes. Same data. Different boundaries. Different
+      story.
+    </p>
+  </aside>
+</StorySection>

@@ -13,6 +13,8 @@ import rehypeKatex from 'rehype-katex';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
+import { cheeseBytesVideo } from '@guiferviz/cheese-bytes-video/astro-integration';
+import videoConfig from './video.config.ts';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -204,5 +206,5 @@ export default defineConfig({
     },
     plugins: [tailwindcss(), resolveExternalDependencies],
   },
-  integrations: [mdx(), react()],
+  integrations: [mdx(), react(), cheeseBytesVideo(videoConfig)],
 });

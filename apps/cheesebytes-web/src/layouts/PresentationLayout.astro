@@ -205,6 +205,11 @@ const {
     </script>
     <!-- The cheese-cursor module manages this style dynamically.
          We keep it here so the presentation never flashes the default cursor. -->
+    <style is:inline>
+      .reveal [data-video-only="true"] {
+        display: none !important;
+      }
+    </style>
     <style is:inline id="cheese-cursor-hide">
       html,
       body,

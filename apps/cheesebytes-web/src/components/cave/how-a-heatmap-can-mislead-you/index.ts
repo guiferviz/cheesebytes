@@ -8,4 +8,5 @@ export {
   HeatmapGaussianPythonVisual as HeatmapSmoothingVisual,
 } from "./HeatmapSmoothingVisuals";
 export { TemporalAggregationVisual } from "./TemporalAggregationVisual";
+export { TemporalBoundaryShiftVisual } from "./TemporalBoundaryShiftVisual";
 export { PostcodeAggregationVisual } from "./PostcodeAggregationVisual";

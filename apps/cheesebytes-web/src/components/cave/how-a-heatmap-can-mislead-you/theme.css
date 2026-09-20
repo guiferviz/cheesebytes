@@ -11,6 +11,15 @@
   --heatmapviz-button-bg-active: rgba(185, 93, 30, 0.18);
   --heatmapviz-code-bg: #11161f;
   --heatmapviz-fullscreen-bg: #f5ede0;
+  --heatmapviz-chart-bg: rgba(255, 255, 255, 0.34);
+  --heatmapviz-grid-line: rgba(83, 63, 44, 0.11);
+  --heatmapviz-boundary: rgba(83, 63, 44, 0.48);
+  --heatmapviz-price-line: #4b3d31;
+  --heatmapviz-label-bg: #fffaf2;
+  --heatmapviz-positive: #047857;
+  --heatmapviz-negative: #b42318;
+  --heatmapviz-window-negative: rgba(180, 35, 24, 0.14);
+  --heatmapviz-window-positive: rgba(4, 120, 87, 0.12);
   --goldmine-fullscreen-bg: var(--heatmapviz-fullscreen-bg);
 }
 
@@ -27,4 +36,13 @@
   --heatmapviz-button-bg-active: rgba(255, 157, 92, 0.24);
   --heatmapviz-code-bg: #0b1017;
   --heatmapviz-fullscreen-bg: #090d13;
+  --heatmapviz-chart-bg: rgba(2, 6, 23, 0.3);
+  --heatmapviz-grid-line: rgba(226, 232, 240, 0.1);
+  --heatmapviz-boundary: rgba(226, 232, 240, 0.42);
+  --heatmapviz-price-line: #f8fafc;
+  --heatmapviz-label-bg: #111927;
+  --heatmapviz-positive: #34d399;
+  --heatmapviz-negative: #fb7185;
+  --heatmapviz-window-negative: rgba(251, 113, 133, 0.24);
+  --heatmapviz-window-positive: rgba(52, 211, 153, 0.17);
 }

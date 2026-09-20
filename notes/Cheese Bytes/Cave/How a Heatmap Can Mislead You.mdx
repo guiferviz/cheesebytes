@@ -9,6 +9,7 @@ import {
   HeatmapGaussianPythonVisual as HeatmapSmoothingVisual,
 } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/HeatmapSmoothingVisuals";
 import { TemporalAggregationVisual } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/TemporalAggregationVisual";
+import { TemporalBoundaryShiftVisual } from "../../../apps/cheesebytes-web/src/components/cave/how-a-heatmap-can-mislead-you/TemporalBoundaryShiftVisual";
 
 Imagine you want to open a small coffee shop in your city. You do not want to
 choose the location just by vibes, so you collect a bit of data: delivery
@@ -132,6 +133,14 @@ The visual below keeps the monthly history fixed and only changes where the row
 starts. Each row is still twelve months. The only thing moving is the boundary.
 
 <TemporalAggregationVisual client:only="react" />
+
+For a more visual version of the same idea, keep the S&P 500 price line fixed
+and move only the year boundaries. The 2018 calendar year is about **-6.2%**.
+Shift the boundary one month earlier, so the period runs from December 2017
+through November 2018, and the same underlying monthly series tells a roughly
+**+4.3%** story instead.
+
+<TemporalBoundaryShiftVisual client:only="react" />
 
 And yet the story changes. Some rows become more positive. Others lose their
 shine. A bad month can move from one "year" to another, and suddenly the summary
