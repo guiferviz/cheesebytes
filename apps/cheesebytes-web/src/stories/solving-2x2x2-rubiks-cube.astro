@@ -10,6 +10,8 @@ import { RubikStateGraph } from "../components/cave/rubik-graph";
 import { LogoAnimation } from "../components/cave/intro";
 import PyodideWorkerRunner from "../components/PyodideWorkerRunner";
 import RevealCode from "../components/RevealCode";
+import RevealCodeVideo, { revealCodeVideoDefinition } from "../components/RevealCodeVideo";
+import { EncodingShowcaseVideo, encodingShowcaseVideoDefinition } from "../components/cave/rubik-cube/EncodingShowcaseVideo";
 
 export const stickerPermutationCode = dedent`\
     MOVES = {
@@ -250,8 +252,9 @@ import {
 </StorySection>
 
 <StorySection id="rubik-05" timeline={(t) => {
-    const visual = t.visual("visual-5");
+    const visual = t.visual("visual-5", encodingShowcaseVideoDefinition);
     t.fadeIn(visual, { from: "start" });
+    t.action(visual.cycle, { from: "start", to: "visual-end" });
   }}>
   <aside class="notes">
         <p>
@@ -259,10 +262,11 @@ import {
           Now the problem is well defined. We have a graph. We have a move set.
           But a computer still needs one more thing. It needs a way to represent
           each cube state. In other words, it needs an encoding.
-        </p>
-      </aside>
+        <Mark id="visual-end" />
+      </p>
+    </aside>
   <VideoVisual id="visual-5">
-    <EncodingShowcase client:only="react" width={1080} height={600} />
+    <EncodingShowcaseVideo client:only="react" width={1080} height={600} />
   </VideoVisual>
 </StorySection>
 
@@ -319,8 +323,9 @@ import {
 </StorySection>
 
 <StorySection id="rubik-08" timeline={(t) => {
-    const visual = t.visual("visual-8");
+    const visual = t.visual("visual-8", revealCodeVideoDefinition);
     t.fadeIn(visual, { from: "start" });
+    t.action(visual.reveal, { from: "start", to: "visual-end" });
   }}>
   <aside class="notes">
         <p>
@@ -329,10 +334,11 @@ import {
           if the second value in the list is 9, that means the sticker that used
           to be at index 9 now moves into position 1. Then applying a move is just
           building a new string by reading the old one in that new order.
-        </p>
-      </aside>
+        <Mark id="visual-end" />
+      </p>
+    </aside>
   <VideoVisual id="visual-8">
-    <RevealCode
+    <RevealCodeVideo
           client:only="react"
           animation="fade"
           code={`MOVES = {
@@ -389,8 +395,9 @@ import {
 </StorySection>
 
 <StorySection id="wip" timeline={(t) => {
-    const visual = t.visual("visual-10");
+    const visual = t.visual("visual-10", revealCodeVideoDefinition);
     t.fadeIn(visual, { from: "start" });
+    t.action(visual.reveal, { from: "start", to: "visual-end" });
   }}>
   <aside class="notes">
         <p>
@@ -405,10 +412,11 @@ import {
           possible moves. If the new state has not been seen before, we store it
           in visited and add it to the next frontier. Then we repeat the process
           with that new frontier. And this works. At least in theory.
-        </p>
-      </aside>
+        <Mark id="visual-end" />
+      </p>
+    </aside>
   <VideoVisual id="visual-10">
-    <RevealCode
+    <RevealCodeVideo
           client:only="react"
           animation="fade"
           code={`def bfs(start, max_depth):
