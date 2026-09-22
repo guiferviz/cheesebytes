@@ -113,7 +113,8 @@ import {
     t.action(compare.reveal2x2, { from: "show-2x2", to: "countdown-done" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           Mi favorita: The Rubik's Cube has an absurd number of possible
           configurations. Far too many to explore, even with a modern computer.
           <Mark id="show-2x2" />But what about its little brother, the 2x2? Is it small enough to
@@ -170,7 +171,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           Before doing any math or writing any code, we need to be precise about
           what we are measuring. What does it mean to say that a cube is, for
           example, 7 moves away from solved? Well, that depends on what counts as
@@ -204,7 +206,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           Once we know which moves are allowed, the problem becomes much easier to
           think about. We can represent all cube configurations as a graph. Each
           configuration is a node. And there is an edge between two nodes if one
@@ -252,7 +255,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           Now the problem is well defined. We have a graph. We have a move set.
           But a computer still needs one more thing. It needs a way to represent
           each cube state. In other words, it needs an encoding.
@@ -268,7 +272,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           A very natural first approach is to represent the cube using its
           stickers. We choose a fixed order for the 24 visible stickers and store
           the state as a string. Each character tells us the color of one sticker.
@@ -290,7 +295,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           Once the cube is encoded as a string, the next question is how to apply
           moves. Each move simply rearranges some of the stickers. For example, in
           the solved cube, an R move sends this yellow sticker from the front face
@@ -318,7 +324,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           So in code, each move can be stored as a list of indices. For example,
           if the second value in the list is 9, that means the sticker that used
           to be at index 9 now moves into position 1. Then applying a move is just
@@ -351,7 +358,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           Now that we can represent a state and apply moves, we can start
           exploring the state space. We begin from the solved cube. Then we apply
           all possible moves to find every state that is 1 move away. Then we
@@ -386,7 +394,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           Let's implement BFS in Python using frontiers. We keep a dictionary
           called visited. It tells us which states we have already seen, and how
           far they are from solved
@@ -435,7 +444,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           When we run the code in Pyodide, a Python interpreter for the browser,
           we hit its memory limit of around 2 GB.
         </p>
@@ -450,7 +460,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           If we run the same code outside the browser, using a regular Python
           interpreter, it does finish. But it takes around 34 minutes and peaks at
           more than 13 GB of memory. The next step is not to change the algorithm,
@@ -476,7 +487,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           This is the number of states we have at each distance from solved. Looks
           like it found a total of 88 M states.
         </p>
@@ -532,7 +544,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           There is an issue hiding inside our sticker encoding. We define our
           strings relative to the camera. So if we rotate the whole cube in space,
           the string changes. But from the puzzle's point of view, nothing
@@ -558,7 +571,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           A neat way to handle this is to choose one corner as a reference and
           always keep it in the same place. For example, we can always rotate the
           cube so that the blue-yellow-red corner ends up back in the front-left
@@ -592,7 +606,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           With this change, we can solve all cube states in about 40 seconds using
           around 300 MB of memory, directly in Python and in the browser.
         </p>
@@ -607,7 +622,8 @@ import {
     t.fadeIn(visual, { from: "start" });
   }}>
   <aside class="notes">
-        <p>\n        <Mark id="start" />
+        <p>
+        <Mark id="start" />
           The biggest improvement has not come from changing the algorithm. It has
           come from paying more attention to the representation. The algorithm is
           still breadth-first search. What changed is that we stopped treating the
