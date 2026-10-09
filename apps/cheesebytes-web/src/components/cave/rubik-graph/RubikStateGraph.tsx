@@ -574,12 +574,44 @@ function drawIsoCube(
   for (const [idx, corners] of faceF) drawSticker(corners, stickers[8 + idx]);
 }
 
+// ─── Deterministic layout seeding ───────────────────────────────────────────
+// A seeded PRNG (mulberry32) drives both the initial node positions and d3's
+// internal jiggle, so a given seed always produces the exact same layout.
+// Changing the seed yields a different-but-reproducible layout.
+function mulberry32(seed: number): () => number {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Ticks run synchronously before the first paint so a seeded layout appears
+// already settled ("pre-warmed") instead of visibly drifting into place.
+// ~300 matches d3's default alpha decay reaching alphaMin.
+const WARMUP_TICKS = 300;
+
+const seedBtnStyle: React.CSSProperties = {
+  width: 22,
+  height: 22,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  lineHeight: 1,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
 // ─── React Component ─────────────────────────────────────────────────────────
 
 interface Props {
   initialIndex?: number;
   initialDepth?: number;
   initialMoves?: string[];
+  initialSeed?: number;
   overflow?: boolean;
 }
 
@@ -587,6 +619,7 @@ export default function RubikStateGraph({
   initialIndex = 0,
   initialDepth = 1,
   initialMoves,
+  initialSeed = 1,
   overflow = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -632,6 +665,7 @@ export default function RubikStateGraph({
 
   // Collapsible settings
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [seed, setSeed] = useState(initialSeed);
   const [chargeStrength, setChargeStrength] = useState(-250);
   const [linkDistance, setLinkDistance] = useState(130);
   const [cubeThreshold, setCubeThreshold] = useState(0); // 0 = always show cube
@@ -713,6 +747,17 @@ export default function RubikStateGraph({
     svg.selectAll("*").remove();
 
     const { nodes, edges } = bfsExpand(rootIndex, depth, activeMoveset);
+
+    // Seed deterministic initial positions. d3 only auto-places nodes whose
+    // x/y are NaN, so setting them here (before forceSimulation) makes the
+    // whole layout a pure function of `seed`.
+    const rng = mulberry32(seed);
+    for (const n of nodes) {
+      const radius = Math.min(width, height) * 0.35 * Math.sqrt(rng());
+      const angle = rng() * 2 * Math.PI;
+      n.x = width / 2 + radius * Math.cos(angle);
+      n.y = height / 2 + radius * Math.sin(angle);
+    }
 
     // D3 links need object references
     const nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -883,9 +928,11 @@ export default function RubikStateGraph({
       setInputValue(String(d.id));
     });
 
-    // Force simulation
+    // Force simulation. randomSource is set first so d3's internal jiggle also
+    // follows our seed, making the settled layout fully reproducible.
     const sim = d3
       .forceSimulation(nodes)
+      .randomSource(rng)
       .force(
         "link",
         d3
@@ -979,13 +1026,20 @@ export default function RubikStateGraph({
     simRef.current = sim;
     tickFnRef.current = tick;
 
+    // Pre-warm: settle the layout synchronously, then leave the sim stopped so
+    // it renders static (no visible drift). Interactions (drag, param tweaks)
+    // call restart() to animate again on demand.
+    sim.stop();
+    for (let i = 0; i < WARMUP_TICKS; i += 1) sim.tick();
+    tick();
+
     // Initial zoom: slightly zoomed in
     svg.call(zoom.transform as any, d3.zoomIdentity.translate(0, 0).scale(1.3));
 
     return () => {
       sim.stop();
     };
-  }, [rootIndex, depth, width, height, getStickers, activeMovesKey]);
+  }, [rootIndex, depth, width, height, getStickers, activeMovesKey, seed]);
 
   // ── Force-params useEffect: adjusts simulation without rebuilding ──────
   useEffect(() => {
@@ -1387,6 +1441,53 @@ export default function RubikStateGraph({
           />
 
           {/* Advanced sliders */}
+          <label
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            Seed
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <button
+                type="button"
+                onClick={() => setSeed((s) => Math.max(0, s - 1))}
+                style={seedBtnStyle}
+                title="Previous seed"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                value={seed}
+                onChange={(e) => setSeed(Number(e.target.value) || 0)}
+                style={{
+                  width: 72,
+                  textAlign: "center",
+                  accentColor: "#ff8800",
+                  fontFamily: "inherit",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setSeed((s) => s + 1)}
+                style={seedBtnStyle}
+                title="Next seed"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={() => setSeed(Math.floor(Math.random() * 1e9))}
+                style={seedBtnStyle}
+                title="Random seed"
+              >
+                🎲
+              </button>
+            </span>
+          </label>
           <label
             style={{
               display: "flex",
