@@ -1,0 +1,418 @@
+---
+import Mark from "@guiferviz/cheese-bytes-video/astro/Mark.astro";
+import StorySection from "@guiferviz/cheese-bytes-video/astro/StorySection.astro";
+import VideoVisual from "@guiferviz/cheese-bytes-video/astro/VideoVisual.astro";
+import {
+  MajorityVideoVisual,
+  majorityVideoDefinition,
+} from "../components/cave/majority-vote/video/MajorityVideoVisual";
+const chapters = [
+  {
+    scene: "stream",
+    notes: [
+      {
+        mark: "start",
+        text: "Imagine a billion shapes passing right in front of you.",
+      },
+      {
+        mark: "shapes",
+        text: "Squares, circles, triangles, diamonds.",
+      },
+      {
+        mark: "majority",
+        text: "Somewhere in this endless stream, one shape appears more often than all the others combined.",
+      },
+      {
+        mark: "question",
+        text: "But which one? And more importantly, how could we find it?",
+      },
+    ],
+    actions: [
+      {
+        start: "start",
+        end: "question",
+        value: 4,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "counting",
+    notes: [
+      {
+        mark: "start",
+        text: "Well, the obvious solution is to count.",
+      },
+      {
+        mark: "count",
+        text: "Every time we see a square, we increase its counter. Every circle, another counter. Every triangle, another.",
+      },
+      {
+        mark: "simple",
+        text: "Simple, right? But there's a problem.",
+      },
+    ],
+    actions: [
+      {
+        start: "count",
+        end: "simple",
+        value: 4,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "memory",
+    notes: [
+      {
+        mark: "start",
+        text: "What if we're not dealing with four different shapes, but millions of different values?",
+      },
+      {
+        mark: "values",
+        text: "User IDs, IP addresses, or any other kind of data.",
+      },
+      {
+        mark: "many",
+        text: "Suddenly, we need millions of counters, and if the data is large enough, we might not even have enough memory to store them.",
+      },
+      {
+        mark: "question",
+        text: "So here's a question. What if we could find the majority without remembering how many times every shape appeared?",
+      },
+    ],
+    actions: [
+      {
+        start: "start",
+        end: "question",
+        value: 2,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "cancel",
+    notes: [
+      {
+        mark: "start",
+        text: "Let's forget about computers for a moment. Imagine ten shapes. Six squares and four other shapes.",
+      },
+      {
+        mark: "game",
+        text: "Now, let's play a little game. Pick any two different shapes and remove them.",
+      },
+      {
+        mark: "pair-one",
+        text: "A square and a circle? Gone.",
+      },
+      {
+        mark: "pair-two",
+        text: "A square and a triangle? Gone.",
+      },
+      {
+        mark: "repeat",
+        text: "Keep doing this until you can't remove any more pairs.",
+      },
+      {
+        mark: "left",
+        text: "What's left? Squares.",
+      },
+    ],
+    actions: [
+      {
+        start: "pair-one",
+        end: null,
+        value: 1,
+      },
+      {
+        start: "pair-two",
+        end: null,
+        value: 2,
+      },
+      {
+        start: "repeat",
+        end: "left",
+        value: 4,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "invariant",
+    notes: [
+      {
+        mark: "start",
+        text: "And here's the interesting part. It doesn't matter how we choose the pairs. As long as squares make up more than half of the original shapes, some squares must survive.",
+      },
+      {
+        mark: "why",
+        text: "Because there simply aren't enough other shapes to cancel them all.",
+      },
+      {
+        mark: "trick",
+        text: "That's it. That's the entire trick. A true majority cannot be completely cancelled out by different elements.",
+      },
+      {
+        mark: "catch",
+        text: "But there's a catch.",
+      },
+    ],
+    actions: [],
+    initial: 0,
+  },
+  {
+    scene: "online",
+    notes: [
+      {
+        mark: "start",
+        text: "So far, we've had all our shapes in front of us. What happens when they arrive one at a time?",
+      },
+      {
+        mark: "memory",
+        text: "We can't keep all those shapes around just to pair them later. That would bring us right back to our memory problem.",
+      },
+      {
+        mark: "two",
+        text: "Fortunately, we don't have to. Instead, we only need to remember two things: a candidate and its strength.",
+      },
+      {
+        mark: "first",
+        text: "The first shape becomes our candidate with a strength of one.",
+      },
+    ],
+    actions: [
+      {
+        start: "first",
+        end: null,
+        value: 1,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "algorithm",
+    notes: [
+      {
+        mark: "start",
+        text: "When another shape arrives, we compare it with our candidate.",
+      },
+      {
+        mark: "match",
+        text: "If they match, we increase the strength. If they're different, we decrease it.",
+      },
+      {
+        mark: "cancel",
+        text: "Think of that decrease as cancelling one copy of each shape.",
+      },
+      {
+        mark: "zero",
+        text: "And when the strength reaches zero, we've cancelled everything we were keeping track of.",
+      },
+      {
+        mark: "new",
+        text: "The next shape can become our new candidate.",
+      },
+      {
+        mark: "all",
+        text: "That's all. We process every element once without storing the entire stream.",
+      },
+      {
+        mark: "guarantee",
+        text: "If a majority exists, our final candidate is guaranteed to be that majority.",
+      },
+    ],
+    actions: [
+      {
+        start: "match",
+        end: null,
+        value: 2,
+      },
+      {
+        start: "new",
+        end: null,
+        value: 3,
+      },
+      {
+        start: "all",
+        end: "guarantee",
+        value: 10,
+      },
+    ],
+    initial: 1,
+  },
+  {
+    scene: "complexity",
+    notes: [
+      {
+        mark: "start",
+        text: "This is the Boyer-Moore Majority Vote Algorithm.",
+      },
+      {
+        mark: "cost",
+        text: "It takes linear time and uses constant extra memory.",
+      },
+      {
+        mark: "two",
+        text: "Just one candidate and one counter. Pretty amazing, isn't it?",
+      },
+    ],
+    actions: [],
+    initial: 0,
+  },
+  {
+    scene: "catch",
+    notes: [
+      {
+        mark: "start",
+        text: "But wait. What if no shape appears more than half the time?",
+      },
+      {
+        mark: "candidate",
+        text: "Well, the algorithm might still return a candidate.",
+      },
+      {
+        mark: "survive",
+        text: "Remember, surviving the cancellations doesn't necessarily mean having a majority.",
+      },
+      {
+        mark: "only",
+        text: "It only means that the candidate wasn't completely cancelled out.",
+      },
+    ],
+    actions: [
+      {
+        start: "candidate",
+        end: "survive",
+        value: 7,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "verify",
+    notes: [
+      {
+        mark: "start",
+        text: "So, unless we already know a majority exists, we need a second pass to verify the result.",
+      },
+    ],
+    actions: [
+      {
+        start: "start",
+        end: "end",
+        value: 2,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "distributed",
+    notes: [
+      {
+        mark: "start",
+        text: "And now, here's where things get even more interesting. Let's go back to our billion data points.",
+      },
+      {
+        mark: "three",
+        text: "But this time, imagine they're split across three different machines.",
+      },
+      {
+        mark: "summaries",
+        text: "Each machine runs exactly the same process and sends back just two things: its candidate and its strength.",
+      },
+    ],
+    actions: [
+      {
+        start: "summaries",
+        end: null,
+        value: 1,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "merge",
+    notes: [
+      {
+        mark: "start",
+        text: "Then we apply that same cancellation logic to those summaries.",
+      },
+      {
+        mark: "combine",
+        text: "And just like that, we've handled a billion elements without ever building a giant frequency table.",
+      },
+    ],
+    actions: [
+      {
+        start: "start",
+        end: "combine",
+        value: 1,
+      },
+    ],
+    initial: 0,
+  },
+  {
+    scene: "closing",
+    notes: [
+      {
+        mark: "start",
+        text: "That's why this idea shows up in big data contexts: one pass, tiny memory, easy to combine.",
+      },
+      {
+        mark: "check",
+        text: "So yes, it's a beautiful trick, provided we remember when we still need that final check.",
+      },
+    ],
+    actions: [],
+    initial: 0,
+  },
+];
+---
+
+{
+  chapters.map((chapter) => (
+    <StorySection
+      id={chapter.scene}
+      timeline={(t) => {
+        const visual = t.visual("majority", majorityVideoDefinition);
+        for (const action of chapter.actions) {
+          t.action(visual.advance, {
+            from: action.start,
+            ...(action.end ? { to: action.end } : { duration: 0.8 }),
+            ease: "linear",
+            params: { value: action.value },
+          });
+        }
+      }}
+    >
+      <aside class="notes">
+        {chapter.notes.map((note) => (
+          <p>
+            <Mark id={note.mark} />
+            {note.text}
+          </p>
+        ))}
+        <Mark id="end" />
+      </aside>
+      <VideoVisual id="majority">
+        <MajorityVideoVisual
+          initial={{ scene: chapter.scene, progress: chapter.initial }}
+          client:only="react"
+        />
+      </VideoVisual>
+    </StorySection>
+  ))
+}
+
+<style is:global>
+  @font-face {
+    font-family: "Majority Iosevka";
+    src: url("/fonts/IosevkaTermSlabNerdFontPropo-Regular.woff2")
+      format("woff2");
+    font-weight: 400;
+    font-display: block;
+  }
+  [data-majority-scene] {
+    font-family: "Majority Iosevka", monospace !important;
+  }
+</style>
