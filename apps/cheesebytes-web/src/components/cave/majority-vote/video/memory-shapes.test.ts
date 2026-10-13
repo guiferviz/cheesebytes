@@ -30,6 +30,12 @@ describe("seeded memory polygons", () => {
   });
 
   it("never intersects nonadjacent edges, including the closing edge", () => {
+    const intersections: {
+      seed: number;
+      points: Point[];
+      i: number;
+      j: number;
+    }[] = [];
     for (const seed of [
       0,
       1,
@@ -45,21 +51,23 @@ describe("seeded memory polygons", () => {
         for (let i = 0; i < n; i++) {
           for (let j = i + 1; j < n; j++) {
             if (j === i + 1 || (i === 0 && j === n - 1)) continue;
-            expect(
+            if (
               intersects(
                 points[i],
                 points[(i + 1) % n],
                 points[j],
                 points[(j + 1) % n],
-              ),
-            ).toBe(false);
+              )
+            )
+              intersections.push({ seed, points, i, j });
           }
         }
       }
     }
+    expect(intersections).toEqual([]);
   });
 
-  it("mixes concave spiky shapes with quieter polygons", () => {
+  it("mixes stars, locally indented shapes and fuller contours", () => {
     const shapes = createMemoryShapes(42);
     const concave = shapes.filter((shape) => {
       const p = vertices(shape.points);
@@ -70,6 +78,14 @@ describe("seeded memory polygons", () => {
     });
     expect(concave.length).toBeGreaterThan(shapes.length / 2);
     expect(concave.length).toBeLessThan(shapes.length);
+    const locallyIndented = shapes.filter((shape) => {
+      const p = vertices(shape.points);
+      const dents = p.filter(
+        (a, i) => cross(a, p[(i + 1) % p.length], p[(i + 2) % p.length]) < 0,
+      ).length;
+      return dents === 1 || dents === 2;
+    });
+    expect(locallyIndented.length).toBeGreaterThan(shapes.length / 5);
     expect(new Set(shapes.map((s) => s.points)).size).toBe(shapes.length);
   });
 });

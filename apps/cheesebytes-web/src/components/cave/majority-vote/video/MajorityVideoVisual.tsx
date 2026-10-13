@@ -31,7 +31,7 @@ const descriptions: Record<string, string> = {
   stream: "An endless river of shapes. Find the hidden majority.",
   counting: "Shapes land in separate piles; each pile needs a counter.",
   memory:
-    "Four familiar shapes sit at the centre of a spiral of unique, softly coloured polygons.",
+    "A continuous spiral of unique, softly coloured shapes, including four familiar shapes near its centre.",
   cancel: "Different shapes collide and cancel. Two squares survive.",
   invariant:
     "Six squares face four other shapes. The majority survives every cancellation.",
@@ -56,6 +56,7 @@ function Shape({
   size = 64,
   opacity = 1,
   rotate = 0,
+  colour,
 }: {
   kind: ShapeKind;
   x: number;
@@ -63,13 +64,14 @@ function Shape({
   size?: number;
   opacity?: number;
   rotate?: number;
+  colour?: string;
 }) {
   const r = size / 2;
   return (
     <g
       transform={`translate(${x} ${y}) rotate(${rotate})`}
       opacity={opacity}
-      fill={tint(kind)}
+      fill={colour ?? tint(kind)}
       stroke="#ffffff30"
       strokeWidth={1.3}
     >
@@ -416,29 +418,34 @@ export function MajorityVideoVisual({
         {scene === "memory" && (
           <>
             {Array.from({ length: 360 }, (_, i) => {
-              const a = (i - 4) * 2.399963;
-              const radius = 105 + Math.sqrt(Math.max(0, i - 4)) * 26;
+              const a = i * 2.399963;
+              const radius = Math.sqrt(i + 0.5) * 31;
               const q = smooth(t / 7);
               const r = mix(radius * 2.8, radius, q);
-              const x =
-                i < 4
-                  ? 800 + (i % 2 ? 1 : -1) * mix(46, 27, q)
-                  : 800 + Math.cos(a + t * 0.035) * r;
-              const y =
-                i < 4
-                  ? 450 + (i < 2 ? -1 : 1) * mix(46, 27, q)
-                  : 450 + Math.sin(a + t * 0.035) * r * 0.64;
-              const s = mix(67, i < 4 ? 34 : 30, q);
+              const x = 800 + Math.cos(a + t * 0.035) * r;
+              const y = 450 + Math.sin(a + t * 0.035) * r * 0.64;
+              const s = mix(52, 23, q);
               const polygon = memoryShapes[i - 4];
               return (
-                <g key={i} opacity={smooth(t * 0.65 - i * 0.009)}>
+                <g
+                  key={i}
+                  data-memory-shape={i}
+                  opacity={smooth(t * 0.65 - i * 0.009)}
+                >
                   {i < 4 ? (
-                    <Shape kind={SHAPES[i].type} x={x} y={y} size={s} />
+                    <Shape
+                      kind={SHAPES[i].type}
+                      x={x}
+                      y={y}
+                      size={s}
+                      colour={["#d59090", "#91b6d4", "#95bd99", "#d5bb8f"][i]}
+                      rotate={t * 0.4}
+                    />
                   ) : (
                     <polygon
                       data-memory-polygon={i - 4}
                       points={polygon.points}
-                      transform={`translate(${x} ${y}) rotate(${polygon.rotation + t * 0.4}) scale(${(s * polygon.scale) / 2})`}
+                      transform={`translate(${x} ${y}) rotate(${t * 0.4}) scale(${(s * polygon.scale) / 2})`}
                       fill={polygon.colour}
                       stroke="#ffffff28"
                       strokeWidth={0.06}
