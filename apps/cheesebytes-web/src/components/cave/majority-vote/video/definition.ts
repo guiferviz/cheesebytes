@@ -53,10 +53,25 @@ export function merge(a: Summary, b: Summary): Summary {
 export interface MajorityVideoState {
   scene: string;
   progress: number;
+  seed?: number;
 }
 export const majorityVideoDefinition = defineVideoVisual<MajorityVideoState>()({
   type: "majority-vote",
   actions: {
+    setSeed: {
+      timing: "instant",
+      label: "Polygon seed",
+      params: {
+        seed: {
+          type: "number",
+          label: "Random seed",
+          min: 0,
+          max: 4294967295,
+          step: 1,
+        },
+      },
+      apply: (state, params) => ({ ...state, seed: Number(params.seed) }),
+    },
     advance: {
       timing: "animated",
       label: "Advance visual",

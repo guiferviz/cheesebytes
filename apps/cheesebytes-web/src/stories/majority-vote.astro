@@ -80,6 +80,7 @@ import {
   id="memory"
   timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
+    t.action(visual.setSeed, { at: "start", params: { seed: 42 } });
     t.action(visual.advance, {
       from: "start",
       to: "question",

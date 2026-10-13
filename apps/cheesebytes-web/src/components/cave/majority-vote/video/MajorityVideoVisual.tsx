@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { createMemoryShapes, DEFAULT_MEMORY_SEED } from "./memory-shapes";
 import {
   useVideoSection,
   useVideoVisual,
@@ -28,7 +30,8 @@ const angle = (i: number, n: number) => (i / n) * Math.PI * 2 - Math.PI / 2;
 const descriptions: Record<string, string> = {
   stream: "An endless river of shapes. Find the hidden majority.",
   counting: "Shapes land in separate piles; each pile needs a counter.",
-  memory: "The counters multiply until they fill the screen.",
+  memory:
+    "Four familiar shapes sit at the centre of a spiral of unique, softly coloured polygons.",
   cancel: "Different shapes collide and cancel. Two squares survive.",
   invariant:
     "Six squares face four other shapes. The majority survives every cancellation.",
@@ -229,6 +232,8 @@ export function MajorityVideoVisual({
   );
   const { localTime: t, marks } = useVideoSection(sectionId);
   const { scene, progress: p } = state;
+  const seed = state.seed ?? DEFAULT_MEMORY_SEED;
+  const memoryShapes = useMemo(() => createMemoryShapes(seed), [seed]);
   const seq = scene === "catch" ? NO_MAJORITY : SEQUENCE;
   const processed = Math.min(seq.length, Math.floor(p + 1e-6));
   const fraction = p - Math.floor(p + 1e-6);
@@ -257,6 +262,7 @@ export function MajorityVideoVisual({
       ref={ref}
       data-majority-scene={scene}
       data-progress={p}
+      data-memory-seed={scene === "memory" ? seed : undefined}
       data-processed={processed}
       data-candidate={summary.candidate ?? ""}
       data-strength={summary.strength}
@@ -410,30 +416,35 @@ export function MajorityVideoVisual({
         {scene === "memory" && (
           <>
             {Array.from({ length: 360 }, (_, i) => {
-              const a = i * 2.399963;
-              const radius = Math.sqrt(i) * 27;
+              const a = (i - 4) * 2.399963;
+              const radius = 105 + Math.sqrt(Math.max(0, i - 4)) * 26;
               const q = smooth(t / 7);
               const r = mix(radius * 2.8, radius, q);
-              const x = 800 + Math.cos(a + t * 0.035) * r;
-              const y = 450 + Math.sin(a + t * 0.035) * r * 0.64;
-              const s = mix(67, 23, q);
+              const x =
+                i < 4
+                  ? 800 + (i % 2 ? 1 : -1) * mix(46, 27, q)
+                  : 800 + Math.cos(a + t * 0.035) * r;
+              const y =
+                i < 4
+                  ? 450 + (i < 2 ? -1 : 1) * mix(46, 27, q)
+                  : 450 + Math.sin(a + t * 0.035) * r * 0.64;
+              const s = mix(67, i < 4 ? 34 : 30, q);
+              const polygon = memoryShapes[i - 4];
               return (
                 <g key={i} opacity={smooth(t * 0.65 - i * 0.009)}>
-                  <Shape
-                    kind={SHAPES[i % 4].type}
-                    x={x}
-                    y={y - 12}
-                    size={s}
-                    rotate={Math.sin(i) * 12}
-                  />
-                  <Word
-                    x={x}
-                    y={y + s * 0.7}
-                    size={Math.max(13, s * 0.42)}
-                    fill="#ffffff65"
-                  >
-                    {(i % 9) + 1}
-                  </Word>
+                  {i < 4 ? (
+                    <Shape kind={SHAPES[i].type} x={x} y={y} size={s} />
+                  ) : (
+                    <polygon
+                      data-memory-polygon={i - 4}
+                      points={polygon.points}
+                      transform={`translate(${x} ${y}) rotate(${polygon.rotation + t * 0.4}) scale(${(s * polygon.scale) / 2})`}
+                      fill={polygon.colour}
+                      stroke="#ffffff28"
+                      strokeWidth={0.06}
+                      strokeLinejoin="round"
+                    />
+                  )}
                 </g>
               );
             })}
