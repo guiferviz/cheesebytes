@@ -1,6 +1,10 @@
 export const DEFAULT_MEMORY_SEED = 42;
 
-/** Stable geometry and soft colours; seeking never consumes random state. */
+/**
+ * Simple radial polygons: angular order and gaps below π keep each edge in
+ * its own wedge, so edges cannot cross. Alternating radii add concave stars.
+ * Stable geometry and soft colours; seeking never consumes random state.
+ */
 export function createMemoryShapes(seed: number, count = 356) {
   let state = seed >>> 0;
   const random = () => {
@@ -11,11 +15,18 @@ export function createMemoryShapes(seed: number, count = 356) {
   };
   const hues = [5, 207, 125, 35, 175, 265];
   return Array.from({ length: count }, () => {
-    const vertices = 4 + Math.floor(random() * 6);
+    const spiky = random() < 0.65;
+    const vertices = spiky
+      ? (3 + Math.floor(random() * 5)) * 2
+      : 4 + Math.floor(random() * 6);
     const points = Array.from({ length: vertices }, (_, index) => {
       const angle =
         ((index + (random() - 0.5) * 0.55) / vertices) * Math.PI * 2;
-      const radius = 0.65 + random() * 0.35;
+      const radius = spiky
+        ? index % 2 === 0
+          ? 0.85 + random() * 0.15
+          : 0.22 + random() * 0.13
+        : 0.65 + random() * 0.35;
       return `${(Math.cos(angle) * radius).toFixed(4)},${(Math.sin(angle) * radius).toFixed(4)}`;
     }).join(" ");
     const hue = hues[Math.floor(random() * hues.length)] + random() * 24 - 12;
