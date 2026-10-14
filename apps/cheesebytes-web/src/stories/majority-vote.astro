@@ -11,15 +11,7 @@ import {
 <StorySection
   id="stream"
   timeline={(t) => {
-    const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "start",
-      to: "question",
-      ease: "linear",
-      params: {
-        value: 4,
-      },
-    });
+    t.visual("majority", majorityVideoDefinition);
   }}
 >
   <aside class="notes">
@@ -28,12 +20,11 @@ import {
     </p>
     <p><Mark id="shapes" />Squares, circles, triangles, diamonds.</p>
     <p>
-      <Mark id="majority" />Somewhere in this endless stream, one shape appears
-      more often than all the others combined.
+      <Mark id="majority" />One shape appears more often than all the others
+      combined.
     </p>
     <p>
-      <Mark id="question" />But which one? And more importantly, how could we
-      find it?
+      <Mark id="question" />But which one?
     </p>
     <Mark id="end" />
   </aside>
@@ -48,24 +39,16 @@ import {
 <StorySection
   id="counting"
   timeline={(t) => {
-    const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "count",
-      to: "simple",
-      ease: "linear",
-      params: {
-        value: 4,
-      },
-    });
+    t.visual("majority", majorityVideoDefinition);
   }}
 >
   <aside class="notes">
-    <p><Mark id="start" />Well, the obvious solution is to count.</p>
+    <p><Mark id="start" />Let's count.</p>
     <p>
-      <Mark id="count" />Every time we see a square, we increase its counter.
-      Every circle, another counter. Every triangle, another.
+      <Mark id="count" />Each square increases one counter. Each circle,
+      another. Each triangle, another.
     </p>
-    <p><Mark id="simple" />Simple, right? But there's a problem.</p>
+    <p><Mark id="simple" />Simple, right?</p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
@@ -81,31 +64,22 @@ import {
   timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
     t.action(visual.setSeed, { at: "start", params: { seed: 42 } });
-    t.action(visual.advance, {
-      from: "start",
-      to: "question",
-      ease: "linear",
-      params: {
-        value: 2,
-      },
-    });
   }}
 >
   <aside class="notes">
     <p>
-      <Mark id="start" />What if we're not dealing with four different shapes,
-      but millions of different values?
+      <Mark id="start" />But what if there are millions of different values?
     </p>
     <p>
-      <Mark id="values" />User IDs, IP addresses, or any other kind of data.
+      <Mark id="values" />User IDs. IP addresses.
     </p>
     <p>
-      <Mark id="many" />Suddenly, we need millions of counters, and if the data
-      is large enough, we might not even have enough memory to store them.
+      <Mark id="many" />Every new value needs a new counter. Eventually, there's
+      no room left.
     </p>
     <p>
-      <Mark id="question" />So here's a question. What if we could find the
-      majority without remembering how many times every shape appeared?
+      <Mark id="question" />Could we find the majority without remembering all
+      these frequencies?
     </p>
     <Mark id="end" />
   </aside>
@@ -150,7 +124,7 @@ import {
   <aside class="notes">
     <p>
       <Mark id="start" />Let's forget about computers for a moment. Imagine ten
-      shapes. Six squares and four other shapes.
+      shapes. <Mark id="six" />Six squares and four other shapes.
     </p>
     <p>
       <Mark id="game" />Now, let's play a little game. Pick any two different

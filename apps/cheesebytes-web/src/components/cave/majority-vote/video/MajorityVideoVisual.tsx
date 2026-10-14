@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { Shape } from "./Shape";
+import { FrequencyCounterScene } from "./FrequencyCounterScene";
 import { createMemoryShapes, DEFAULT_MEMORY_SEED } from "./memory-shapes";
 import {
   useVideoSection,
@@ -29,9 +31,10 @@ const tint = (kind: ShapeKind) => SHAPES.find((s) => s.type === kind)!.color;
 const angle = (i: number, n: number) => (i / n) * Math.PI * 2 - Math.PI / 2;
 const descriptions: Record<string, string> = {
   stream: "An endless river of shapes. Find the hidden majority.",
-  counting: "Shapes land in separate piles; each pile needs a counter.",
+  counting:
+    "Shapes enter from the right, then merge into their frequency counters exactly when the numbers increase.",
   memory:
-    "A continuous spiral of unique, softly coloured shapes, including four familiar shapes near its centre.",
+    "New values allocate more counters until the storage space fills and overflows. Repeated values only increase existing numbers.",
   cancel: "Different shapes collide and cancel. Two squares survive.",
   invariant:
     "Six squares face four other shapes. The majority survives every cancellation.",
@@ -49,41 +52,6 @@ const descriptions: Record<string, string> = {
   closing: "One candidate, one counter, and a final verification.",
 };
 
-function Shape({
-  kind,
-  x,
-  y,
-  size = 64,
-  opacity = 1,
-  rotate = 0,
-  colour,
-}: {
-  kind: ShapeKind;
-  x: number;
-  y: number;
-  size?: number;
-  opacity?: number;
-  rotate?: number;
-  colour?: string;
-}) {
-  const r = size / 2;
-  return (
-    <g
-      transform={`translate(${x} ${y}) rotate(${rotate})`}
-      opacity={opacity}
-      fill={colour ?? tint(kind)}
-      stroke="#ffffff30"
-      strokeWidth={1.3}
-    >
-      {kind === "square" && (
-        <rect x={-r} y={-r} width={size} height={size} rx={size * 0.095} />
-      )}
-      {kind === "circle" && <circle r={r} />}
-      {kind === "triangle" && <path d={`M0 ${-r} L${r} ${r} L${-r} ${r} Z`} />}
-      {kind === "diamond" && <path d={`M0 ${-r} L${r} 0 L0 ${r} L${-r} 0 Z`} />}
-    </g>
-  );
-}
 function Word({
   children,
   x = 800,
@@ -232,7 +200,7 @@ export function MajorityVideoVisual({
     majorityVideoDefinition,
     initial,
   );
-  const { localTime: t, marks } = useVideoSection(sectionId);
+  const { localTime: t, marks, duration } = useVideoSection(sectionId);
   const { scene, progress: p } = state;
   const seed = state.seed ?? DEFAULT_MEMORY_SEED;
   const memoryShapes = useMemo(() => createMemoryShapes(seed), [seed]);
@@ -336,135 +304,9 @@ export function MajorityVideoVisual({
             >
               1,000,000,000
             </Word>
-            <g opacity={smooth(elapsed("majority") / 1.5)}>
-              <circle
-                cx={800}
-                cy={450}
-                r={133}
-                fill="#000"
-                stroke={blue}
-                strokeWidth={2}
-              />
-              <Shape
-                kind="square"
-                x={800}
-                y={450}
-                size={134}
-                rotate={Math.sin(t) * 3}
-              />
-              <Halo t={t} r={157} />
-              <Word
-                x={1030}
-                y={310}
-                size={85}
-                fill={gold}
-                opacity={smooth(elapsed("question"))}
-              >
-                ?
-              </Word>
-            </g>
-          </>
-        )}
-
-        {scene === "counting" && (
-          <>
-            {SHAPES.map((shape, i) => {
-              const x = 320 + i * 320;
-              const count = SEQUENCE.filter((k) => k === shape.type).length;
-              const amount = clamp(p / 4) * count;
-              return (
-                <g key={shape.type}>
-                  {Array.from({ length: count }, (_, j) => {
-                    const q = smooth(amount - j);
-                    return (
-                      <Shape
-                        key={j}
-                        kind={shape.type}
-                        x={x + Math.sin(j * 7) * 6 * (1 - q)}
-                        y={mix(-100 - j * 80, 600 - j * 62, q)}
-                        size={72}
-                        opacity={q}
-                        rotate={mix(35, 0, q)}
-                      />
-                    );
-                  })}
-                  <path
-                    d={`M${x - 75} 662 Q${x} 678 ${x + 75} 662`}
-                    fill="none"
-                    stroke={tint(shape.type)}
-                    strokeWidth={3}
-                    opacity={0.4}
-                  />
-                  <Word x={x} y={745} size={67} fill={tint(shape.type)}>
-                    {Math.round(amount)}
-                  </Word>
-                </g>
-              );
-            })}
-            <g opacity={0.25}>
-              {Array.from({ length: 16 }, (_, i) => (
-                <Shape
-                  key={i}
-                  kind={SEQUENCE[i % 10]}
-                  x={((((i * 160 - t * 260) % 2560) + 2560) % 2560) - 300}
-                  y={130}
-                  size={32}
-                />
-              ))}
-            </g>
-          </>
-        )}
-
-        {scene === "memory" && (
-          <>
-            {Array.from({ length: 360 }, (_, i) => {
-              const a = i * 2.399963;
-              const radius = Math.sqrt(i + 0.5) * 31;
-              const q = smooth(t / 7);
-              const r = mix(radius * 2.8, radius, q);
-              const x = 800 + Math.cos(a + t * 0.035) * r;
-              const y = 450 + Math.sin(a + t * 0.035) * r * 0.64;
-              const s = mix(52, 23, q);
-              const polygon = memoryShapes[i - 4];
-              return (
-                <g
-                  key={i}
-                  data-memory-shape={i}
-                  opacity={smooth(t * 0.65 - i * 0.009)}
-                >
-                  {i < 4 ? (
-                    <Shape
-                      kind={SHAPES[i].type}
-                      x={x}
-                      y={y}
-                      size={s}
-                      colour={["#d59090", "#91b6d4", "#95bd99", "#d5bb8f"][i]}
-                      rotate={t * 0.4}
-                    />
-                  ) : (
-                    <polygon
-                      data-memory-polygon={i - 4}
-                      points={polygon.points}
-                      transform={`translate(${x} ${y}) rotate(${t * 0.4}) scale(${(s * polygon.scale) / 2})`}
-                      fill={polygon.colour}
-                      stroke="#ffffff28"
-                      strokeWidth={0.06}
-                      strokeLinejoin="round"
-                    />
-                  )}
-                </g>
-              );
-            })}
-            <circle
-              cx={800}
-              cy={450}
-              r={140 + Math.sin(t * 2) * 6}
-              fill="#000"
-              opacity={smooth(elapsed("question"))}
-            />
             <Word
-              y={450}
-              size={115}
+              y={175}
+              size={100}
               fill={gold}
               opacity={smooth(elapsed("question"))}
             >
@@ -473,12 +315,37 @@ export function MajorityVideoVisual({
           </>
         )}
 
+        {(scene === "counting" || scene === "memory") && (
+          <FrequencyCounterScene
+            memory={scene === "memory"}
+            time={t}
+            duration={duration}
+            marks={marks}
+            polygons={memoryShapes}
+          />
+        )}
+
         {scene === "cancel" && (
           <>
             {SEQUENCE.map((kind, i) => {
-              const a = angle(i, 10);
-              const ox = 800 + Math.cos(a) * 340,
-                oy = 450 + Math.sin(a) * 275;
+              const squareIndices = [0, 4, 5, 6, 8, 9];
+              const otherIndices = [1, 2, 3, 7];
+              const index = (
+                kind === "square" ? squareIndices : otherIndices
+              ).indexOf(i);
+              const group = smooth(elapsed("six") / 0.8);
+              const ox = mix(
+                560 + (i % 5) * 120,
+                kind === "square"
+                  ? 380 + (index % 3) * 130
+                  : 1060 + (index % 2) * 140,
+                group,
+              );
+              const oy = mix(
+                380 + Math.floor(i / 5) * 130,
+                380 + Math.floor(index / (kind === "square" ? 3 : 2)) * 130,
+                group,
+              );
               const pair = cancellationPairs.findIndex((v) => v.includes(i));
               if (pair < 0) {
                 const q = smooth(p - 3);
