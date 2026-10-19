@@ -3,11 +3,52 @@ import {
   summarize,
   merge,
   SEQUENCE,
+  ONLINE_SEQUENCE,
+  FRIEND_PARTS,
+  CLUSTER_PARTS,
   NO_MAJORITY,
   SHARDS,
   type ShapeKind,
 } from "./definition";
 describe("majority story examples", () => {
+  it("keeps the same eleven values when repartitioning the friends into machines", () => {
+    expect(CLUSTER_PARTS.flat()).toEqual(FRIEND_PARTS.flat());
+    const result = CLUSTER_PARTS.map(summarize).reduce(merge);
+    expect(result).toEqual({ candidate: "square", strength: 1 });
+    expect(
+      CLUSTER_PARTS.map((part) => part.filter((v) => v === "square").length),
+    ).toEqual([2, 3, 1]);
+  });
+  it("demonstrates match, mismatch, zero, and replacement in spoken order", () => {
+    expect(summarize(ONLINE_SEQUENCE.slice(0, 2))).toEqual({
+      candidate: "square",
+      strength: 2,
+    });
+    expect(summarize(ONLINE_SEQUENCE.slice(0, 3)).strength).toBe(1);
+    expect(summarize(ONLINE_SEQUENCE.slice(0, 4)).strength).toBe(0);
+    expect(summarize(ONLINE_SEQUENCE.slice(0, 5))).toEqual({
+      candidate: "triangle",
+      strength: 1,
+    });
+    expect(summarize(ONLINE_SEQUENCE)).toEqual({
+      candidate: "square",
+      strength: 2,
+    });
+  });
+  it("merges the friend's real chunks and preserves their global majority", () => {
+    const summaries = FRIEND_PARTS.map(summarize);
+    expect(summaries).toEqual([
+      { candidate: "square", strength: 3 },
+      { candidate: "circle", strength: 2 },
+    ]);
+    expect(merge(summaries[0], summaries[1])).toEqual({
+      candidate: "square",
+      strength: 1,
+    });
+    const values = FRIEND_PARTS.flat();
+    expect(values.filter((v) => v === "square")).toHaveLength(6);
+    expect(values).toHaveLength(11);
+  });
   it("shows cancellation, zero balance and candidate replacement", () => {
     expect(summarize(SEQUENCE.slice(0, 1))).toEqual({
       candidate: "square",

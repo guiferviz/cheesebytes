@@ -8,468 +8,469 @@ import {
 } from "../components/cave/majority-vote/video/MajorityVideoVisual";
 ---
 
-<StorySection
-  id="stream"
-  timeline={(t) => {
+<StorySection id="stream" timeline={(t) => {
     t.visual("majority", majorityVideoDefinition);
-  }}
->
+  }}>
   <aside class="notes">
     <p>
       <Mark id="start" />Imagine a billion shapes passing right in front of you.
     </p>
-    <p><Mark id="shapes" />Squares, circles, triangles, diamonds.</p>
     <p>
-      <Mark id="majority" />One shape appears more often than all the others
-      combined.
+      <Mark id="shapes" />Squares, circles, triangles, diamonds.
     </p>
     <p>
-      <Mark id="question" />But which one?
+      <Mark id="majority" />You're told that one of them appears more than half the time.
+      That's a majority, and your job is to find it.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "stream", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "stream", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="counting"
-  timeline={(t) => {
+<StorySection id="counting" timeline={(t) => {
     t.visual("majority", majorityVideoDefinition);
-  }}
->
+  }}>
   <aside class="notes">
-    <p><Mark id="start" />Let's count.</p>
     <p>
-      <Mark id="count" />Each square increases one counter. Each circle,
-      another. Each triangle, another.
+      <Mark id="start" />The obvious solution is to count.
     </p>
-    <p><Mark id="simple" />Simple, right?</p>
+    <p>
+      <Mark id="count" />Every time a square arrives, we increase its counter. Every circle,
+      another counter. Every triangle, another.
+    </p>
+    <p>
+      <Mark id="simple" />That works fine with four different shapes.
+    </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "counting", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "counting", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="memory"
-  timeline={(t) => {
+<StorySection id="memory" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
     t.action(visual.setSeed, { at: "start", params: { seed: 42 } });
-  }}
->
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />But what if there are millions of different values?
+      <Mark id="start" />But what if there are millions of different shapes?
     </p>
     <p>
-      <Mark id="values" />User IDs. IP addresses.
+      <Mark id="values" />Every new shape needs another counter.
     </p>
     <p>
-      <Mark id="many" />Every new value needs a new counter. Eventually, there's
-      no room left.
+      <Mark id="many" />Eventually, we run out of space, even though the shapes keep arriving.
     </p>
     <p>
-      <Mark id="question" />Could we find the majority without remembering all
-      these frequencies?
+      <Mark id="question" />So, can we find the majority without keeping a count for every
+      different shape?
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "memory", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "memory", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="cancel"
-  timeline={(t) => {
+<StorySection id="cancel" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "pair-one",
-      duration: 0.8,
-      ease: "linear",
-      params: {
-        value: 1,
-      },
-    });
-    t.action(visual.advance, {
-      from: "pair-two",
-      duration: 0.8,
-      ease: "linear",
-      params: {
-        value: 2,
-      },
-    });
-    t.action(visual.advance, {
-      from: "repeat",
-      to: "left",
-      ease: "linear",
-      params: {
-        value: 4,
-      },
-    });
-  }}
->
+    t.action(visual.advance, { from: "pair-one", duration: 1.05, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "pair-two", duration: 1.05, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "repeat", to: "left", ease: "linear", params: { value: 4 } });
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />Let's forget about computers for a moment. Imagine ten
-      shapes. <Mark id="six" />Six squares and four other shapes.
+      <Mark id="start" />Let's try a small example. We have ten shapes:
     </p>
     <p>
-      <Mark id="game" />Now, let's play a little game. Pick any two different
-      shapes and remove them.
+      <Mark id="six" />six squares and four others.
     </p>
-    <p><Mark id="pair-one" />A square and a circle? Gone.</p>
-    <p><Mark id="pair-two" />A square and a triangle? Gone.</p>
     <p>
-      <Mark id="repeat" />Keep doing this until you can't remove any more pairs.
+      <Mark id="game" />Pick any two different shapes and remove them.
     </p>
-    <p><Mark id="left" />What's left? Squares.</p>
+    <p>
+      <Mark id="pair-one" />A square and a circle, for example.
+    </p>
+    <p>
+      <Mark id="pair-two" />Then a square and a triangle.
+    </p>
+    <p>
+      <Mark id="repeat" />Keep doing that until there are no different pairs left.
+    </p>
+    <p>
+      <Mark id="left" />We're left with squares.
+    </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "cancel", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "cancel", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="invariant"
-  timeline={(t) => {
-    const visual = t.visual("majority", majorityVideoDefinition);
-  }}
->
+<StorySection id="pair-orders" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />And here's the interesting part. It doesn't matter how
-      we choose the pairs. As long as squares make up more than half of the
-      original shapes, some squares must survive.
+      <Mark id="start" />But we don't have to include a square in every pair.
     </p>
     <p>
-      <Mark id="why" />Because there simply aren't enough other shapes to cancel
-      them all.
+      <Mark id="other" />We could start by removing a circle and a triangle.
     </p>
     <p>
-      <Mark id="trick" />That's it. That's the entire trick. A true majority
-      cannot be completely cancelled out by different elements.
+      <Mark id="any" />That works too. Any two different shapes can cancel.
     </p>
-    <p><Mark id="catch" />But there's a catch.</p>
+    <p>
+      <Mark id="repeat" />If we finish this example with these different pairings, we get four
+      squares instead of two.
+    </p>
+    <p>
+      <Mark id="result" />The number left over can change, but we still finish with squares.
+    </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "invariant", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "pair-orders", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="online"
-  timeline={(t) => {
-    const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "first",
-      duration: 0.8,
-      ease: "linear",
-      params: {
-        value: 1,
-      },
-    });
-  }}
->
+<StorySection id="invariant" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />So far, we've had all our shapes in front of us. What
-      happens when they arrive one at a time?
+      <Mark id="start" />And there's a reason for that. We started with six squares and only
+      four other shapes.
     </p>
     <p>
-      <Mark id="memory" />We can't keep all those shapes around just to pair
-      them later. That would bring us right back to our memory problem.
+      <Mark id="why" />To remove a square, we also have to remove something different. There
+      aren't enough other shapes to cancel all six.
     </p>
     <p>
-      <Mark id="two" />Fortunately, we don't have to. Instead, we only need to
-      remember two things: a candidate and its strength.
-    </p>
-    <p>
-      <Mark id="first" />The first shape becomes our candidate with a strength
-      of one.
+      <Mark id="trick" />So a shape that makes up more than half of the original collection
+      cannot be completely cancelled out.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "online", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "invariant", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="algorithm"
-  timeline={(t) => {
+<StorySection id="online" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "match",
-      duration: 0.8,
-      ease: "linear",
-      params: {
-        value: 2,
-      },
-    });
-    t.action(visual.advance, {
-      from: "new",
-      duration: 0.8,
-      ease: "linear",
-      params: {
-        value: 3,
-      },
-    });
-    t.action(visual.advance, {
-      from: "all",
-      to: "guarantee",
-      ease: "linear",
-      params: {
-        value: 10,
-      },
-    });
-  }}
->
+    t.action(visual.advance, { from: "first", duration: 1.1, ease: "linear", params: { value: 1 } });
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />When another shape arrives, we compare it with our
-      candidate.
+      <Mark id="start" />Now, how do we do this when the shapes arrive one at a time?
     </p>
     <p>
-      <Mark id="match" />If they match, we increase the strength. If they're
-      different, we decrease it.
+      <Mark id="memory" />Keeping all of them around to pair later would bring us back to the
+      memory problem.
     </p>
     <p>
-      <Mark id="cancel" />Think of that decrease as cancelling one copy of each
-      shape.
+      <Mark id="two" />Instead, we remember a candidate and its strength.
     </p>
     <p>
-      <Mark id="zero" />And when the strength reaches zero, we've cancelled
-      everything we were keeping track of.
-    </p>
-    <p><Mark id="new" />The next shape can become our new candidate.</p>
-    <p>
-      <Mark id="all" />That's all. We process every element once without storing
-      the entire stream.
-    </p>
-    <p>
-      <Mark id="guarantee" />If a majority exists, our final candidate is
-      guaranteed to be that majority.
+      <Mark id="first" />The first shape becomes our candidate, with a strength of one.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "algorithm", progress: 1 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "online", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="complexity"
-  timeline={(t) => {
+<StorySection id="algorithm" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-  }}
->
+    t.action(visual.advance, { from: "match", duration: 1.1, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "cancel", duration: 1.1, ease: "linear", params: { value: 3 } });
+    t.action(visual.advance, { from: "zero", duration: 1.1, ease: "linear", params: { value: 4 } });
+    t.action(visual.advance, { from: "new", duration: 1.1, ease: "linear", params: { value: 5 } });
+    t.action(visual.advance, { from: "all", to: "guarantee", ease: "linear", params: { value: 10 } });
+  }}>
   <aside class="notes">
-    <p><Mark id="start" />This is the Boyer-Moore Majority Vote Algorithm.</p>
     <p>
-      <Mark id="cost" />It takes linear time and uses constant extra memory.
+      <Mark id="start" />When the next shape arrives, we compare them.
     </p>
     <p>
-      <Mark id="two" />Just one candidate and one counter. Pretty amazing, isn't
-      it?
+      <Mark id="match" />If they match, we increase the strength. If they're different, we
+      decrease it.
+    </p>
+    <p>
+      <Mark id="cancel" />That decrease is the cancellation: one copy of the candidate cancels
+      with the incoming shape.
+    </p>
+    <p>
+      <Mark id="zero" />When the strength reaches zero, that whole batch has cancelled out.
+    </p>
+    <p>
+      <Mark id="new" />The next shape can become our new candidate, starting again at one.
+    </p>
+    <p>
+      <Mark id="all" />We keep doing this, matching or cancelling each incoming shape, until
+      the stream ends.
+    </p>
+    <p>
+      <Mark id="guarantee" />If a majority exists, our final candidate is guaranteed to be
+      that majority.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "complexity", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "algorithm", progress: 1 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="catch"
-  timeline={(t) => {
-    const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "candidate",
-      to: "survive",
-      ease: "linear",
-      params: {
-        value: 7,
-      },
-    });
-  }}
->
+<StorySection id="complexity" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />But wait. What if no shape appears more than half the
-      time?
+      <Mark id="start" />This is the Boyer-Moore Majority Vote Algorithm.
     </p>
     <p>
-      <Mark id="candidate" />Well, the algorithm might still return a candidate.
+      <Mark id="cost" />We process each element once,
     </p>
     <p>
-      <Mark id="survive" />Remember, surviving the cancellations doesn't
-      necessarily mean having a majority.
-    </p>
-    <p>
-      <Mark id="only" />It only means that the candidate wasn't completely
-      cancelled out.
+      <Mark id="two" />using just one candidate and one counter.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "catch", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "complexity", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="verify"
-  timeline={(t) => {
-    const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "start",
-      to: "end",
-      ease: "linear",
-      params: {
-        value: 2,
-      },
-    });
-  }}
->
+<StorySection id="strength" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />So, unless we already know a majority exists, we need a
-      second pass to verify the result.
+      <Mark id="start" />But there's something important about that counter.
+    </p>
+    <p>
+      <Mark id="balance" />It represents the strength remaining after cancellations, not the
+      candidate's actual frequency.
+    </p>
+    <p>
+      <Mark id="compare" />Remember how different pairings left us with different numbers of
+      squares? It's the same idea.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "verify", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "strength", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="distributed"
-  timeline={(t) => {
+<StorySection id="catch" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "summaries",
-      duration: 0.8,
-      ease: "linear",
-      params: {
-        value: 1,
-      },
-    });
-  }}
->
+    t.action(visual.advance, { from: "candidate", to: "survive", ease: "linear", params: { value: 7 } });
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />And now, here's where things get even more interesting.
-      Let's go back to our billion data points.
+      <Mark id="start" />And remember our starting condition: we were told that a majority
+      existed. What happens if we don't know that?
     </p>
     <p>
-      <Mark id="three" />But this time, imagine they're split across three
-      different machines.
+      <Mark id="candidate" />The algorithm can still leave us with a candidate.
     </p>
     <p>
-      <Mark id="summaries" />Each machine runs exactly the same process and
-      sends back just two things: its candidate and its strength.
+      <Mark id="survive" />Surviving the cancellations doesn't prove that it appeared more
+      than half the time.
+    </p>
+    <p>
+      <Mark id="only" />It only means that the candidate survived those cancellations.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "distributed", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "catch", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="merge"
-  timeline={(t) => {
+<StorySection id="verify" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, {
-      from: "start",
-      to: "combine",
-      ease: "linear",
-      params: {
-        value: 1,
-      },
-    });
-  }}
->
+    t.action(visual.advance, { from: "scan", to: "none", ease: "linear", params: { value: 0.99 } });
+    t.action(visual.advance, { from: "none", duration: 0.3, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "yes", to: "confirmed", ease: "linear", params: { value: 2 } });
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />Then we apply that same cancellation logic to those
-      summaries.
+      <Mark id="start" />In general, we need a second pass to check.
     </p>
     <p>
-      <Mark id="combine" />And just like that, we've handled a billion elements
-      without ever building a giant frequency table.
+      <Mark id="scan" />This time, we count only the candidate and compare its frequency with
+      half the total.
+    </p>
+    <p>
+      <Mark id="none" />If it doesn't exceed that threshold, there isn't a majority.
+    </p>
+    <p>
+      <Mark id="yes" />If it does, we have a <Mark id="confirmed" />majority.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "merge", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "verify", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 
-<StorySection
-  id="closing"
-  timeline={(t) => {
-    const visual = t.visual("majority", majorityVideoDefinition);
-  }}
->
+<StorySection id="friend" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />That's why this idea shows up in big data contexts: one
-      pass, tiny memory, easy to combine.
+      <Mark id="start" />Now, suppose a friend wants to help.
     </p>
     <p>
-      <Mark id="check" />So yes, it's a beautiful trick, provided we remember
-      when we still need that final check.
+      <Mark id="split" />We split the stream between us and process our parts at the same
+      time.
+    </p>
+    <p>
+      <Mark id="lists" />If we each keep a list of counters, we still have to send those lists
+      and combine the counts for every different shape.
+    </p>
+    <p>
+      <Mark id="summaries" />With cancellations, each of us sends just a candidate and its
+      remaining strength.
     </p>
     <Mark id="end" />
   </aside>
   <VideoVisual id="majority">
-    <MajorityVideoVisual
-      initial={{ scene: "closing", progress: 0 }}
-      client:only="react"
-    />
+    <MajorityVideoVisual initial={{ scene: "friend", progress: 0 }} client:only="react" />
+  </VideoVisual>
+</StorySection>
+
+<StorySection id="merge" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
+  <aside class="notes">
+    <p>
+      <Mark id="start" />If our candidates match, we add their strengths.
+    </p>
+    <p>
+      <Mark id="different" />If they're different, we cancel the smaller strength against the
+      larger one.
+    </p>
+    <p>
+      <Mark id="example" />For example, I send you a square with a strength of three. You have
+      a circle with a strength of two.
+    </p>
+    <p>
+      <Mark id="cancel" />Two pairs cancel, leaving a square with a strength of one.
+    </p>
+    <p>
+      <Mark id="combine" />It's the same rule we've been using all along.
+    </p>
+    <p>
+      <Mark id="guarantee" />If there's a majority across the original stream, it will survive
+      these combined cancellations too. We don't need each person's part to have the same
+      local winner.
+    </p>
+    <Mark id="end" />
+  </aside>
+  <VideoVisual id="majority">
+    <MajorityVideoVisual initial={{ scene: "merge", progress: 0 }} client:only="react" />
+  </VideoVisual>
+</StorySection>
+
+<StorySection id="distributed" timeline={(t) => {
+    const visual = t.visual("majority", majorityVideoDefinition);
+    t.action(visual.advance, { from: "summaries", duration: 1.2, ease: "linear", params: { value: 1 } });
+  }}>
+  <aside class="notes">
+    <p>
+      <Mark id="start" />This is useful when large datasets are spread across machines in a
+      cluster.
+    </p>
+    <p>
+      <Mark id="three" />Each machine processes its own part,
+    </p>
+    <p>
+      <Mark id="summaries" />and we combine these small summaries.
+    </p>
+    <p>
+      <Mark id="verify" />The verification can be distributed too: each machine counts the
+      final candidate in its part, and we add the results.
+    </p>
+    <Mark id="end" />
+  </aside>
+  <VideoVisual id="majority">
+    <MajorityVideoVisual initial={{ scene: "distributed", progress: 0 }} client:only="react" />
+  </VideoVisual>
+</StorySection>
+
+<StorySection id="privacy" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
+  <aside class="notes">
+    <p>
+      <Mark id="start" />For a concrete application, imagine we're reviewing transaction
+      statistics before publishing them.
+    </p>
+    <p>
+      <Mark id="rule" />One of our checks might be to flag any group where a single person
+      contributes more than half of the transactions.
+    </p>
+    <p>
+      <Mark id="mapping" />Here, each shape represents a person, and each occurrence is one
+      transaction.
+    </p>
+    <p>
+      <Mark id="candidate" />We can find a candidate for that dominant contributor, then
+      verify their actual contribution, without building a huge table of everyone's
+      frequencies.
+    </p>
+    <p>
+      <Mark id="parallel" />And if the transactions are spread across machines, each machine
+      can send its small summary instead of its entire table.
+    </p>
+    <Mark id="end" />
+  </aside>
+  <VideoVisual id="majority">
+    <MajorityVideoVisual initial={{ scene: "privacy", progress: 0 }} client:only="react" />
+  </VideoVisual>
+</StorySection>
+
+<StorySection id="extension" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
+  <aside class="notes">
+    <p>
+      <Mark id="start" />There's also an extension called Misra-Gries that keeps several
+      candidates and gives frequency estimates with a bounded error.
+    </p>
+    <Mark id="end" />
+  </aside>
+  <VideoVisual id="majority">
+    <MajorityVideoVisual initial={{ scene: "extension", progress: 0 }} client:only="react" />
+  </VideoVisual>
+</StorySection>
+
+<StorySection id="closing" timeline={(t) => {
+    t.visual("majority", majorityVideoDefinition);
+  }}>
+  <aside class="notes">
+    <p>
+      <Mark id="start" />But the idea we've used here is simple: different elements cancel,
+    </p>
+    <p>
+      <Mark id="survive" />a true majority survives,
+    </p>
+    <p>
+      <Mark id="check" />and those cancellations still work when we combine separate parts of
+      the data.
+    </p>
+    <Mark id="end" />
+  </aside>
+  <VideoVisual id="majority">
+    <MajorityVideoVisual initial={{ scene: "closing", progress: 0 }} client:only="react" />
   </VideoVisual>
 </StorySection>
 

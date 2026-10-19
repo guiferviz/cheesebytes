@@ -106,6 +106,36 @@ describe("frequency arrivals", () => {
     ).toBeGreaterThan(0);
     expect(new Set(events.map((event) => event.value)).size).toBe(4);
   });
+  it("matches the belt velocity and keeps velocity continuous at the curve join", () => {
+    const dt = 0.00001;
+    for (const y of [80, 210, 450, 690, 820]) {
+      const velocity = (p: number) => {
+        const a = counterRoute(p - dt, y),
+          b = counterRoute(p, y);
+        return {
+          x: (b.x - a.x) / (dt * TRANSFER_DURATION),
+          y: (b.y - a.y) / (dt * TRANSFER_DURATION),
+        };
+      };
+      const entry = counterRoute(dt, y);
+      expect((entry.x - 800) / (dt * TRANSFER_DURATION)).toBeCloseTo(
+        -880 / FEED_DURATION,
+        0,
+      );
+      const before = velocity(0.72),
+        after = velocity(0.72 + dt);
+      expect(Math.hypot(before.x - after.x, before.y - after.y)).toBeLessThan(
+        0.2,
+      );
+      expect(Math.hypot(velocity(1).x, velocity(1).y)).toBeLessThan(0.2);
+      // No artificial stops between the belt and the final destination.
+      for (let i = 1; i < 99; i++) {
+        const v = velocity(i / 100);
+        expect(Math.hypot(v.x, v.y)).toBeGreaterThan(100);
+        expect(v.x).toBeLessThan(0);
+      }
+    }
+  });
   it("routes through an empty aisle before approaching only the target row", () => {
     for (const y of [130, 330, 490, 650, 810]) {
       expect(counterRoute(0, y)).toEqual({ x: 800, y: 450 });
@@ -113,7 +143,7 @@ describe("frequency arrivals", () => {
       for (let step = 0; step <= 100; step++) {
         const progress = step / 100,
           point = counterRoute(progress, y);
-        if (progress < 0.8) expect(point.x).toBeGreaterThanOrEqual(690);
+        if (progress < 0.72) expect(point.x).toBeGreaterThanOrEqual(620);
         else expect(point.y).toBe(y);
       }
     }

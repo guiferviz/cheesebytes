@@ -46,6 +46,10 @@ export function FrequencyCounterScene({
     ? capacityState(events, clock, initial)
     : { entries: frequenciesAt(events, clock, initial), blocked: null };
   const { entries, blocked } = status;
+  const queueStop = memory
+    ? capacityState(events, Infinity, initial).blocked
+    : null;
+
   const order = [
     ...new Set([...initial.map((e) => e.value), ...events.map((e) => e.value)]),
   ];
@@ -57,7 +61,9 @@ export function FrequencyCounterScene({
     if (blocked || (memory && occupied >= MEMORY_CAPACITY)) break;
     if (event.arrival <= clock || futureValues.has(event.value)) continue;
     futureValues.add(event.value);
-    occupied += smooth((clock - event.arrival + 0.24) / 0.24);
+    occupied += smooth(
+      (clock - event.arrival + TRANSFER_DURATION) / TRANSFER_DURATION,
+    );
   }
   const { compact, top, pitch, size } = centredCounterLayout(occupied, memory);
   const position = (index: number) => ({ x: 430, y: top + index * pitch });
@@ -193,7 +199,11 @@ export function FrequencyCounterScene({
         />
       )}
       {flights.map((event, i) => {
-        const queued = Boolean(blocked && i >= blocked.index);
+        const queued = Boolean(
+          queueStop &&
+            i >= queueStop.index &&
+            clock >= queueStop.time - 80 / (880 / FEED_DURATION),
+        );
         if (!queued && clock >= event.arrival) return null;
         const spawn = event.arrival - FEED_DURATION - TRANSFER_DURATION;
         if (clock < spawn) return null;
@@ -203,18 +213,26 @@ export function FrequencyCounterScene({
         const dest = position(Math.max(0, order.indexOf(event.value)));
         const route = counterRoute(phase, dest.y);
         const feed = clamp((clock - spawn) / FEED_DURATION);
-        const feedX = mix(1680, 800, feed);
-        const x = queued
-          ? Math.max(feedX, 800 + (i - blocked!.index) * 110)
-          : phase > 0
-            ? route.x
-            : feedX;
+        const feedX = queued
+          ? 1680 - (880 / FEED_DURATION) * (clock - spawn)
+          : mix(1680, 800, feed);
+        const queueX = queueStop ? 800 + (i - queueStop.index) * 110 : 800;
+        const queueDistance = feedX - queueX;
+        const queuedX =
+          queueDistance >= 80
+            ? feedX
+            : queueDistance <= -80
+              ? queueX
+              : queueX + (queueDistance + 80) ** 2 / 320;
+        const x = queued ? queuedX : phase > 0 ? route.x : feedX;
         const y = queued ? 450 : phase > 0 ? route.y : 450;
         return (
           <g
             key={i}
             data-flight-id={event.value}
             data-flight-index={i}
+            data-x={x}
+            data-y={y}
             data-arrival={event.arrival}
             data-transfer={phase}
             data-queued={queued || undefined}

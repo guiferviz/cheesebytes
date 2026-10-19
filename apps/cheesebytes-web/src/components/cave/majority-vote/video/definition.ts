@@ -12,6 +12,30 @@ export const SEQUENCE: ShapeKind[] = [
   "square",
   "square",
 ];
+// Same multiset as the cancellation example, ordered to demonstrate a match,
+// a mismatch, a zero balance, and replacement in separate narrated steps.
+export const ONLINE_SEQUENCE: ShapeKind[] = [
+  "square",
+  "square",
+  "circle",
+  "triangle",
+  "triangle",
+  "square",
+  "square",
+  "diamond",
+  "square",
+  "square",
+];
+export const FRIEND_PARTS: ShapeKind[][] = [
+  ["square", "circle", "square", "triangle", "square", "square", "square"],
+  ["circle", "square", "circle", "circle"],
+];
+// Repartition the SAME eleven values when the friends become three machines.
+export const CLUSTER_PARTS: ShapeKind[][] = [
+  FRIEND_PARTS[0].slice(0, 3),
+  FRIEND_PARTS[0].slice(3),
+  FRIEND_PARTS[1],
+];
 export const NO_MAJORITY: ShapeKind[] = [
   "square",
   "circle",

@@ -1,4 +1,13 @@
 import { useMemo } from "react";
+import {
+  PairOrders,
+  StrengthScene,
+  FriendScene,
+  MergeScene,
+  PrivacyScene,
+  ExtensionScene,
+  ClusterScene,
+} from "./ExtraScenes";
 import { Shape } from "./Shape";
 import { FrequencyCounterScene } from "./FrequencyCounterScene";
 import { createMemoryShapes, DEFAULT_MEMORY_SEED } from "./memory-shapes";
@@ -10,8 +19,8 @@ import { SHAPES } from "../MajorityVoteConstants";
 import {
   majorityVideoDefinition,
   SEQUENCE,
+  ONLINE_SEQUENCE,
   NO_MAJORITY,
-  SHARDS,
   summarize,
   type ShapeKind,
   type MajorityVideoState,
@@ -34,7 +43,7 @@ const descriptions: Record<string, string> = {
   counting:
     "Shapes enter from the right, then merge into their frequency counters exactly when the numbers increase.",
   memory:
-    "New values allocate more counters until the storage space fills and overflows. Repeated values only increase existing numbers.",
+    "New values allocate more counters until the storage space fills and the stream queues at intake. Repeated values only increase existing numbers.",
   cancel: "Different shapes collide and cancel. Two squares survive.",
   invariant:
     "Six squares face four other shapes. The majority survives every cancellation.",
@@ -48,8 +57,18 @@ const descriptions: Record<string, string> = {
     "A second pass checks actual frequency against the strict majority threshold.",
   distributed: "Three machines reduce their streams to weighted candidates.",
   merge:
-    "Weighted candidates converge and cancel, leaving a square with strength two.",
-  closing: "One candidate, one counter, and a final verification.",
+    "A square of strength three cancels with a circle of strength two, leaving one square.",
+  closing:
+    "Different elements cancel; a majority survives, even when parts are combined.",
+  "pair-orders":
+    "A circle and a triangle cancel first. A different pairing order leaves four squares.",
+  strength: "Residual strength two is different from the actual frequency six.",
+  friend:
+    "Two friends compare full frequency tables with small candidate summaries.",
+  privacy:
+    "Flag a transaction group where one person contributes six of ten transactions.",
+  extension:
+    "Misra–Gries maintains several candidates with bounded frequency error.",
 };
 
 function Word({
@@ -204,16 +223,16 @@ export function MajorityVideoVisual({
   const { scene, progress: p } = state;
   const seed = state.seed ?? DEFAULT_MEMORY_SEED;
   const memoryShapes = useMemo(() => createMemoryShapes(seed), [seed]);
-  const seq = scene === "catch" ? NO_MAJORITY : SEQUENCE;
+  const seq = scene === "catch" ? NO_MAJORITY : ONLINE_SEQUENCE;
   const processed = Math.min(seq.length, Math.floor(p + 1e-6));
   const fraction = p - Math.floor(p + 1e-6);
   const summary = summarize(seq.slice(0, processed));
   const entered = smooth(t / 1.1);
   const elapsed = (mark: string) => Math.max(0, t - (marks[mark] ?? Infinity));
-  const verifyValues = p < 1 ? NO_MAJORITY : SEQUENCE;
+  const verifyValues = p <= 1 ? NO_MAJORITY : SEQUENCE;
   const scanned = Math.min(
     verifyValues.length,
-    Math.ceil((p < 1 ? p : p - 1) * verifyValues.length),
+    Math.floor((p <= 1 ? p : p - 1) * verifyValues.length + 1e-6),
   );
   const frequency = verifyValues
     .slice(0, scanned)
@@ -308,7 +327,7 @@ export function MajorityVideoVisual({
               y={175}
               size={100}
               fill={gold}
-              opacity={smooth(elapsed("question"))}
+              opacity={smooth(elapsed("majority"))}
             >
               ?
             </Word>
@@ -343,12 +362,12 @@ export function MajorityVideoVisual({
               );
               const oy = mix(
                 380 + Math.floor(i / 5) * 130,
-                380 + Math.floor(index / (kind === "square" ? 3 : 2)) * 130,
+                310 + Math.floor(index / (kind === "square" ? 3 : 2)) * 280,
                 group,
               );
               const pair = cancellationPairs.findIndex((v) => v.includes(i));
               if (pair < 0) {
-                const q = smooth(p - 3);
+                const q = smooth(elapsed("left") / 1);
                 return (
                   <Shape
                     key={i}
@@ -367,7 +386,7 @@ export function MajorityVideoVisual({
                   key={i}
                   kind={kind}
                   x={mix(ox, 800, travel)}
-                  y={mix(oy, 450, travel)}
+                  y={mix(oy, 450, 1 - (1 - clamp(q / 0.68)) ** 3)}
                   size={84 * (1 - 0.4 * travel)}
                   opacity={1 - smooth((q - 0.55) / 0.18)}
                   rotate={mix(((i % 3) - 1) * 5, 0, travel)}
@@ -377,7 +396,7 @@ export function MajorityVideoVisual({
             {cancellationPairs.map((_, i) => (
               <Burst key={i} x={800} y={450} q={(p - i - 0.55) / 0.45} />
             ))}
-            <Halo t={t} r={190} opacity={smooth(p - 3)} />
+            <Halo t={t} r={190} opacity={smooth(elapsed("left"))} />
           </>
         )}
 
@@ -385,13 +404,13 @@ export function MajorityVideoVisual({
           <>
             {Array.from({ length: 6 }, (_, i) => {
               const wave = smooth(t / 2);
-              const q = smooth((t - 3 - i * 0.75) / 0.65);
+              const q = smooth((t - (marks.why ?? 3) - i * 0.85) / 1.1);
               return (
                 <Shape
                   key={i}
                   kind="square"
-                  x={mix(360 + i * 145, i < 4 ? 800 : 720 + (i - 4) * 160, q)}
-                  y={mix(mix(450, 310, wave), 450, q)}
+                  x={mix(475 + i * 130, i < 4 ? 800 : 720 + (i - 4) * 160, q)}
+                  y={mix(mix(450, 310, wave), 450, 1 - (1 - q) ** 3)}
                   size={mix(84, i < 4 ? 50 : 116, q)}
                   opacity={i < 4 ? 1 - q : 1}
                 />
@@ -399,13 +418,17 @@ export function MajorityVideoVisual({
             })}
             {(["circle", "triangle", "triangle", "diamond"] as ShapeKind[]).map(
               (kind, i) => {
-                const q = smooth((t - 3 - i * 0.75) / 0.65);
+                const q = smooth((t - (marks.why ?? 3) - i * 0.85) / 1.1);
                 return (
                   <Shape
                     key={i}
                     kind={kind}
-                    x={mix(580 + i * 145, 800, q)}
-                    y={mix(mix(1050, 590, smooth(t / 2)), 450, q)}
+                    x={mix(605 + i * 130, 800, q)}
+                    y={mix(
+                      mix(1050, 590, smooth(t / 2)),
+                      450,
+                      1 - (1 - q) ** 3,
+                    )}
                     size={84 * (1 - q * 0.4)}
                     opacity={1 - q}
                   />
@@ -417,10 +440,14 @@ export function MajorityVideoVisual({
                 key={i}
                 x={800}
                 y={450}
-                q={(t - 3 - i * 0.75 - 0.3) / 0.9}
+                q={(t - (marks.why ?? 3) - i * 0.85 - 0.5) / 0.9}
               />
             ))}
-            <Halo t={t} r={190} opacity={smooth((t - 6) / 0.8)} />
+            <Halo
+              t={t}
+              r={190}
+              opacity={smooth((t - (marks.trick ?? 10)) / 0.8)}
+            />
           </>
         )}
 
@@ -452,17 +479,21 @@ export function MajorityVideoVisual({
             {seq.map((kind, i) => {
               const isNext = i === processed;
               const q = isNext ? smooth(fraction) : 0;
-              const startX = 800 + (i - processed) * 138;
+              const startX =
+                1000 +
+                (i - processed) * 145 -
+                (isNext ? 0 : 145 * smooth(fraction));
               return (
-                <Shape
-                  key={i}
-                  kind={kind}
-                  x={mix(startX, 800, q)}
-                  y={mix(160, 450, q)}
-                  size={mix(54, 76, q)}
-                  opacity={i < processed ? 0 : isNext ? 1 : 0.4}
-                  rotate={isNext ? mix(-8, 0, q) : Math.sin(t * 0.5 + i) * 4}
-                />
+                <g key={i} data-online-index={i}>
+                  <Shape
+                    kind={kind}
+                    x={mix(startX, 800, q)}
+                    y={mix(180, 450, q)}
+                    size={mix(66, summary.strength ? 90 : 146, q)}
+                    opacity={i < processed ? 0 : isNext ? 1 : 0.4}
+                    rotate={isNext ? mix(-8, 0, q) : Math.sin(t * 0.5 + i) * 4}
+                  />
+                </g>
               );
             })}
             {summary.candidate && (
@@ -471,33 +502,15 @@ export function MajorityVideoVisual({
                 x={800}
                 y={450}
                 size={146 + Math.sin(t * 2) * 2}
-                opacity={summary.strength ? 1 : 0.12}
+                opacity={summary.strength ? 1 : 0}
                 rotate={summary.strength ? Math.sin(t * 0.6) * 2 : 18}
               />
             )}
-            {Array.from({ length: summary.strength }, (_, i) => (
-              <Shape
-                key={i}
-                kind={summary.candidate!}
-                x={
-                  800 +
-                  Math.cos(angle(i, Math.max(3, summary.strength)) + t * 0.12) *
-                    235
-                }
-                y={
-                  450 +
-                  Math.sin(angle(i, Math.max(3, summary.strength)) + t * 0.12) *
-                    235
-                }
-                size={26}
-                opacity={0.7}
-              />
-            ))}
             <Word
               x={800}
               y={735}
               size={94}
-              fill={summary.strength ? gold : "#ffffff35"}
+              fill={summary.strength ? gold : "#ffffff85"}
             >
               {summary.strength}
             </Word>
@@ -564,14 +577,18 @@ export function MajorityVideoVisual({
               const targetX = 730 + (rank % 2) * 140;
               const targetY = 350 + Math.floor(rank / 2) * 110;
               const arrival = smooth(
-                (p < 1 ? p : p - 1) * verifyValues.length - i,
+                (p <= 1 ? p : p - 1) * verifyValues.length - i,
               );
               return (
                 <Shape
                   key={i}
                   kind={kind}
                   x={kind === "square" ? mix(x, targetX, arrival) : x}
-                  y={kind === "square" ? mix(170, targetY, arrival) : 170}
+                  y={
+                    kind === "square"
+                      ? mix(170, targetY, 1 - (1 - arrival) ** 3)
+                      : 170
+                  }
                   size={kind === "square" ? mix(45, 65, arrival) : 45}
                   opacity={counted && kind !== "square" ? 0.08 : 1}
                 />
@@ -612,93 +629,14 @@ export function MajorityVideoVisual({
           </>
         )}
 
-        {scene === "distributed" && (
-          <>
-            {SHARDS.map((values, i) => {
-              const x = 360 + i * 440,
-                y = 450;
-              const result = summarize(values);
-              const q = smooth(p);
-              return (
-                <g key={i}>
-                  <Halo
-                    x={x}
-                    y={y}
-                    r={150}
-                    t={t + i}
-                    color={tint(result.candidate!)}
-                  />
-                  {values.map((kind, j) => {
-                    const a = angle(j, values.length) + t * 0.08;
-                    return (
-                      <Shape
-                        key={j}
-                        kind={kind}
-                        x={mix(x + Math.cos(a) * 205, x, q)}
-                        y={mix(y + Math.sin(a) * 205, y, q)}
-                        size={mix(57, 32, q)}
-                        opacity={1 - q}
-                      />
-                    );
-                  })}
-                  <Shape
-                    kind={result.candidate!}
-                    x={x}
-                    y={y}
-                    size={mix(0, 105, q)}
-                    opacity={q}
-                  />
-                  <Word x={x} y={680} size={67} fill={gold} opacity={q}>
-                    {result.strength}
-                  </Word>
-                  <path
-                    d={`M${x - 45} 750 h90`}
-                    stroke="#ffffff25"
-                    strokeWidth={2}
-                  />
-                </g>
-              );
-            })}
-          </>
-        )}
+        {scene === "distributed" && <ClusterScene time={t} marks={marks} />}
 
-        {scene === "merge" && (
-          <>
-            {(["square", "triangle", "square"] as ShapeKind[]).map(
-              (kind, i) => {
-                const q = smooth(i === 2 ? (p - 0.5) * 2 : p * 2);
-                const x = mix(360 + i * 440, 800, q);
-                const y = mix(450, 450, q);
-                return (
-                  <g key={i}>
-                    <Shape
-                      kind={kind}
-                      x={x}
-                      y={y}
-                      size={mix(105, 116, q)}
-                      opacity={i === 1 ? 1 - smooth((p - 0.28) / 0.22) : 1}
-                    />
-                    {i === 0 && (
-                      <Shape
-                        kind="square"
-                        x={mix(360, 800, q)}
-                        y={mix(565, 450, q)}
-                        size={56}
-                        opacity={1 - smooth((p - 0.28) / 0.22)}
-                      />
-                    )}
-                    <Halo x={x} y={y} r={150} t={t + i} opacity={1 - q} />
-                  </g>
-                );
-              },
-            )}
-            <Burst x={800} y={450} q={(p - 0.28) / 0.45} />
-            <Word y={725} size={94} fill={gold}>
-              {p < 0.5 ? 2 : p < 0.99 ? 1 : 2}
-            </Word>
-            <Halo t={t} r={185} opacity={smooth(p - 0.7)} />
-          </>
-        )}
+        {scene === "pair-orders" && <PairOrders time={t} marks={marks} />}
+        {scene === "strength" && <StrengthScene time={t} marks={marks} />}
+        {scene === "friend" && <FriendScene time={t} marks={marks} />}
+        {scene === "merge" && <MergeScene time={t} marks={marks} />}
+        {scene === "privacy" && <PrivacyScene time={t} marks={marks} />}
+        {scene === "extension" && <ExtensionScene />}
 
         {scene === "closing" && (
           <>
@@ -711,7 +649,7 @@ export function MajorityVideoVisual({
               rotate={Math.sin(t * 0.6) * 2}
             />
             <Word x={935} y={460} size={160} fill={gold}>
-              2
+              1
             </Word>
             <Tick x={800} y={710} q={smooth(elapsed("check"))} />
             <Word

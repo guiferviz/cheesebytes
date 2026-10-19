@@ -9,7 +9,7 @@ export interface FrequencyEntry {
   count: number;
   lastArrival: number;
 }
-export const TRANSFER_DURATION = 0.42;
+export const TRANSFER_DURATION = 0.75;
 export const FEED_DURATION = 3.2;
 export const MEMORY_CAPACITY = 11;
 
@@ -94,20 +94,31 @@ export function memoryArrivals(questionMark: number): CounterArrival[] {
   }));
 }
 
-/** Leave the belt sideways, travel in a clear aisle, then merge into one row. */
+/** Two tangent-continuous curves: keep clear of the table until on the target row.
+ * Entry velocity matches the belt; the only full stop is at the counter itself.
+ */
 export function counterRoute(progress: number, targetY: number) {
-  const smooth = (v: number) => {
-    const q = Math.max(0, Math.min(1, v));
-    return q * q * (3 - 2 * q);
-  };
-  if (progress < 0.22)
-    return { x: 800 - 110 * smooth(progress / 0.22), y: 450 };
-  if (progress < 0.8)
+  const p = Math.max(0, Math.min(1, progress));
+  const bezier = (a: number, b: number, c: number, d: number, q: number) =>
+    (1 - q) ** 3 * a +
+    3 * (1 - q) ** 2 * q * b +
+    3 * (1 - q) * q * q * c +
+    q ** 3 * d;
+  const split = 0.72;
+  const beltSpeed = 880 / FEED_DURATION;
+  const entryControl = 800 - (beltSpeed * TRANSFER_DURATION * split) / 3;
+  const joinControl = 620 - ((690 - 620) * (1 - split)) / split;
+  if (p < split) {
+    const q = p / split;
     return {
-      x: 690,
-      y: 450 + (targetY - 450) * smooth((progress - 0.22) / 0.58),
+      x: bezier(800, entryControl, 690, 620, q),
+      y: bezier(450, 450, targetY, targetY, q),
     };
-  return { x: 690 - 260 * smooth((progress - 0.8) / 0.2), y: targetY };
+  }
+  return {
+    x: bezier(620, joinControl, 430, 430, (p - split) / (1 - split)),
+    y: targetY,
+  };
 }
 export function initialFrequencies(): FrequencyEntry[] {
   return frequenciesAt(countingArrivals(0), Infinity);
