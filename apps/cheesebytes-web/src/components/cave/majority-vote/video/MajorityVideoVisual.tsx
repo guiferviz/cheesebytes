@@ -4,7 +4,6 @@ import {
   StrengthScene,
   FriendScene,
   MergeScene,
-  PrivacyScene,
   ExtensionScene,
   ClusterScene,
   ClosingScene,
@@ -70,8 +69,6 @@ const descriptions: Record<string, string> = {
   strength: "Residual strength two is different from the actual frequency six.",
   friend:
     "Two friends compare full frequency tables with small candidate summaries.",
-  privacy:
-    "Flag a transaction group where one person contributes six of ten transactions.",
   extension:
     "Misra–Gries maintains several candidates with bounded frequency error.",
 };
@@ -557,7 +554,6 @@ export function MajorityVideoVisual({
         {scene === "strength" && <StrengthScene time={t} marks={marks} />}
         {scene === "friend" && <FriendScene time={t} marks={marks} />}
         {scene === "merge" && <MergeScene time={t} marks={marks} />}
-        {scene === "privacy" && <PrivacyScene time={t} marks={marks} />}
         {scene === "extension" && <ExtensionScene />}
 
         {scene === "closing" && (

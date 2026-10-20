@@ -97,9 +97,6 @@ export function ClosingScene({
           1
         </Label>
       </g>
-      <Label x={800} y={810} size={26} fill={gold} opacity={motion.brand}>
-        cheese bytes
-      </Label>
     </g>
   );
 }
@@ -443,74 +440,6 @@ export function MergeScene({
             {left.strength + right.strength}
           </Label>
         </g>
-      </g>
-    </g>
-  );
-}
-
-export function PrivacyScene({
-  time,
-  marks,
-}: {
-  time: number;
-  marks: Record<string, number>;
-}) {
-  const transactionCount = SEQUENCE.length;
-  const contribution = SEQUENCE.filter((value) => value === "square").length;
-  const mapping = smooth((time - (marks.mapping ?? 10)) / 0.8);
-  const candidate = smooth((time - (marks.candidate ?? 17)) / 1.5);
-  const parallel = smooth((time - (marks.parallel ?? 28)) / 1.1);
-  return (
-    <g data-application="transaction-count" data-contribution="6/10">
-      {SEQUENCE.map((kind, i) => {
-        const x = 350 + i * 100,
-          y = 325 + Math.sin(time * 0.4 + i) * 4;
-        return (
-          <g key={i}>
-            <Shape
-              kind={kind}
-              x={x}
-              y={y}
-              size={70}
-              opacity={mix(
-                1,
-                kind === "square" ? 1 : DIMMED_SHAPE_OPACITY,
-                candidate,
-              )}
-            />
-            <path
-              d={`M${x - 18} ${y + 65} h36 m-36 10 h25`}
-              stroke={muted}
-              strokeWidth={2}
-              opacity={mapping * (1 - parallel) * 0.5}
-            />
-          </g>
-        );
-      })}
-      <Shape kind="square" x={640} y={565} size={100} />
-      <Label x={900} y={565} size={78} fill={gold} opacity={candidate}>
-        {contribution} / {transactionCount}
-      </Label>
-      <Label y={710} size={30} opacity={mapping * (1 - parallel)}>
-        one shape = one person
-      </Label>
-      <g opacity={parallel}>
-        {[540, 800, 1060].map((x, i) => (
-          <g key={x}>
-            <path
-              d={`M${x} 770 L800 650`}
-              stroke="#64b5f6"
-              strokeWidth={2}
-              opacity={0.4}
-            />
-            <Shape
-              kind={i === 1 ? "triangle" : "square"}
-              x={x}
-              y={790}
-              size={42}
-            />
-          </g>
-        ))}
       </g>
     </g>
   );

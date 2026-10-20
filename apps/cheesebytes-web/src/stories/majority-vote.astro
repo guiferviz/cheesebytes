@@ -407,38 +407,6 @@ import {
   </VideoVisual>
 </StorySection>
 
-<StorySection id="privacy" timeline={(t) => {
-    t.visual("majority", majorityVideoDefinition);
-  }}>
-  <aside class="notes">
-    <p>
-      <Mark id="start" />For a concrete application, imagine we're reviewing transaction
-      statistics before publishing them.
-    </p>
-    <p>
-      <Mark id="rule" />One of our checks might be to flag any group where a single person
-      contributes more than half of the transactions.
-    </p>
-    <p>
-      <Mark id="mapping" />Here, each shape represents a person, and each occurrence is one
-      transaction.
-    </p>
-    <p>
-      <Mark id="candidate" />We can find a candidate for that dominant contributor, then
-      verify their actual contribution, without building a huge table of everyone's
-      frequencies.
-    </p>
-    <p>
-      <Mark id="parallel" />And if the transactions are spread across machines, each machine
-      can send its small summary instead of its entire table.
-    </p>
-    <Mark id="end" />
-  </aside>
-  <VideoVisual id="majority">
-    <MajorityVideoVisual initial={{ scene: "privacy", progress: 0 }} client:only="react" />
-  </VideoVisual>
-</StorySection>
-
 <StorySection id="extension" timeline={(t) => {
     t.visual("majority", majorityVideoDefinition);
   }}>
