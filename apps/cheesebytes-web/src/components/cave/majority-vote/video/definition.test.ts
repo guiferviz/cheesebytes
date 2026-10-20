@@ -12,8 +12,13 @@ import {
 } from "./definition";
 describe("majority story examples", () => {
   it("keeps the same eleven values when repartitioning the friends into machines", () => {
-    expect(CLUSTER_PARTS.flat()).toEqual(FRIEND_PARTS.flat());
+    expect(CLUSTER_PARTS.flat().sort()).toEqual(FRIEND_PARTS.flat().sort());
     const result = CLUSTER_PARTS.map(summarize).reduce(merge);
+    expect(CLUSTER_PARTS.map(summarize)).toEqual([
+      { candidate: "square", strength: 1 },
+      { candidate: "square", strength: 2 },
+      { candidate: "circle", strength: 2 },
+    ]);
     expect(result).toEqual({ candidate: "square", strength: 1 });
     expect(
       CLUSTER_PARTS.map((part) => part.filter((v) => v === "square").length),
@@ -37,9 +42,10 @@ describe("majority story examples", () => {
   });
   it("merges the friend's real chunks and preserves their global majority", () => {
     const summaries = FRIEND_PARTS.map(summarize);
+    expect(FRIEND_PARTS.map((part) => part.length)).toEqual([6, 5]);
     expect(summaries).toEqual([
-      { candidate: "square", strength: 3 },
-      { candidate: "circle", strength: 2 },
+      { candidate: "square", strength: 2 },
+      { candidate: "circle", strength: 1 },
     ]);
     expect(merge(summaries[0], summaries[1])).toEqual({
       candidate: "square",

@@ -77,9 +77,9 @@ import {
 
 <StorySection id="cancel" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, { from: "pair-one", duration: 1.05, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "pair-two", duration: 1.05, ease: "linear", params: { value: 2 } });
-    t.action(visual.advance, { from: "repeat", to: "left", ease: "linear", params: { value: 4 } });
+    t.action(visual.advance, { from: "pair-one", duration: 1.65, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "pair-two", duration: 1.65, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "repeat", duration: 3, ease: "linear", params: { value: 4 } });
   }}>
   <aside class="notes">
     <p>
@@ -254,8 +254,8 @@ import {
       <Mark id="start" />But there's something important about that counter.
     </p>
     <p>
-      <Mark id="balance" />It represents the strength remaining after cancellations, not the
-      candidate's actual frequency.
+      <Mark id="balance" />It represents the strength remaining after cancellations,
+      <Mark id="actual" />not the candidate's actual frequency.
     </p>
     <p>
       <Mark id="compare" />Remember how different pairings left us with different numbers of
@@ -352,26 +352,27 @@ import {
   }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />If our candidates match, we add their strengths.
+      <Mark id="start" />I've got a square with strength two. You've got a circle with
+      strength one.
     </p>
     <p>
-      <Mark id="different" />If they're different, we cancel the smaller strength against the
-      larger one.
+      <Mark id="different" />Our candidates are different, so we cancel one against the other.
     </p>
     <p>
-      <Mark id="example" />For example, I send you a square with a strength of three. You have
-      a circle with a strength of two.
+      <Mark id="cancel" />One pair cancels, leaving a square with strength one.
     </p>
     <p>
-      <Mark id="cancel" />Two pairs cancel, leaving a square with a strength of one.
+      <Mark id="same" />And what if we'd both ended up with the same shape?
     </p>
     <p>
-      <Mark id="combine" />It's the same rule we've been using all along.
+      <Mark id="add" />Then we'd simply add our strengths.
     </p>
     <p>
-      <Mark id="guarantee" />If there's a majority across the original stream, it will survive
-      these combined cancellations too. We don't need each person's part to have the same
-      local winner.
+      <Mark id="sum" />Two plus one gives us three.
+    </p>
+    <p>
+      <Mark id="guarantee" />And if the full stream has a majority, these cancellations still
+      preserve it.
     </p>
     <Mark id="end" />
   </aside>
@@ -382,7 +383,7 @@ import {
 
 <StorySection id="distributed" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, { from: "summaries", duration: 1.2, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "combine", duration: 1, ease: "linear", params: { value: 1 } });
   }}>
   <aside class="notes">
     <p>
@@ -393,11 +394,11 @@ import {
       <Mark id="three" />Each machine processes its own part,
     </p>
     <p>
-      <Mark id="summaries" />and we combine these small summaries.
+      <Mark id="summaries" />and we <Mark id="combine" />combine these small summaries.
     </p>
     <p>
-      <Mark id="verify" />The verification can be distributed too: each machine counts the
-      final candidate in its part, and we add the results.
+      <Mark id="verify" />The verification can be distributed too: <Mark id="counts" />each machine counts the
+      final candidate in its part, <Mark id="total" />and we add the results.
     </p>
     <Mark id="end" />
   </aside>
@@ -453,19 +454,18 @@ import {
   </VideoVisual>
 </StorySection>
 
-<StorySection id="closing" timeline={(t) => {
+<StorySection id="closing" holdAfter={2} timeline={(t) => {
     t.visual("majority", majorityVideoDefinition);
   }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />But the idea we've used here is simple: different elements cancel,
+      <Mark id="start" />We started with a billion shapes.
     </p>
     <p>
-      <Mark id="survive" />a true majority survives,
+      <Mark id="remember" />All we needed to remember was <Mark id="candidate" />one candidate and <Mark id="counter" />one counter.
     </p>
     <p>
-      <Mark id="check" />and those cancellations still work when we combine separate parts of
-      the data.
+      <Mark id="survive" />Because a true majority can't be completely cancelled out.
     </p>
     <Mark id="end" />
   </aside>

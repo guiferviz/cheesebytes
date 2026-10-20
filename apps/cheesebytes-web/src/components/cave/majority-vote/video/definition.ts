@@ -27,14 +27,14 @@ export const ONLINE_SEQUENCE: ShapeKind[] = [
   "square",
 ];
 export const FRIEND_PARTS: ShapeKind[][] = [
-  ["square", "circle", "square", "triangle", "square", "square", "square"],
-  ["circle", "square", "circle", "circle"],
+  ["square", "circle", "square", "triangle", "square", "square"],
+  ["circle", "square", "circle", "circle", "square"],
 ];
 // Repartition the SAME eleven values when the friends become three machines.
 export const CLUSTER_PARTS: ShapeKind[][] = [
   FRIEND_PARTS[0].slice(0, 3),
-  FRIEND_PARTS[0].slice(3),
-  FRIEND_PARTS[1],
+  FRIEND_PARTS[0].slice(3).concat(FRIEND_PARTS[1].slice(-1)),
+  FRIEND_PARTS[1].slice(0, -1),
 ];
 export const NO_MAJORITY: ShapeKind[] = [
   "square",

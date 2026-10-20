@@ -1,4 +1,5 @@
 import type { ShapeKind } from "./definition";
+import { itemColumn } from "@guiferviz/cheese-bytes-video/item-layouts";
 
 export interface CounterArrival {
   value: string;
@@ -18,10 +19,15 @@ export function centredCounterLayout(count: number, memory: boolean) {
   const q = memory ? Math.max(0, Math.min(1, (n - 4) / 7)) : 0;
   const compact = q * q * (3 - 2 * q);
   const size = 90 - 34 * compact;
-  const pitch = memory
-    ? Math.min(160, Math.max(68, (740 - size) / Math.max(1, n - 1)))
-    : 160;
-  return { compact, size, pitch, top: 450 - ((n - 1) * pitch) / 2 };
+  const { pitch, top } = itemColumn({
+    count: n,
+    center: { x: 430, y: 450 },
+    itemSize: size,
+    spacing: 160,
+    maxExtent: memory ? 740 : Infinity,
+    minSpacing: memory ? 68 : 0,
+  });
+  return { compact, size, pitch, top };
 }
 
 /** A full table can update known values; the next unseen value blocks at intake. */
