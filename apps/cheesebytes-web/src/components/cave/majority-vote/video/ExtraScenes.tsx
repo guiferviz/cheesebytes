@@ -17,6 +17,7 @@ import {
   FRIEND_PARTS,
   CLUSTER_PARTS,
   SEQUENCE,
+  ONLINE_SEQUENCE,
   summarize,
   merge,
   type ShapeKind,
@@ -40,7 +41,12 @@ export function ClosingScene({
   marks: Record<string, number>;
 }) {
   const motion = closingChoreography(time, marks);
-  const floating = gentleFloat(globalTime);
+  const floating = gentleFloat(globalTime, {
+    verticalAmplitude: 2,
+    rotationAmplitude: 0.4,
+    verticalPeriod: 9,
+    rotationPeriod: 11,
+  });
   const selected = introItems(marks.remember ?? 2.5, 1)
     .filter((item) => item.kind === "square")
     .sort(
@@ -79,23 +85,28 @@ export function ClosingScene({
           </g>
         ))}
       </g>
-      <g data-closing-candidate data-source-index={selected.index}>
-        <Shape
-          kind="square"
-          x={mix(sourceX, 720, motion.recall)}
-          y={mix(sourceY, 450 + floating.offsetY, motion.recall)}
-          size={mix(90, 136, motion.recall)}
-          rotate={mix(
-            Math.sin(selected.index + motion.travelTime * 0.3) * 2,
-            floating.rotate,
-            motion.recall,
-          )}
-        />
-      </g>
-      <g data-closing-counter opacity={motion.counter}>
-        <Label x={935} y={460} size={160} fill={gold}>
-          1
-        </Label>
+      <g
+        data-closing-pair
+        transform={`translate(0 ${floating.offsetY * motion.recall})`}
+      >
+        <g data-closing-candidate data-source-index={selected.index}>
+          <Shape
+            kind="square"
+            x={mix(sourceX, 720, motion.recall)}
+            y={mix(sourceY, 450, motion.recall)}
+            size={mix(90, 136, motion.recall)}
+            rotate={mix(
+              Math.sin(selected.index + motion.travelTime * 0.3) * 2,
+              floating.rotate,
+              motion.recall,
+            )}
+          />
+        </g>
+        <g data-closing-counter opacity={motion.counter}>
+          <Label x={935} y={468} size={160} fill={gold}>
+            1
+          </Label>
+        </g>
       </g>
     </g>
   );
@@ -203,7 +214,7 @@ export function StrengthScene({
   const q = smooth((time - (marks.actual ?? Infinity)) / 0.65);
   return (
     <g>
-      {SEQUENCE.map((kind, i) => (
+      {ONLINE_SEQUENCE.map((kind, i) => (
         <Shape
           key={i}
           kind={kind}

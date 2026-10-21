@@ -12,10 +12,24 @@ export const smooth = smoothStep;
 export const mix = (a: number, b: number, q: number) => a + (b - a) * q;
 
 /** Subtle continuous motion, sampled from the video clock rather than entry progress. */
-export function gentleFloat(time: number) {
+export function gentleFloat(
+  time: number,
+  {
+    verticalAmplitude = 6,
+    rotationAmplitude = 1.5,
+    verticalPeriod = 6.8,
+    rotationPeriod = 8.4,
+  }: {
+    verticalAmplitude?: number;
+    rotationAmplitude?: number;
+    verticalPeriod?: number;
+    rotationPeriod?: number;
+  } = {},
+) {
   return {
-    offsetY: Math.sin((time * Math.PI * 2) / 6.8) * 6,
-    rotate: Math.sin((time * Math.PI * 2) / 8.4) * 1.5,
+    offsetY:
+      Math.sin((time * Math.PI * 2) / verticalPeriod) * verticalAmplitude,
+    rotate: Math.sin((time * Math.PI * 2) / rotationPeriod) * rotationAmplitude,
   };
 }
 

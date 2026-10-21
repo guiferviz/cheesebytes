@@ -162,7 +162,7 @@ import {
 
 <StorySection id="online" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, { from: "first", duration: 1.1, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "choose", to: "one", ease: "linear", params: { value: 1 } });
   }}>
   <aside class="notes">
     <p>
@@ -176,7 +176,7 @@ import {
       <Mark id="two" />Instead, we remember a candidate and its strength.
     </p>
     <p>
-      <Mark id="first" />The first shape becomes our candidate, with a strength of one.
+      <Mark id="first" />The first shape <Mark id="choose" />becomes our candidate, with a strength of <Mark id="one" />one.
     </p>
     <Mark id="end" />
   </aside>
@@ -187,7 +187,7 @@ import {
 
 <StorySection id="algorithm" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
-    t.action(visual.advance, { from: "match", duration: 1.1, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "arrives", to: "match", ease: "linear", params: { value: 2 } });
     t.action(visual.advance, { from: "cancel", duration: 1.1, ease: "linear", params: { value: 3 } });
     t.action(visual.advance, { from: "zero", duration: 1.1, ease: "linear", params: { value: 4 } });
     t.action(visual.advance, { from: "new", duration: 1.1, ease: "linear", params: { value: 5 } });
@@ -195,7 +195,7 @@ import {
   }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />When the next shape arrives, we compare them.
+      <Mark id="start" />When the next shape <Mark id="arrives" />arrives, we compare them.
     </p>
     <p>
       <Mark id="match" />If they match, we increase the strength. If they're different, we
@@ -425,7 +425,7 @@ import {
   </VideoVisual>
 </StorySection>
 
-<StorySection id="closing" holdAfter={2} timeline={(t) => {
+<StorySection id="closing" holdAfter={12} timeline={(t) => {
     t.visual("majority", majorityVideoDefinition);
   }}>
   <aside class="notes">

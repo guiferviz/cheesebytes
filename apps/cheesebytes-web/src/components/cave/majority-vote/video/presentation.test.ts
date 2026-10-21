@@ -17,6 +17,35 @@ import {
 import { CLUSTER_PARTS } from "./definition";
 
 describe("majority choreography", () => {
+  it("keeps the extended closing float subtle, smooth and moving throughout the silence", () => {
+    const options = {
+      verticalAmplitude: 2,
+      rotationAmplitude: 0.4,
+      verticalPeriod: 9,
+      rotationPeriod: 11,
+    };
+    const samples = Array.from({ length: 720 }, (_, i) =>
+      gentleFloat(296 + i / 30, options),
+    );
+    for (let i = 0; i < samples.length; i++) {
+      expect(Math.abs(samples[i].offsetY)).toBeLessThanOrEqual(2);
+      expect(Math.abs(samples[i].rotate)).toBeLessThanOrEqual(0.4);
+      if (i > 0) {
+        expect(
+          Math.abs(samples[i].offsetY - samples[i - 1].offsetY),
+        ).toBeLessThan(0.05);
+        expect(
+          Math.abs(samples[i].rotate - samples[i - 1].rotate),
+        ).toBeLessThan(0.008);
+      }
+    }
+    for (const start of [0, 360]) {
+      const positions = samples.slice(start, start + 360).map((p) => p.offsetY);
+      expect(Math.max(...positions) - Math.min(...positions)).toBeGreaterThan(
+        3.9,
+      );
+    }
+  });
   it("recalls the opening without a hard stop and holds the final pair after the words", () => {
     const marks = { remember: 3, counter: 7, end: 12 };
     const epsilon = 1e-5;

@@ -168,7 +168,8 @@ export function MajorityVideoVisual({
     previousSummary.candidate !== seq[processed - 1];
   const entered = smooth(t / 1.1);
   const elapsed = (mark: string) => Math.max(0, t - (marks[mark] ?? Infinity));
-  const verifyValues = p <= 1 ? NO_MAJORITY : SEQUENCE;
+  const onlineSetup = smooth(elapsed("two") / 1.1);
+  const verifyValues = p <= 1 ? NO_MAJORITY : ONLINE_SEQUENCE;
   const scanned = Math.min(
     verifyValues.length,
     Math.floor((p <= 1 ? p : p - 1) * verifyValues.length + 1e-6),
@@ -364,8 +365,8 @@ export function MajorityVideoVisual({
           </>
         )}
 
-        {scene === "online" && p < 1 && (
-          <g opacity={1 - smooth(p)}>
+        {scene === "online" && onlineSetup < 1 && (
+          <g data-online-ribbon opacity={1 - onlineSetup}>
             {Array.from({ length: 22 }, (_, i) => (
               <Shape
                 key={i}
@@ -380,7 +381,7 @@ export function MajorityVideoVisual({
         )}
 
         {(scene === "online" || scene === "algorithm" || scene === "catch") && (
-          <g opacity={scene === "online" ? smooth(p) : 1}>
+          <g data-online-view opacity={scene === "online" ? onlineSetup : 1}>
             {seq.map((kind, i) => {
               const isNext = i === processed;
               const q = isNext ? smooth(fraction) : 0;
