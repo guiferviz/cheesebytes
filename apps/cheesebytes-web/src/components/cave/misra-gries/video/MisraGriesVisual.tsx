@@ -4,6 +4,7 @@ import {
   useVideoSection,
 } from "@guiferviz/cheese-bytes-video/react";
 import { Shape } from "../../majority-vote/video/Shape";
+import { createMemoryShapes } from "../../majority-vote/video/memory-shapes";
 import {
   STREAM,
   KINDS,
@@ -13,15 +14,7 @@ import {
   type State,
   type Summary,
 } from "./definition";
-import {
-  clamp,
-  smooth,
-  mix,
-  slotX,
-  ribbonX,
-  transferPose,
-  cancellationPose,
-} from "./motion";
+import { clamp, smooth, mix, slotX, ribbonX, cancellationPose } from "./motion";
 export { misraGriesDefinition } from "./definition";
 const gold = "#fbbf24",
   blue = "#64b5f6",
@@ -29,7 +22,8 @@ const gold = "#fbbf24",
   muted = "#94a3b8",
   green = "#81c784";
 const TWO = trace(STREAM, 2),
-  THREE = trace(STREAM, 3);
+  THREE = trace(STREAM, 3),
+  POLYGONS = createMemoryShapes(42, 24);
 function Text({
   children,
   x = 800,
@@ -56,41 +50,15 @@ function Text({
       opacity={opacity}
       textAnchor={anchor}
       dominantBaseline="middle"
-      fontFamily="'Inter', system-ui, sans-serif"
-      fontWeight={450}
+      fontFamily="'Inter',system-ui,sans-serif"
     >
       {children}
     </text>
   );
 }
-function Caption({
-  children,
-  opacity = 1,
-  y = 100,
-}: {
-  children: ReactNode;
-  opacity?: number;
-  y?: number;
-}) {
+function Card({ x, children }: { x: number; children?: ReactNode }) {
   return (
-    <Text y={y} size={38} fill={muted} opacity={opacity}>
-      {children}
-    </Text>
-  );
-}
-function Card({
-  x,
-  children,
-  opacity = 1,
-  pulse = 0,
-}: {
-  x: number;
-  children?: ReactNode;
-  opacity?: number;
-  pulse?: number;
-}) {
-  return (
-    <g opacity={opacity}>
+    <g>
       <rect
         x={x - 110}
         y={355}
@@ -98,10 +66,40 @@ function Card({
         height={245}
         rx={23}
         fill="#0a1017"
-        stroke={pulse ? blue : "#283644"}
-        strokeWidth={2 + pulse * 2}
+        stroke="#283644"
+        strokeWidth={2}
       />
       {children}
+    </g>
+  );
+}
+/** Visible copies explain subtraction. Their count is the residual, never the frequency. */
+function pilePoint(index: number, count: number, x: number) {
+  const rows = Math.ceil(count / 3),
+    columns = Math.ceil(count / rows),
+    row = Math.floor(index / columns),
+    inRow = Math.min(columns, count - row * columns);
+  return {
+    x: x + ((index % columns) - (inRow - 1) / 2) * 64,
+    y: 435 + (row - (rows - 1) / 2) * 64,
+  };
+}
+function Pile({
+  kind,
+  count,
+  x,
+  opacity = 1,
+}: {
+  kind: Kind;
+  count: number;
+  x: number;
+  opacity?: number;
+}) {
+  return (
+    <g opacity={opacity}>
+      {Array.from({ length: count }, (_, i) => (
+        <Shape key={i} kind={kind} {...pilePoint(i, count, x)} size={54} />
+      ))}
     </g>
   );
 }
@@ -109,10 +107,12 @@ function FixedSummary({
   summary,
   capacity = 2,
   opacity = 1,
+  hideSquare = false,
 }: {
   summary: Summary;
   capacity?: number;
   opacity?: number;
+  hideSquare?: boolean;
 }) {
   return (
     <g opacity={opacity}>
@@ -120,7 +120,13 @@ function FixedSummary({
         <Card key={i} x={slotX(i, capacity)}>
           {kind && (
             <>
-              <Shape kind={kind} x={slotX(i, capacity)} y={445} size={88} />
+              {!(hideSquare && kind === "square") && (
+                <Pile
+                  kind={kind}
+                  count={summary.counts[kind]!}
+                  x={slotX(i, capacity)}
+                />
+              )}
               <Text x={slotX(i, capacity)} y={545} size={66} fill={gold}>
                 {summary.counts[kind]}
               </Text>
@@ -131,28 +137,35 @@ function FixedSummary({
     </g>
   );
 }
-function Ledger({ count, opacity = 1 }: { count: number; opacity?: number }) {
+function Ledger({
+  count,
+  capacity = 2,
+  opacity = 1,
+}: {
+  count: number;
+  capacity?: number;
+  opacity?: number;
+}) {
   return (
-    <g opacity={opacity}>
-      <Text x={755} y={730} size={38} fill={muted} anchor="end">
-        groups removed
+    <g opacity={opacity} data-removed={count}>
+      <Text x={765} y={735} size={34} fill={muted} anchor="end">
+        groups
       </Text>
-      <Text x={815} y={730} size={62} fill={gold} anchor="start">
+      <Text x={825} y={735} size={60} fill={gold}>
         {count}
       </Text>
       {Array.from({ length: count }, (_, i) => (
         <g
           key={i}
-          transform={`translate(${738 + (i - (count - 1) / 2) * 80} 795)`}
+          transform={`translate(${800 + (i - (count - 1) / 2) * 95} 798)`}
         >
-          {[0, 1, 2].map((n) => (
+          {Array.from({ length: capacity + 1 }, (_, n) => (
             <circle
               key={n}
-              cx={n * 18}
+              cx={(n - capacity / 2) * 18}
               cy={0}
               r={5}
               fill={gold}
-              opacity={0.75}
             />
           ))}
         </g>
@@ -160,7 +173,28 @@ function Ledger({ count, opacity = 1 }: { count: number; opacity?: number }) {
     </g>
   );
 }
-/** The original row stays in place. Only the active arrival leaves it. */
+function StreamRow({
+  processed = 0,
+  opacity = 1,
+}: {
+  processed?: number;
+  opacity?: number;
+}) {
+  return (
+    <g opacity={opacity}>
+      {STREAM.map((kind, i) => (
+        <Shape
+          key={i}
+          kind={kind}
+          x={ribbonX(i)}
+          y={190}
+          size={50}
+          opacity={i < processed ? 0.4 : 1}
+        />
+      ))}
+    </g>
+  );
+}
 function TraceBoard({
   progress,
   capacity,
@@ -170,36 +204,46 @@ function TraceBoard({
 }) {
   const states = capacity === 2 ? TWO : THREE,
     p = Math.max(0, Math.min(15, progress)),
+    done = p >= 15,
     n = Math.min(14, Math.floor(p)),
-    f = p >= 15 ? 1 : p - n;
+    f = done ? 1 : p - n;
   const before = states[n],
     after = states[n + 1],
     incoming = STREAM[n],
     cancel = after.event === "cancel",
-    done = p >= 15;
-  const hit = smooth((f - 0.67) / 0.23),
-    removed = hit > 0.5 ? after.removed : before.removed;
+    q = cancel ? clamp((f - 0.3) / 0.7) : f,
+    hit = smooth((q - 0.67) / 0.23);
   const targetIndex = after.slots.indexOf(incoming),
-    target = targetIndex < 0 ? 800 : slotX(targetIndex, capacity);
+    targetCount = after.counts[incoming] ?? 1,
+    target = pilePoint(
+      targetCount - 1,
+      targetCount,
+      slotX(targetIndex, capacity),
+    );
+  const removed = done
+    ? states[15].removed
+    : hit > 0.5
+      ? after.removed
+      : before.removed;
   return (
-    <g data-trace-progress={p} data-capacity={capacity}>
+    <g
+      data-trace-progress={p}
+      data-capacity={capacity}
+      data-square-count={(hit > 0.5 ? after : before).counts.square ?? 0}
+      data-circle-count={(hit > 0.5 ? after : before).counts.circle ?? 0}
+    >
       {STREAM.map((kind, i) =>
-        i === n && !done ? (
-          <g key={i} />
-        ) : (
+        i === n && !done ? null : (
           <Shape
             key={i}
             kind={kind}
             x={ribbonX(i)}
             y={190}
             size={50}
-            opacity={i < n || done ? 0.3 : 1}
+            opacity={done || i < n ? 0.4 : 1}
           />
         ),
       )}
-      <Text y={275} size={31} fill={muted}>
-        {done ? "15 / 15" : ""}
-      </Text>
       {!done &&
         before.slots.map((kind, i) => {
           const x = slotX(i, capacity),
@@ -207,106 +251,118 @@ function TraceBoard({
             oldCount = kind ? (before.counts[kind] ?? 0) : 0,
             newCount = next ? (after.counts[next] ?? 0) : 0;
           return (
-            <Card
-              key={i}
-              x={x}
-              pulse={
-                !cancel && i === targetIndex ? Math.sin(Math.PI * hit) * 0.7 : 0
-              }
-            >
-              {kind && (
-                <Shape
-                  kind={kind}
-                  x={x}
-                  y={445}
-                  size={88}
-                  opacity={cancel && oldCount === 1 ? 0 : 1}
-                />
+            <Card key={i} x={x}>
+              {kind &&
+                Array.from({ length: oldCount }, (_, j) => {
+                  const source = pilePoint(j, oldCount, x),
+                    removedCopy = cancel && j === oldCount - 1;
+                  if (removedCopy) {
+                    const pose = cancellationPose(source.x, source.y, q);
+                    return <Shape key={j} kind={kind} {...pose} size={54} />;
+                  }
+                  const dest = pilePoint(j, Math.max(1, newCount), x);
+                  return (
+                    <Shape
+                      key={j}
+                      kind={kind}
+                      x={mix(source.x, dest.x, hit)}
+                      y={mix(source.y, dest.y, hit)}
+                      size={54}
+                    />
+                  );
+                })}
+              {!cancel && next && newCount > oldCount && (
+                <Shape kind={next} {...target} size={54} opacity={hit} />
               )}
-              {!kind && next && (
-                <Shape kind={next} x={x} y={445} size={88} opacity={hit} />
+              {(hit > 0.5 ? newCount : oldCount) > 0 && (
+                <Text x={x} y={545} size={66} fill={gold}>
+                  {hit > 0.5 ? newCount : oldCount}
+                </Text>
               )}
-              {kind && (
-                <g opacity={oldCount === newCount ? 1 : 1 - hit}>
-                  <Text x={x} y={545 - hit * 12} size={66} fill={gold}>
-                    {oldCount}
-                  </Text>
-                </g>
-              )}
-              {newCount !== oldCount && newCount > 0 && (
-                <g opacity={hit}>
-                  <Text x={x} y={557 - hit * 12} size={66} fill={gold}>
-                    {newCount}
-                  </Text>
-                </g>
+              {cancel && (
+                <Text
+                  x={x + 145}
+                  y={470}
+                  size={40}
+                  fill={gold}
+                  opacity={Math.sin(Math.PI * hit)}
+                >
+                  −1
+                </Text>
               )}
             </Card>
           );
         })}
       {!done && !cancel && (
-        <Shape kind={incoming} {...transferPose(ribbonX(n), target, f)} />
+        <Shape
+          kind={incoming}
+          x={mix(ribbonX(n), target.x, smooth(f))}
+          y={mix(190, target.y, smooth(f)) - Math.sin(Math.PI * smooth(f)) * 35}
+          size={mix(50, 54, smooth(f))}
+          opacity={1 - hit}
+        />
       )}
       {!done && cancel && (
-        <>
-          {before.slots.map(
-            (kind, i) =>
-              kind && (
-                <Shape
-                  key={kind}
-                  kind={kind}
-                  {...cancellationPose(slotX(i, capacity), 445, f)}
-                  size={88}
-                />
-              ),
-          )}
-          <Shape
-            kind={incoming}
-            {...cancellationPose(ribbonX(n), 190, f)}
-            size={mix(50, 88, smooth(f / 0.5))}
-          />
-        </>
+        <Shape
+          kind={incoming}
+          x={f <= 0.3 ? mix(ribbonX(n), 800, smooth(f / 0.3)) : 800}
+          y={f <= 0.3 ? 190 : mix(190, 330, smooth(q / 0.78))}
+          size={54}
+          opacity={1 - smooth((q - 0.68) / 0.24)}
+        />
       )}
       {done && <FixedSummary summary={states[15]} capacity={capacity} />}
-      <Ledger count={done ? states[15].removed : removed} />
+      <Ledger count={removed} capacity={capacity} opacity={removed ? 1 : 0} />
     </g>
   );
 }
 function Range({
-  low = 5,
-  high = 8,
+  low = 4,
+  high = 7,
   y = 490,
+  kind = "square",
   threshold = 0,
   exact,
   opacity = 1,
+  small = false,
 }: {
   low?: number;
   high?: number;
   y?: number;
+  kind?: Kind;
   threshold?: number;
   exact?: number;
   opacity?: number;
+  small?: boolean;
 }) {
-  const x = (n: number) => 370 + (n - 4) * 200;
+  const x = (n: number) => 370 + ((n - 1) * 1000) / 7;
   return (
-    <g opacity={opacity} data-interval-low={low} data-interval-high={high}>
-      <Shape kind="square" x={205} y={y} size={82} />
-      <line x1={370} x2={1370} y1={y} y2={y} stroke="#344353" strokeWidth={4} />
-      {[4, 5, 6, 7, 8, 9].map((n) => (
+    <g
+      opacity={opacity}
+      data-interval-kind={kind}
+      data-interval-low={low}
+      data-interval-high={high}
+    >
+      <Shape kind={kind} x={235} y={y} size={small ? 64 : 82} />
+      <line x1={370} x2={1370} y1={y} y2={y} stroke="#344353" strokeWidth={3} />
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
         <g key={n}>
-          <line x1={x(n)} x2={x(n)} y1={y - 8} y2={y + 8} stroke={muted} />
-          <Text x={x(n)} y={y + 55} size={30} fill={muted}>
-            {n}
-          </Text>
+          <line x1={x(n)} x2={x(n)} y1={y - 7} y2={y + 7} stroke={muted} />
+          {!small && (
+            <Text x={x(n)} y={y + 53} size={29} fill={muted}>
+              {n}
+            </Text>
+          )}
         </g>
       ))}
       <rect
         x={x(low)}
-        y={y - 19}
-        width={Math.max(2, (high - low) * 200)}
-        height={38}
-        rx={12}
+        y={y - 17}
+        width={Math.max(1, ((high - low) * 1000) / 7)}
+        height={34}
+        rx={10}
         fill={gold}
-        opacity={0.16}
+        opacity={0.15}
       />
       <line
         x1={x(low)}
@@ -314,24 +370,24 @@ function Range({
         y1={y}
         y2={y}
         stroke={gold}
-        strokeWidth={8}
+        strokeWidth={7}
         strokeLinecap="round"
       />
-      <circle cx={x(low)} cy={y} r={11} fill={blue} />
+      <circle cx={x(low)} cy={y} r={10} fill={blue} />
       <circle
         cx={x(high)}
         cy={y}
-        r={11}
+        r={10}
         fill={gold}
         opacity={smooth((high - low) / 0.25)}
       />
-      <Text x={x(low)} y={y - 68} size={66} fill={blue}>
+      <Text x={x(low)} y={y - 58} size={small ? 46 : 62} fill={blue}>
         {Math.round(low)}
       </Text>
       <Text
         x={x(high)}
-        y={y - 68}
-        size={66}
+        y={y - 58}
+        size={small ? 46 : 62}
         fill={gold}
         opacity={smooth((high - low) / 0.25)}
       >
@@ -341,23 +397,23 @@ function Range({
         <line
           x1={x(5)}
           x2={x(5)}
-          y1={y - 35}
-          y2={y + 100}
+          y1={y - 28}
+          y2={y + 83}
           stroke={muted}
           strokeWidth={3}
-          strokeDasharray="9 9"
+          strokeDasharray="8 8"
         />
-        <Text x={x(5)} y={y + 145} size={37} fill={muted}>
-          ⅓ of 15 = 5
+        <Text x={x(5)} y={y + 122} size={36} fill={muted}>
+          ⅓
         </Text>
       </g>
       {exact !== undefined && (
-        <g>
-          <circle cx={x(exact)} cy={y} r={14} fill={green} />
-          <Text x={x(exact)} y={y - 145} size={42} fill={green}>
-            exactly {exact}
+        <>
+          <circle cx={x(exact)} cy={y} r={13} fill={green} />
+          <Text x={x(exact)} y={y - 120} size={46} fill={green}>
+            {exact}
           </Text>
-        </g>
+        </>
       )}
     </g>
   );
@@ -374,77 +430,75 @@ function River({
   return (
     <g opacity={opacity}>
       {Array.from({ length: 24 }, (_, i) => {
-        const x = ((((i * 105 - time * 72) % 2520) + 2520) % 2520) - 460;
-        return (
+        const x = ((((i * 105 - time * 72) % 2520) + 2520) % 2520) - 460,
+          py = y + Math.sin(time * 0.65 + i * 1.7) * 12,
+          fade = smooth((x + 80) / 130) * (1 - smooth((x - 1440) / 160));
+        return i % 3 === 0 ? (
+          <g
+            key={i}
+            transform={`translate(${x} ${py}) rotate(${Math.sin(time * 0.55 + i) * 2}) scale(33)`}
+            opacity={fade}
+          >
+            <polygon points={POLYGONS[i].points} fill={POLYGONS[i].colour} />
+          </g>
+        ) : (
           <Shape
             key={i}
             kind={KINDS[(i * 7 + Math.floor(i / 5)) % 4]}
             x={x}
-            y={y + Math.sin(time * 0.65 + i * 1.7) * 12}
+            y={py}
             size={64}
             rotate={Math.sin(time * 0.55 + i) * 2}
-            opacity={smooth((x + 80) / 130) * (1 - smooth((x - 1440) / 160))}
+            opacity={fade}
           />
         );
       })}
     </g>
   );
 }
-function Demo({ s, cancel = false }: { s: number; cancel?: boolean }) {
-  const first = smooth(s),
-    second = smooth(s - 1),
-    arrival = cancel ? smooth(s) : 0,
-    collision = cancel ? clamp(s - 1) : 0;
+function PossibleRow({ opacity = 1 }: { opacity?: number }) {
   return (
-    <>
-      {[0, 1].map((i) => {
-        const x = slotX(i, 2),
-          q = cancel ? 1 : i === 0 ? first : second,
-          kind = i === 0 ? "square" : "circle",
-          flight = cancel
-            ? cancellationPose(x, 445, collision)
-            : { x, y: mix(190, 445, q), opacity: 1, size: 88 };
-        return (
-          <g key={i}>
-            <Card x={x} />
-            {q > 0 && (
-              <Shape
-                kind={kind}
-                x={flight.x}
-                y={flight.y}
-                size={mix(66, 88, q)}
-                opacity={flight.opacity}
-              />
-            )}
-            <Text
-              x={x}
-              y={545}
-              size={66}
-              fill={gold}
-              opacity={
-                smooth((q - 0.75) / 0.25) *
-                (cancel ? 1 - smooth((collision - 0.67) / 0.23) : 1)
-              }
-            >
-              1
-            </Text>
-          </g>
-        );
-      })}
-      {cancel && (
-        <Shape
-          kind="triangle"
-          x={800}
-          y={mix(mix(40, 190, arrival), 330, smooth(collision / 0.78))}
-          size={88}
-          opacity={arrival * (1 - smooth((collision - 0.68) / 0.24))}
+    <g opacity={opacity}>
+      {Array.from({ length: 4 }, (_, i) => (
+        <Shape key={i} kind="square" x={470 + i * 110} y={310} size={78} />
+      ))}
+      {Array.from({ length: 3 }, (_, i) => (
+        <rect
+          key={i}
+          x={910 + i * 110 - 39}
+          y={271}
+          width={78}
+          height={78}
+          rx={8}
+          stroke={blue}
+          strokeWidth={3}
+          strokeDasharray="9 7"
+          fill={blue}
+          fillOpacity={0.08}
         />
-      )}
-      <Ledger
-        count={cancel && collision > 0.82 ? 1 : 0}
-        opacity={cancel ? smooth((s - 1.7) / 0.3) : 0}
-      />
-    </>
+      ))}
+    </g>
+  );
+}
+function Tick({
+  x = 800,
+  y = 690,
+  opacity = 1,
+}: {
+  x?: number;
+  y?: number;
+  opacity?: number;
+}) {
+  return (
+    <path
+      d={`M${x - 35} ${y} l25 25 l50 -60`}
+      fill="none"
+      stroke={green}
+      strokeWidth={9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity={opacity}
+    />
   );
 }
 export function MisraGriesVisual({ initial }: { initial: State }) {
@@ -452,94 +506,75 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
       misraGriesDefinition,
       initial,
     ),
-    section = useVideoSection(sectionId);
-  const s = state.step,
+    section = useVideoSection(sectionId),
+    s = state.step,
     scene = state.scene,
     t = section.localTime,
-    global = section.globalTime,
-    float = Math.sin(global * 0.7) * 3;
+    global = section.globalTime;
   let content: ReactNode;
   if (scene === "hook")
     content = (
       <>
-        <River time={global} y={260} />
-        <g opacity={smooth(s)}>
-          <Shape kind="square" x={415} y={500} size={108} />
-          <Text x={940} y={505} size={104}>
-            more than ⅓?
-          </Text>
-        </g>
-        <g opacity={smooth((s - 1.45) / 0.55)}>
-          {KINDS.map((kind, i) => (
-            <g
-              key={kind}
-              opacity={1 - smooth((s - 1.45) / 0.55) * (i > 1 ? 0.8 : 0)}
-            >
-              <Shape kind={kind} x={620 + i * 120} y={700} size={54} />
+        <River time={global} y={245} />
+        <Text y={490} size={112} opacity={smooth(s)}>
+          any &gt; ⅓?
+        </Text>
+        <g opacity={smooth(s - 1)}>
+          {[0, 1].map((i) => (
+            <g key={i}>
+              <rect
+                x={650 + i * 230 - 82}
+                y={640}
+                width={164}
+                height={145}
+                rx={19}
+                fill="#0a1017"
+                stroke="#334155"
+                strokeWidth={2}
+              />
+              <Text x={650 + i * 230} y={713} size={70} fill={gold}>
+                ?
+              </Text>
             </g>
           ))}
         </g>
       </>
     );
   else if (scene === "slots")
-    content = (
-      <>
-        <Caption>Two counters</Caption>
-        <Demo s={s} />
-      </>
-    );
+    content = <TraceBoard progress={s} capacity={2} />;
   else if (scene === "cancel")
-    content = (
-      <>
-        <Caption opacity={1 - smooth((s - 1.6) / 0.2)}>
-          Two slots. A third kind.
-        </Caption>
-        <Demo s={s} cancel />
-        <Text y={100} size={42} fill={gold} opacity={smooth((s - 1.82) / 0.18)}>
-          One of each. One group removed.
-        </Text>
-      </>
-    );
+    content = <TraceBoard progress={5 + s} capacity={2} />;
   else if (scene === "trace")
-    content = (
-      <>
-        <Caption>Same rule · 15 arrivals</Caption>
-        <TraceBoard progress={s} capacity={2} />
-      </>
-    );
+    content = <TraceBoard progress={s} capacity={2} />;
   else if (scene === "bounds") {
     const spread = smooth(s),
       hidden = smooth(s - 1),
       rise = smooth(s - 2),
-      chart = smooth((rise - 0.55) / 0.45);
+      chart = smooth((rise - 0.55) / 0.45),
+      others = smooth(s - 3);
     content = (
       <>
-        <FixedSummary summary={TWO[15]} opacity={1 - spread} />
+        <StreamRow processed={15} opacity={1 - spread} />
+        <FixedSummary summary={TWO[15]} hideSquare opacity={1 - spread} />
         <Ledger count={3} opacity={1 - spread} />
-        {Array.from({ length: 5 }, (_, i) => (
-          <Shape
-            key={i}
-            kind="square"
-            x={mix(615, 360 + i * 110, spread)}
-            y={mix(445, 310, spread)}
-            size={88}
-            opacity={i === 0 ? 1 : spread}
-          />
-        ))}
-        <Text
-          x={580}
-          y={430}
-          size={48}
-          fill={blue}
-          opacity={spread * (1 - smooth(rise / 0.4))}
-        >
-          5 survived
-        </Text>
+        {Array.from({ length: 4 }, (_, i) => {
+          const source = pilePoint(i, 4, slotX(0, 2));
+          return (
+            <Shape
+              key={i}
+              kind="square"
+              x={mix(source.x, 470 + i * 110, spread)}
+              y={mix(source.y, 310, spread)}
+              size={mix(54, 78, spread)}
+              opacity={1 - others}
+            />
+          );
+        })}
         {Array.from({ length: 3 }, (_, i) => {
           const x = 520 + i * 280,
             target = 910 + i * 110;
           return (
-            <g key={i} opacity={hidden}>
+            <g key={i} opacity={hidden * (1 - others)}>
               <g opacity={1 - smooth(rise / 0.35)}>
                 <rect
                   x={x - 100}
@@ -552,53 +587,72 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
                   strokeDasharray="8 8"
                   fill="none"
                 />
-                <Text x={x} y={675} size={34} fill={muted}>
-                  at most 1
+                <Text x={x} y={680} size={35} fill={muted}>
+                  ≤ 1
                 </Text>
               </g>
               <g
                 transform={`translate(${mix(x, target, rise)} ${mix(565, 310, rise)})`}
               >
                 <rect
-                  x={-44}
-                  y={-44}
-                  width={88}
-                  height={88}
-                  rx={9}
+                  x={-39}
+                  y={-39}
+                  width={78}
+                  height={78}
+                  rx={8}
                   fill={blue}
                   fillOpacity={0.08}
                   stroke={blue}
                   strokeWidth={3}
                   strokeDasharray="9 7"
                 />
-                <Text x={0} y={3} size={42} fill={blue} opacity={1 - rise}>
+                <Text x={0} y={0} size={42} fill={blue} opacity={1 - rise}>
                   ?
                 </Text>
               </g>
             </g>
           );
         })}
-        <Caption opacity={spread * (1 - smooth(rise / 0.4))}>
-          How many squares could we have lost?
-        </Caption>
-        <Caption opacity={smooth((rise - 0.5) / 0.5)}>
-          5 survived + at most 3 lost
-        </Caption>
-        <Range low={5} high={mix(5, 8, chart)} y={660} opacity={chart} />
+        <Range
+          low={4}
+          high={mix(4, 7, chart)}
+          y={mix(660, 355, others)}
+          opacity={chart}
+        />
+        <Range kind="circle" low={2} high={5} y={615} opacity={others} small />
+        <g opacity={others}>
+          <Shape kind="triangle" x={675} y={805} size={47} opacity={0.4} />
+          <Shape kind="diamond" x={745} y={805} size={47} opacity={0.4} />
+          <Text x={905} y={805} size={42} fill={muted}>
+            ≤ 3
+          </Text>
+        </g>
       </>
     );
   } else if (scene === "threshold") {
-    const move = smooth(s),
-      q = smooth(s - 1);
+    const q = smooth(s),
+      circle = smooth(s - 1),
+      ask = smooth(s - 2);
     content = (
       <>
-        <Caption>More than one third?</Caption>
-        <Range y={mix(660, 420, move)} threshold={move} />
-        <Text y={725} size={54} fill={gold} opacity={q}>
-          5 is still possible.
+        <Text y={125} size={70} opacity={q}>
+          any &gt; ⅓?
         </Text>
-        <Text y={800} size={36} fill={muted} opacity={q}>
-          The summary cannot decide yet.
+        <Range low={4} high={7} y={355} threshold={q} />
+        <Range
+          kind="circle"
+          low={2}
+          high={5}
+          y={615}
+          small
+          threshold={q}
+          opacity={mix(1, 0.4, circle)}
+        />
+        <Text x={1180} y={615} size={65} fill={muted} opacity={circle}>
+          ×
+        </Text>
+        <Text x={1150} y={330} size={80} fill={gold} opacity={ask}>
+          ?
         </Text>
       </>
     );
@@ -607,29 +661,20 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
       chart = smooth((reveal - 0.45) / 0.55);
     content = (
       <>
-        <Caption>Replay the same stream · three counters</Caption>
         <g opacity={1 - smooth(reveal / 0.35)}>
           <TraceBoard progress={Math.min(15, s)} capacity={3} />
         </g>
-        <Range
-          low={mix(5, 6, reveal)}
-          high={mix(8, 7, reveal)}
-          y={mix(600, 420, reveal)}
-          opacity={chart}
-        />
-        <Text y={695} size={54} fill={gold} opacity={chart}>
-          6 survived + at most 1 lost
-        </Text>
+        <Range low={6} high={7} y={420} opacity={chart} />
       </>
     );
   } else if (scene === "decide") {
-    const answer = smooth(s),
+    const yes = smooth(s),
+      intro = clamp(s - 1),
       scan = clamp(s - 2),
       visited = Math.min(15, Math.floor(scan * 15)),
       count = STREAM.slice(0, visited).filter((k) => k === "square").length;
     content = (
       <>
-        <Caption>More than one third?</Caption>
         <Range
           low={6}
           high={7}
@@ -637,16 +682,9 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
           threshold={1}
           exact={scan === 1 ? 7 : undefined}
         />
-        <g opacity={1 - smooth((s - 1) / 0.45)}>
-          <Text y={695} size={70} fill={green} opacity={answer}>
-            Yes. Even the minimum is above 5.
-          </Text>
-          <Text y={785} size={38} fill={muted} opacity={answer}>
-            No second pass for this decision.
-          </Text>
-        </g>
+        <Tick opacity={yes * (1 - smooth(intro / 0.45))} />
         {s > 1 && (
-          <g opacity={smooth((s - 1.45) / 0.55)}>
+          <g opacity={smooth((intro - 0.45) / 0.55)}>
             {STREAM.map((kind, i) => (
               <Shape
                 key={i}
@@ -658,8 +696,11 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
                 highlight={i < visited && kind === "square" ? 1 : 0}
               />
             ))}
-            <Text y={795} size={43} fill={scan === 1 ? green : muted}>
-              second pass · exact count: {count}
+            <Text x={740} y={800} size={32} fill={muted}>
+              recount
+            </Text>
+            <Text x={895} y={800} size={62} fill={scan === 1 ? green : gold}>
+              {count}
             </Text>
           </g>
         )}
@@ -672,30 +713,29 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
       fraction = 1 / (m + 1);
     content = (
       <>
-        <Caption>Misra–Gries</Caption>
-        <Text x={600} y={290} size={130} fill={gold}>
+        <Text y={120} size={48} fill={muted}>
+          Misra–Gries
+        </Text>
+        <Text x={600} y={285} size={124} fill={gold}>
           {m}
         </Text>
-        <Text x={600} y={395} size={39} fill={muted}>
+        <Text x={600} y={390} size={34} fill={muted}>
           counters
         </Text>
         <g opacity={1 - smooth(scale / 0.25)}>
-          {["square", "circle", "triangle"].map((kind, i) => (
+          {["square", "circle", "triangle"].map((k, i) => (
             <Shape
-              key={i}
-              kind={kind as Kind}
+              key={k}
+              kind={k as Kind}
               x={1000 + (i - 1) * 100}
-              y={280}
+              y={285}
               size={65}
             />
           ))}
-          <Text x={1000} y={395} size={37} fill={muted}>
-            3 distinct values
-          </Text>
         </g>
         <Text
           x={1050}
-          y={290}
+          y={285}
           size={105}
           fill={blue}
           opacity={smooth((scale - 0.25) / 0.25)}
@@ -704,14 +744,14 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
         </Text>
         <Text
           x={1050}
-          y={395}
-          size={37}
+          y={390}
+          size={34}
           fill={muted}
           opacity={smooth((scale - 0.25) / 0.25)}
         >
-          maximum error
+          max. error
         </Text>
-        <Text y={540} size={74} fill={ink} opacity={formula}>
+        <Text y={540} size={70} opacity={formula}>
           error ≤ N / (m + 1)
         </Text>
         <g opacity={formula}>
@@ -731,36 +771,21 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
             rx={Math.min(13, (800 * fraction) / 2)}
             fill={blue}
           />
-          <Text y={745} size={36} fill={muted}>
-            N = stream length
-          </Text>
         </g>
       </>
     );
   } else
     content = (
       <>
-        <River time={global} y={195} opacity={0.5} />
-        <Text y={335} size={34} fill={muted}>
-          one-pass summary
+        <River time={global} y={220} opacity={0.45} />
+        <Shape kind="square" x={540} y={505} size={115} />
+        <Text x={855} y={510} size={114} opacity={smooth(s)}>
+          &gt; ⅓
         </Text>
-        <Range low={6} high={7} y={460} />
-        <Text y={680} size={62} fill={green} opacity={smooth(s)}>
-          More than ⅓. Guaranteed.
-        </Text>
-        <Text y={785} size={45} fill={ink} opacity={smooth(s - 1)}>
-          Lose the exact count. Keep the answer.
-        </Text>
+        <Tick x={1130} y={505} opacity={smooth(s - 1)} />
       </>
     );
-  const fades = [
-    "hook",
-    "slots",
-    "trace",
-    "replay",
-    "general",
-    "closing",
-  ].includes(scene)
+  const fade = ["hook", "slots", "replay", "general", "closing"].includes(scene)
     ? smooth(t / 0.45)
     : 1;
   return (
@@ -790,7 +815,10 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
           </radialGradient>
         </defs>
         <rect width="1600" height="900" fill={`url(#mg-haze-${scene})`} />
-        <g opacity={fades} transform={`translate(0 ${float})`}>
+        <g
+          opacity={fade}
+          transform={`translate(0 ${Math.sin(global * 0.7) * 3})`}
+        >
           {content}
         </g>
       </svg>

@@ -87,3 +87,10 @@ tasks:
     options:
       cache: false
       runInCI: false
+
+  interactive_misra_preview:
+    command: "node scripts/build-misra-preview.mjs"
+    preset: utility
+    options:
+      cache: false
+      runInCI: false

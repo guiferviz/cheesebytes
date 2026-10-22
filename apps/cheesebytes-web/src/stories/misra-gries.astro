@@ -7,39 +7,38 @@ import { MisraGriesVisual, misraGriesDefinition } from "../components/cave/misra
 
 <StorySection id="question" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "start", duration: 1.5, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "memory", duration: 2.1, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "start", duration: 1.8, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "memory", duration: 2.4, ease: "linear", params: { value: 2 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Suppose we throw most of these shapes away. Can we still prove that squares make up more than a third of the stream?</p>
-    <p><Mark id="memory" />Counting every kind would work. But as new kinds arrive, that table keeps growing. Can just two counters be useful?</p>
+    <p><Mark id="start" />Somewhere in this stream, a shape might appear more than a third of the time. But we do not know which shape.</p>
+    <p><Mark id="memory" />We could count every kind. As new kinds arrive, that table keeps growing. Can we keep just two counters, and still find the frequent ones?</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "hook", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="two-slots" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "square", duration: 1.6, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "circle", duration: 1.6, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "run", to: "full", ease: "linear", params: { value: 5 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Let's start with a square and a circle.</p>
-    <p><Mark id="square" />Each takes an empty slot, with a count of one.</p>
-    <p><Mark id="circle" />A matching arrival would increase its counter. What happens when a new kind finds both slots full?</p>
+    <p><Mark id="start" />Let's try these fifteen arrivals, with room for only two kinds.</p>
+    <p><Mark id="run" />A square takes one slot. A circle takes the other. Matching arrivals add one.</p>
+    <p><Mark id="full" />Now the counters hold three squares and two circles.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "slots", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="cancel-three" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "start", duration: 1.5, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "remove", duration: 2.4, ease: "linear", params: { value: 2 } });
-    t.action(visual.advance, { from: "tally", duration: 1.5, ease: "linear", params: { value: 3 } });
+    t.action(visual.advance, { from: "start", duration: 1.5, ease: "linear", params: { value: 0.3 } });
+    t.action(visual.advance, { from: "remove", duration: 3.2, ease: "linear", params: { value: 1 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Then a triangle arrives. No match. No empty slot.</p>
-    <p><Mark id="remove" />So we cancel one square, one circle, and the triangle together.</p>
-    <p><Mark id="tally" />Three different shapes. We forget which shapes they were, but remember one thing: one group removed.</p>
+    <p><Mark id="start" />Then a triangle arrives. Both slots are taken.</p>
+    <p><Mark id="remove" />We don't erase the counters. We subtract one from each, and discard the triangle.</p>
+    <p><Mark id="left" />Three becomes two. Two becomes one. Only one of each kind has disappeared.</p>
+    <p><Mark id="tally" />We'll remember that as one removed group.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "cancel", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
@@ -49,35 +48,39 @@ import { MisraGriesVisual, misraGriesDefinition } from "../components/cave/misra
     t.action(visual.advance, { from: "run", to: "result", ease: "linear", params: { value: 15 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Let's rewind and follow these fifteen shapes, from left to right.</p>
-    <p><Mark id="run" />Matches add one. Empty slots accept a new shape. Otherwise, three different shapes disappear together.</p>
-    <p><Mark id="result" />The summary ends with five squares and one circle. Three groups were removed. But five is not the number of squares that arrived.</p>
+    <p><Mark id="start" />Let's finish the stream. The same rule applies again, even when a diamond arrives.</p>
+    <p><Mark id="run" />A match adds one. A new kind, with no free slot, takes one away from every counter.</p>
+    <p><Mark id="result" />We finish with four squares and two circles in memory. Three groups were removed.</p>
   </aside>
-  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "trace", step: 0 }} client:only="react" /></VideoVisual>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "trace", step: 6 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="bounds" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "start", duration: 2.1, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "hidden", duration: 2.5, ease: "linear", params: { value: 2 } });
-    t.action(visual.advance, { from: "interval", duration: 2.4, ease: "linear", params: { value: 3 } });
+    t.action(visual.advance, { from: "start", duration: 2.4, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "hidden", duration: 2.6, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "interval", duration: 2.8, ease: "linear", params: { value: 3 } });
+    t.action(visual.advance, { from: "others", duration: 2.0, ease: "linear", params: { value: 4 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Those five surviving squares are real. At least five squares arrived.</p>
-    <p><Mark id="hidden" />And each removed group contained at most one square. Three groups could hide at most three more.</p>
-    <p><Mark id="interval" />Five survived. At most three were lost. So the true count is between five and eight. That is a guarantee, not a guess.</p>
+    <p><Mark id="start" />These counters are survivors, not the original frequencies. Let's look at the squares. Four survived, so at least four arrived.</p>
+    <p><Mark id="hidden" />Each of the three deleted groups could hide at most one more square.</p>
+    <p><Mark id="interval" />So the true count is between four and seven.</p>
+    <p><Mark id="others" />The same argument puts the circle between two and five. A kind missing from memory can have appeared at most three times.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "bounds", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="heavy-hitters" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "start", duration: 2, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "uncertain", duration: 1.6, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "start", duration: 2.0, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "circle", duration: 1.6, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "uncertain", duration: 1.6, ease: "linear", params: { value: 3 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Our question was: more than a third? In fifteen shapes, that means more than five.</p>
-    <p><Mark id="uncertain" />Our interval still includes five. So we cannot say yes yet. Surviving alone does not answer the question.</p>
+    <p><Mark id="start" />We wanted any shape appearing more than a third of the time. With fifteen arrivals, that means more than five.</p>
+    <p><Mark id="circle" />The circle cannot exceed five. Neither can any missing kind.</p>
+    <p><Mark id="uncertain" />The square might. But four to seven crosses the line. We cannot decide yet.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "threshold", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
@@ -85,54 +88,54 @@ import { MisraGriesVisual, misraGriesDefinition } from "../components/cave/misra
 <StorySection id="more-memory" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
     t.action(visual.advance, { from: "run", to: "result", ease: "linear", params: { value: 15 } });
-    t.action(visual.advance, { from: "result", duration: 2.5, ease: "linear", params: { value: 16 } });
+    t.action(visual.advance, { from: "result", duration: 3.0, ease: "linear", params: { value: 16 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />What if we spend one more counter? Replay the same fifteen shapes.</p>
-    <p><Mark id="run" />Now it takes four different shapes to cancel. Watch the same stream: just one group is removed.</p>
-    <p><Mark id="result" />Six squares survive. At most one was lost. So the true count is between six and seven.</p>
+    <p><Mark id="start" />What if we keep one extra counter? We replay the very same fifteen shapes.</p>
+    <p><Mark id="run" />Now a cancellation needs four different kinds. Only one group is removed.</p>
+    <p><Mark id="result" />Six squares survive. At most one was lost. The true count is six or seven.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "replay", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="decide" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "certain", duration: 1.8, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "exact", duration: 0.8, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "start", duration: 2.4, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "exact", duration: 1.0, ease: "linear", params: { value: 2 } });
     t.action(visual.advance, { from: "recount", to: "answer", ease: "linear", params: { value: 3 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Six to seven is entirely above five.</p>
-    <p><Mark id="certain" />Yes: squares make up more than a third. This decision needs no second pass.</p>
-    <p><Mark id="exact" />We still don't know the exact count.</p>
-    <p><Mark id="recount" />If we can read the data again, a second pass gives us seven.</p>
-    <p><Mark id="answer" />But our original question is already answered.</p>
+    <p><Mark id="start" />Both possibilities are above five. We have found a shape that appears more than a third of the time: the square.</p>
+    <p><Mark id="certain" />We did not need to know its name in advance. Or recount it to answer this question.</p>
+    <p><Mark id="exact" />For the exact frequency, we would need to read the data again.</p>
+    <p><Mark id="recount" />A second pass counts seven squares.</p>
+    <p><Mark id="answer" />The interval had already given us enough to decide.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "decide", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="tradeoff" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "bound", duration: 2.4, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "scale", duration: 3.8, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "bound", duration: 2.2, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "scale", duration: 3.6, ease: "linear", params: { value: 2 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />This is Misra Gries. With m counters, we cancel groups of m plus one different values.</p>
-    <p><Mark id="bound" />Every deletion removes m plus one items, and at most one of any kind. So the error is at most N divided by m plus one, where N is the stream length.</p>
-    <p><Mark id="scale" />Ninety nine counters cap that error at one percent of the stream. A guaranteed margin, not a confidence score.</p>
+    <p><Mark id="start" />This is Misra Gries. With m counters, a cancellation removes m plus one different values. N is the stream length.</p>
+    <p><Mark id="bound" />Each group can hide at most one copy of any kind. More counters mean fewer possible deletions, and a smaller error.</p>
+    <p><Mark id="scale" />Ninety nine counters limit that error to one percent of the stream. A guarantee, not a probability.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "general", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="closing" holdAfter={10} timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "insight", duration: 1.8, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "end", duration: 2.4, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "insight", duration: 2.0, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "end", duration: 2.0, ease: "linear", params: { value: 2 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />We started by throwing shapes away.</p>
-    <p><Mark id="insight" />The trick was to keep a limit on what could have disappeared.</p>
-    <p><Mark id="end" />We may lose the exact count, without losing the answer.</p>
+    <p><Mark id="start" />We let the stream go.</p>
+    <p><Mark id="insight" />Kept a few candidates, and a limit on what we could have lost.</p>
+    <p><Mark id="end" />And still found the shape that crossed the line.</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "closing", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>

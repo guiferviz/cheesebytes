@@ -1,0 +1,62 @@
+---
+import Story from "../../../src/stories/misra-gries.astro";
+import { VideoPreviewControls } from "@guiferviz/cheese-bytes-video/preview";
+const audioUrl = import.meta.env.PUBLIC_MISRA_AUDIO;
+const alignmentUrl = import.meta.env.PUBLIC_MISRA_ALIGNMENT;
+if (!audioUrl || !alignmentUrl) throw new Error("Build with scripts/build-misra-preview.mjs and current narration/alignment.");
+---
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Misra–Gries · video preview</title>
+    <meta name="description" content="Explore Misra–Gries: a few candidates, cancellation, and a bound on what we have forgotten." />
+  </head>
+  <body>
+    <main id="cheesebytes-video-story" tabindex="0" aria-label="Misra–Gries animation. Space to play, arrows to seek, F for fullscreen."><Story /></main>
+    <VideoPreviewControls audioUrl={audioUrl} alignmentUrl={alignmentUrl} client:only="react" />
+    <a class="preview-back" href="/">← Majority Vote</a>
+    <button id="fullscreen" type="button" aria-label="Fullscreen" aria-pressed="false">⛶</button>
+    <script>
+      import { getVideoRuntime } from "@guiferviz/cheese-bytes-video/runtime";
+      const root = document.querySelector<HTMLElement>("#cheesebytes-video-story")!;
+      const full = document.querySelector<HTMLButtonElement>("#fullscreen")!;
+      async function fullscreen() {
+        if (document.fullscreenElement) { await document.exitFullscreen(); return; }
+        if (document.documentElement.classList.contains("preview-expanded")) {
+          document.documentElement.classList.remove("preview-expanded"); full.setAttribute("aria-pressed", "false"); return;
+        }
+        try { await document.documentElement.requestFullscreen?.(); } catch { /* Embedded viewers may require the CSS fallback. */ }
+        document.documentElement.classList.add("preview-expanded"); full.setAttribute("aria-pressed", "true");
+      }
+      full.addEventListener("click", () => void fullscreen());
+      document.addEventListener("fullscreenchange", () => {
+        document.documentElement.classList.toggle("preview-expanded", !!document.fullscreenElement);
+        full.setAttribute("aria-pressed", String(!!document.fullscreenElement));
+      });
+      root.addEventListener("pointerdown", () => root.focus({ preventScroll: true }));
+      root.addEventListener("keydown", event => {
+        const runtime = getVideoRuntime();
+        if (!runtime) return;
+        if (event.key === " ") { event.preventDefault(); void runtime.toggle(); }
+        else if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); runtime.setTime(runtime.snapshot().time + (event.key === "ArrowLeft" ? -1 : 1)); }
+        else if (event.key.toLowerCase() === "f") { event.preventDefault(); void fullscreen(); }
+        else if (event.key === "Escape") { document.documentElement.classList.remove("preview-expanded"); root.blur(); }
+      });
+    </script>
+  </body>
+</html>
+<style is:global>
+html,body,#cheesebytes-video-story{background:#000;margin:0;width:100%;height:100%;overflow:hidden}
+#cheesebytes-video-story{opacity:0;pointer-events:auto}
+#cheesebytes-video-story[data-video-runtime-ready="true"]{opacity:1}
+#cheesebytes-video-story>[data-story-section]{display:none;width:100%;height:100%;overflow:hidden}
+#cheesebytes-video-story>[data-video-section][data-video-active="true"]{display:block}
+#cheesebytes-video-story .notes,[data-video-mark]{display:none!important}
+.preview-brand p{visibility:hidden}.preview-back{position:fixed;top:46px;left:max(16px,env(safe-area-inset-left));font:11px system-ui,sans-serif;color:#fbbf24;text-underline-offset:3px;z-index:100002}
+#fullscreen{position:fixed;top:14px;right:66px;z-index:100002;width:44px;height:44px;border:1px solid #38404e;border-radius:10px;background:#161c26;color:#e2e8f0;font:24px system-ui,sans-serif;cursor:pointer;touch-action:manipulation}
+.preview-actions{padding-right:0;gap:6px}.preview-scene{margin-right:50px}.preview-settings{position:relative;right:0}
+.preview-expanded .preview-scenes{display:none!important}.preview-expanded #cheesebytes-video-story{bottom:var(--preview-controls)!important;height:auto!important}.preview-expanded .cbv-bar{top:auto!important;bottom:12px!important}
+@media(max-height:500px) and (orientation:landscape){.preview-back{top:17px;left:155px}#fullscreen{top:6px}.preview-actions{padding-right:0}}
+@media(max-width:480px){.preview-brand h1{max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview-back{left:12px}.preview-actions{gap:4px}.preview-scene{max-width:24vw}}
+</style>

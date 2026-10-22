@@ -1,7 +1,7 @@
 import { defineVideoVisual } from "@guiferviz/cheese-bytes-video/actions";
 export type Kind = "square" | "circle" | "triangle" | "diamond";
 export const KINDS: Kind[] = ["square", "circle", "triangle", "diamond"];
-export const STREAM: Kind[] = [..."SCTCTDSCTSSSSSC"].map(
+export const STREAM: Kind[] = [..."SCSSCTSCDSTCSCS"].map(
   (c) => ({ S: "square", C: "circle", T: "triangle", D: "diamond" })[c] as Kind,
 );
 export interface Summary {
