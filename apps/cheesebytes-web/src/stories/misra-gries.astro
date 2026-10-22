@@ -87,7 +87,7 @@ import { MisraGriesVisual, misraGriesDefinition } from "../components/cave/misra
 
 <StorySection id="more-memory" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "run", to: "result", ease: "linear", params: { value: 15 } });
+    t.action(visual.advance, { to: "result", duration: 10, ease: "linear", params: { value: 15 } });
     t.action(visual.advance, { from: "result", duration: 3.0, ease: "linear", params: { value: 16 } });
   }}>
   <aside class="notes">

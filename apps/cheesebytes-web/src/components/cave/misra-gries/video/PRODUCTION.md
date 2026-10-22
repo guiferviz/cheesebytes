@@ -52,27 +52,66 @@ endpoints, the threshold, short bookkeeping labels and one general formula.
 Solid copies mean actual survivors; hollow copies mean possible deleted copies.
 Matching occurrences get the existing exact-count outline only on verification.
 
-Copies leave the candidate piles individually; the remaining copies settle
-smoothly. Counts change at collision/arrival. Deletion groups show three dots
+Each arrival is one actor throughout its transfer into a pile. Rounded routes
+use the space above cards and their right gutters, keeping clear of existing
+shapes. Cancellation actors leave individually, settle at separate positions
+above their own slots, and fade together with the incoming kind. Surviving
+copies preserve their order as rows grow or shrink. Counts change when arrivals
+land or the removed group fades. Deletion groups show three dots
 with two counters and four with three. Incoming kinds, surviving identities and
 fixed slot positions continue through cuts. Intro shapes vary geometrically to
 express an open set of kinds; the small worked example is announced explicitly.
 
-## Review and limits
+## Motion and composition review
 
-Checks cover the canonical prefix and both final states, absence of long runs,
-nonempty survivors after every example cancellation, exhaustive short-stream
-mass/bound guarantees, stable slots and continuous motion. Engine tests and
-TypeScript pass. Moon could not fetch its Rust toolchain plugin in this session;
-the declared package test/typecheck commands were run directly instead.
+- Around 33 s, cancellation actors previously converged onto the same pixel.
+  They now occupy separate positions. A populated 3/2 state still loses just
+  one copy of each, retaining 2/1. There is no destination/source crossfade
+  drawing a second incoming copy on top of the first.
+- Around 63–65 s and 75–77 s, straight-line rearrangements could cross other
+  survivors. Horizontal spacing is established before vertical compaction.
+- Around 78 s, the rising square interval previously intersected the appearing
+  circle interval. The upper interval now finishes moving before the lower one
+  appears. The same interval geometry continues into the threshold scene.
+- Interval endpoints no longer repeat the axis numerals. A shared threshold
+  has one 5, and verification turns the existing 7 green rather than adding
+  another 7 above it. The second pass outlines the occurrences without another
+  redundant numeric tally. The generalization changes 2 to 99 without cycling
+  through dozens of briefly visible integers.
+- The three-counter replay uses ten seconds for its fifteen arrivals (previously
+  about 7.75). Its six and representative square travel into the interval;
+  they are not destroyed and recreated in a blank transition. Card numerals
+  have additional clearance below two-row piles. Continuous scene boundaries
+  retain their state; intentional resets fade out and in on both sides.
 
-Review the actual browser app with sound and seek controls at portrait mobile,
-landscape and desktop sizes. The static app must fetch its own scoped audio and
-alignment assets and contain SVG/React visuals rather than a video element.
-Capture each scene plus the populated cancellation's setup, movement and result.
-Screenshots establish composition; frame sequences support continuity review.
-Do not claim a mosaic alone proves smooth playback.
+## Review evidence and limits
 
-The voice uses measured paragraph boundaries and approximate internal word
-positions. Perceptual listening and phonetic alignment have not been verified.
-If narration changes, regenerate it explicitly and preserve current provenance.
+Eight example/geometry tests cover both final states, nonempty cancellation
+survivors, exhaustive short-stream bounds, identity/position handoffs, separation
+of every visible actor through both complete passes (120 samples per arrival),
+and survivor/possible-copy rearrangements. Visual TypeScript, the interactive
+static build and Astro diagnostics pass. Moon could not fetch its Rust plugin
+in this environment; the declared package commands were used directly.
+
+The browser review sampled the whole timeline at 10 fps (1,790 states), located
+shape/text clearance issues, and rechecked the last corrected 110–116 s window
+at 30 fps (180 states, no detected intersections). Labelled scene/contact sheets
+and focused consecutive frames were inspected, including the cancellation,
+interval rearrangement, replay-to-bound handoff and exact verification. Nine
+scene joins were compared at ±1 ms; changes were confined to subpixel edge
+rasterization, with mean RGB difference below 0.05 on the 0–255 scale.
+
+Actual browser playback through five seconds of the three-counter pass produced
+301 animation-frame samples: median 16.7 ms and 95th percentile 16.8 ms, with
+monotonic story time and no browser errors. This is a headless desktop measurement,
+not a promise about every phone. Separate mobile/landscape/desktop checks at
+320×568, 390×844, 844×390 and 1280×720 verify controls, scoped audio loading,
+playback, scene seeking, keyboard behavior and fullscreen. The app uses SVG/React
+and contains no video element. Short 30 fps diagnostic clips support motion
+review; a mosaic alone does not establish perceived fluidity.
+
+The unchanged English Kokoro voice uses measured paragraph boundaries and
+approximate internal word positions. Perceptual listening and phonetic alignment
+have not been verified. Visual changes reuse the existing audio; narration edits
+must explicitly regenerate speech and preserve provenance. Artifacts remain
+outside the repository.
