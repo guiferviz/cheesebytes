@@ -28,6 +28,8 @@ Se revisaron los diez puntos medios y 23 estados focalizados, incluyendo cinco f
 Pruebas: garantía de cotas y conservación de masa en todos los streams cortos; permanencia de las identidades en sus huecos de memoria; convergencia y continuidad de trayectorias/opacidad; TypeScript del visual y sus dependencias. La voz se ha regenerado para el texto actual y se usan tiempos medidos por frase; no se presenta como alineación fonética. No ha sido posible una escucha perceptiva mediante las herramientas disponibles. Los clips y muestras temporales permiten inspeccionar las transiciones; las capturas aisladas no prueban suavidad.
 
 
+Additional contiguous encoded-frame review found two same-baseline text crossfades. They now fade sequentially. The single cancellation uses one easing curve, matching the trace board, instead of applying easing twice. The threshold dash no longer cuts through the endpoint numeral.
+
 ## Previous cut: archived production record
 
 # Misra–Gries production record

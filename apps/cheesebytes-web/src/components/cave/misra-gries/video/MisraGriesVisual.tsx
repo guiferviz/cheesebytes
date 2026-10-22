@@ -341,7 +341,7 @@ function Range({
         <line
           x1={x(5)}
           x2={x(5)}
-          y1={y - 125}
+          y1={y - 35}
           y2={y + 100}
           stroke={muted}
           strokeWidth={3}
@@ -394,7 +394,7 @@ function Demo({ s, cancel = false }: { s: number; cancel?: boolean }) {
   const first = smooth(s),
     second = smooth(s - 1),
     arrival = cancel ? smooth(s) : 0,
-    collision = cancel ? smooth(s - 1) : 0;
+    collision = cancel ? clamp(s - 1) : 0;
   return (
     <>
       {[0, 1].map((i) => {
@@ -491,11 +491,11 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
   else if (scene === "cancel")
     content = (
       <>
-        <Caption opacity={1 - smooth((s - 1.65) / 0.35)}>
+        <Caption opacity={1 - smooth((s - 1.6) / 0.2)}>
           Two slots. A third kind.
         </Caption>
         <Demo s={s} cancel />
-        <Text y={100} size={42} fill={gold} opacity={smooth((s - 1.65) / 0.35)}>
+        <Text y={100} size={42} fill={gold} opacity={smooth((s - 1.82) / 0.18)}>
           One of each. One group removed.
         </Text>
       </>
@@ -530,7 +530,7 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
           y={430}
           size={48}
           fill={blue}
-          opacity={spread * (1 - rise)}
+          opacity={spread * (1 - smooth(rise / 0.4))}
         >
           5 survived
         </Text>
@@ -577,10 +577,12 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
             </g>
           );
         })}
-        <Caption opacity={spread * (1 - rise)}>
+        <Caption opacity={spread * (1 - smooth(rise / 0.4))}>
           How many squares could we have lost?
         </Caption>
-        <Caption opacity={rise}>5 survived + at most 3 lost</Caption>
+        <Caption opacity={smooth((rise - 0.5) / 0.5)}>
+          5 survived + at most 3 lost
+        </Caption>
         <Range low={5} high={mix(5, 8, rise)} y={660} opacity={rise} />
       </>
     );
