@@ -13,6 +13,8 @@ import {
   MEMORY_CAPACITY,
   capacityState,
   centredCounterLayout,
+  type CounterArrival,
+  type FrequencyEntry,
 } from "./counter-flow";
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
@@ -28,20 +30,28 @@ export function FrequencyCounterScene({
   duration,
   marks,
   polygons,
+  arrivals: suppliedArrivals,
+  initialEntries,
+  fadeMatchingArrivals = false,
 }: {
   memory: boolean;
   time: number;
   duration: number;
   marks: Record<string, number>;
   polygons: ReturnType<typeof createMemoryShapes>;
+  arrivals?: CounterArrival[];
+  initialEntries?: FrequencyEntry[];
+  fadeMatchingArrivals?: boolean;
 }) {
   const mode = memory ? "memory" : "counting";
   const stop = memory ? (marks.question ?? 17) : Infinity;
   const clock = time;
-  const events = memory
-    ? memoryArrivals(stop)
-    : countingArrivals(marks.count ?? 3.1, marks.simple);
-  const initial = memory ? initialFrequencies() : [];
+  const events =
+    suppliedArrivals ??
+    (memory
+      ? memoryArrivals(stop)
+      : countingArrivals(marks.count ?? 3.1, marks.simple));
+  const initial = initialEntries ?? (memory ? initialFrequencies() : []);
   const status = memory
     ? capacityState(events, clock, initial)
     : { entries: frequenciesAt(events, clock, initial), blocked: null };
@@ -226,9 +236,19 @@ export function FrequencyCounterScene({
               : queueX + (queueDistance + 80) ** 2 / 320;
         const x = queued ? queuedX : phase > 0 ? route.x : feedX;
         const y = queued ? 450 : phase > 0 ? route.y : 450;
+        const extent = queued ? 90 : mix(90, size, smooth(phase / 0.8));
+        const matching = entries.some((entry) => entry.value === event.value);
+        const opacity =
+          fadeMatchingArrivals && matching && !queued
+            ? smooth(
+                (Math.hypot(x - dest.x, y - dest.y) - (extent + size) / 2 - 4) /
+                  28,
+              )
+            : 1;
         return (
           <g
             key={i}
+            opacity={opacity}
             data-flight-id={event.value}
             data-flight-index={i}
             data-x={x}
@@ -238,12 +258,7 @@ export function FrequencyCounterScene({
             data-queued={queued || undefined}
             clipPath={`url(#counter-flight-${mode})`}
           >
-            {glyph(
-              event.value,
-              x,
-              y,
-              queued ? 90 : mix(90, size, smooth(phase / 0.8)),
-            )}
+            {glyph(event.value, x, y, extent)}
           </g>
         );
       })}

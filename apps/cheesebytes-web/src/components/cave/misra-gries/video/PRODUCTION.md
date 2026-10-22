@@ -14,6 +14,33 @@ English Kokoro narration remains separate from the browser animation. The
 interactive preview is the review deliverable; do not render a whole MP4 for
 every revision. Build instructions are in `preview/README.md` in this app.
 
+## Self-contained opening
+
+The first frame already contains a moving mixture of familiar and irregular
+shapes, with recurring kinds among the variety. The spoken question asks whether
+**any** kind exceeds a third, using as little memory as possible. It does not
+prescribe a counter for each kind or ask about a preselected square.
+
+A short memory demonstration reuses Majority Vote's `FrequencyCounterScene`,
+starting from an empty table and a fresh mixed stream. Unseen kinds add entries;
+repeated kinds update existing entries. The table compacts to eleven entries,
+and an unfamiliar kind waits at intake while the stream continues to arrive.
+This establishes the cost of keeping all counts without assuming another video.
+Supplied arrivals/initial state are optional, preserving the original component's
+default Majority Vote sequence. Misra–Gries also fades matching arrivals before
+they overlap a stored icon; numeric updates still occur at arrival.
+
+Only after that demonstration, the narration says: “In an earlier video, we
+looked for a shape appearing more than half the time. Majority Vote kept just
+one candidate and one counter. Can we extend that idea by keeping a few more?”
+The picture shows >½, introduces the candidate/counter with the spoken clause,
+then carries the card into two empty slots. The fifteen-arrival example is
+announced explicitly, rather than pretending to continue the diverse stream.
+The opening occupies about 29 seconds; the complete interactive timeline is
+about 3:13, including the ending hold. English Kokoro af_heart narration and
+alignment were rebuilt for the changed words; unchanged paragraphs reuse the
+speech cache.
+
 ## Example and mathematical continuity
 
 Canonical order: `SCSSCTSCDSTCSCS`. Fifteen arrivals: S=7, C=5, T=2, D=1.
@@ -64,13 +91,13 @@ express an open set of kinds; the small worked example is announced explicitly.
 
 ## Motion and composition review
 
-- Around 33 s, cancellation actors previously converged onto the same pixel.
+- In the populated cancellation scene, cancellation actors previously converged onto the same pixel.
   They now occupy separate positions. A populated 3/2 state still loses just
   one copy of each, retaining 2/1. There is no destination/source crossfade
   drawing a second incoming copy on top of the first.
-- Around 63–65 s and 75–77 s, straight-line rearrangements could cross other
+- In the survivor and possible-copy rearrangements, straight-line rearrangements could cross other
   survivors. Horizontal spacing is established before vertical compaction.
-- Around 78 s, the rising square interval previously intersected the appearing
+- In the transition to two intervals, the rising square interval previously intersected the appearing
   circle interval. The upper interval now finishes moving before the lower one
   appears. The same interval geometry continues into the threshold scene.
 - Interval endpoints no longer repeat the axis numerals. A shared threshold
@@ -93,25 +120,24 @@ and survivor/possible-copy rearrangements. Visual TypeScript, the interactive
 static build and Astro diagnostics pass. Moon could not fetch its Rust plugin
 in this environment; the declared package commands were used directly.
 
-The browser review sampled the whole timeline at 10 fps (1,790 states), located
-shape/text clearance issues, and rechecked the last corrected 110–116 s window
-at 30 fps (180 states, no detected intersections). Labelled scene/contact sheets
-and focused consecutive frames were inspected, including the cancellation,
-interval rearrangement, replay-to-bound handoff and exact verification. Nine
-scene joins were compared at ±1 ms; changes were confined to subpixel edge
-rasterization, with mean RGB difference below 0.05 on the 0–255 scale.
+The new opening was checked in 840 browser states at 20 fps, including raw
+polygon glyphs, numerals and the handoff to the worked example. Four incoming
+matching-shape intersections were found and fixed; the repeated scan reports
+zero detected intersections. Consecutive captures cover the question, empty and
+full table, repeat updates, queue, Majority Vote reference, one-to-two-slot
+movement and the first populated result. The earlier full-timeline motion review
+remains applicable to the unchanged algorithm scenes. Two new intro tests plus
+thirteen existing Majority Vote flow/polygon tests also pass (23 tests total).
+The static build, visual TypeScript and Astro diagnostics pass.
 
-Actual browser playback through five seconds of the three-counter pass produced
-301 animation-frame samples: median 16.7 ms and 95th percentile 16.8 ms, with
-monotonic story time and no browser errors. This is a headless desktop measurement,
-not a promise about every phone. Separate mobile/landscape/desktop checks at
-320×568, 390×844, 844×390 and 1280×720 verify controls, scoped audio loading,
-playback, scene seeking, keyboard behavior and fullscreen. The app uses SVG/React
-and contains no video element. Short 30 fps diagnostic clips support motion
-review; a mosaic alone does not establish perceived fluidity.
+Real-browser checks at 320×568, 390×844, 844×390 and 1280×720 verify scoped audio
+loading/time advancement, scene seeking, controls without overflow, keyboard
+behavior and fullscreen. Short 30 fps clips document memory pressure and the
+handoff into the example. Captures support composition and continuity; they do
+not establish perceived smoothness or acoustic quality.
 
-The unchanged English Kokoro voice uses measured paragraph boundaries and
-approximate internal word positions. Perceptual listening and phonetic alignment
-have not been verified. Visual changes reuse the existing audio; narration edits
-must explicitly regenerate speech and preserve provenance. Artifacts remain
-outside the repository.
+The voice uses measured paragraph boundaries and approximate internal word
+positions. Perceptual listening and phonetic alignment have not been verified.
+The preview reports current audio/source provenance. Generated speech, builds
+and review artifacts stay outside the repository. Future narration edits must
+explicitly regenerate speech and provenance.

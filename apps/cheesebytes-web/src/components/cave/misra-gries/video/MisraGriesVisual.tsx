@@ -3,6 +3,8 @@ import {
   useVideoVisual,
   useVideoSection,
 } from "@guiferviz/cheese-bytes-video/react";
+import { FrequencyCounterScene } from "../../majority-vote/video/FrequencyCounterScene";
+import { introMemoryArrivals } from "./intro-memory";
 import { Shape } from "../../majority-vote/video/Shape";
 import { createMemoryShapes } from "../../majority-vote/video/memory-shapes";
 import {
@@ -34,7 +36,7 @@ const gold = "#fbbf24",
   green = "#81c784";
 const TWO = trace(STREAM, 2),
   THREE = trace(STREAM, 3),
-  POLYGONS = createMemoryShapes(42, 24);
+  POLYGONS = createMemoryShapes(42, 64);
 function Text({
   children,
   x = 800,
@@ -199,9 +201,11 @@ function StreamRow({
 function TraceBoard({
   progress,
   capacity,
+  streamOpacity = 1,
 }: {
   progress: number;
   capacity: number;
+  streamOpacity?: number;
 }) {
   const frame = traceFrame(progress, capacity);
   return (
@@ -216,7 +220,15 @@ function TraceBoard({
       ))}
       {frame.actors.map(({ id, role, ...actor }) => (
         <g key={id} data-actor={id} data-actor-role={role}>
-          <Shape {...actor} />
+          <Shape
+            {...actor}
+            opacity={
+              actor.opacity *
+              (role === "stream" || (role === "arrival" && actor.y === 190)
+                ? streamOpacity
+                : 1)
+            }
+          />
         </g>
       ))}
       {frame.summary.slots.map(
@@ -491,29 +503,49 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
         <Text y={490} size={112} opacity={smooth(s)}>
           any &gt; ⅓?
         </Text>
-        <g opacity={smooth(s - 1)}>
-          {[0, 1].map((i) => (
-            <g key={i}>
-              <rect
-                x={650 + i * 230 - 82}
-                y={640}
-                width={164}
-                height={145}
-                rx={19}
-                fill="#0a1017"
-                stroke="#334155"
-                strokeWidth={2}
-              />
-              <Text x={650 + i * 230} y={713} size={70} fill={gold}>
-                ?
-              </Text>
-            </g>
-          ))}
+      </>
+    );
+  else if (scene === "memory")
+    content = (
+      <g fontFamily="'Inter',system-ui,sans-serif">
+        <FrequencyCounterScene
+          memory
+          time={t}
+          duration={section.duration}
+          marks={{ question: section.marks.limit ?? 9 }}
+          polygons={POLYGONS}
+          initialEntries={[]}
+          fadeMatchingArrivals
+          arrivals={introMemoryArrivals(section.marks.limit ?? 9)}
+        />
+      </g>
+    );
+  else if (scene === "bridge") {
+    const move = smooth(s),
+      clear = 1 - smooth(s / 0.45),
+      known = smooth((t - (section.marks.counter ?? 4)) / 0.6);
+    content = (
+      <>
+        <Text y={185} size={100} opacity={clear}>
+          &gt; ½
+        </Text>
+        <Card x={mix(800, 615, move)}>
+          <g opacity={clear * known}>
+            <Shape kind="square" x={mix(800, 615, move)} y={435} size={74} />
+            <Text x={mix(800, 615, move)} y={565} size={66} fill={gold}>
+              1
+            </Text>
+          </g>
+        </Card>
+        <g opacity={smooth((s - 0.35) / 0.65)}>
+          <Card x={985} />
         </g>
       </>
     );
-  else if (scene === "slots")
-    content = <TraceBoard progress={s} capacity={2} />;
+  } else if (scene === "slots")
+    content = (
+      <TraceBoard progress={s} capacity={2} streamOpacity={smooth(t / 0.45)} />
+    );
   else if (scene === "cancel")
     content = <TraceBoard progress={5 + s} capacity={2} />;
   else if (scene === "trace")
@@ -752,12 +784,19 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
     );
   // Continuous scenes preserve their last frame. Deliberate resets fade out and
   // in on both sides; never cut a fully visible scene to an empty first frame.
-  const enter = ["hook", "slots", "replay", "general", "closing"].includes(
-    scene,
-  )
+  const enter = [
+    "hook",
+    "memory",
+    "bridge",
+    "replay",
+    "general",
+    "closing",
+  ].includes(scene)
     ? smooth(t / 0.45)
     : 1;
-  const exit = ["hook", "threshold", "decide", "general"].includes(scene)
+  const exit = ["hook", "memory", "threshold", "decide", "general"].includes(
+    scene,
+  )
     ? smooth((section.duration - t) / 0.45)
     : 1;
   const fade = enter * exit;

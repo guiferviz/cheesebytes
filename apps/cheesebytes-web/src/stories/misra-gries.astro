@@ -7,14 +7,34 @@ import { MisraGriesVisual, misraGriesDefinition } from "../components/cave/misra
 
 <StorySection id="question" timeline={(t) => {
     const visual = t.visual("summary", misraGriesDefinition);
-    t.action(visual.advance, { from: "start", duration: 1.8, ease: "linear", params: { value: 1 } });
-    t.action(visual.advance, { from: "memory", duration: 2.4, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "start", duration: 1.6, ease: "linear", params: { value: 1 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Somewhere in this stream, a shape might appear more than a third of the time. But we do not know which shape.</p>
-    <p><Mark id="memory" />We could count every kind. As new kinds arrive, that table keeps growing. Can we keep just two counters, and still find the frequent ones?</p>
+    <p><Mark id="start" />Does any shape appear more than a third of the time?</p>
+    <p><Mark id="memory" />Can we find it using as little memory as possible?</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "hook", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="memory-pressure">
+  <aside class="notes">
+    <p><Mark id="start" />We could count every kind.</p>
+    <p><Mark id="growing" />But every new kind needs another entry. As different shapes arrive, the table keeps growing.</p>
+    <p><Mark id="limit" />And the stream does not stop when our space runs out.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "memory", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="majority-bridge" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "extend", duration: 2.8, ease: "linear", params: { value: 1 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />In an earlier video, we looked for a shape appearing more than half the time.</p>
+    <p><Mark id="counter" />Majority Vote kept just one candidate and one counter.</p>
+    <p><Mark id="extend" />Can we extend that idea by keeping a few more?</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "bridge", step: 0 }} client:only="react" /></VideoVisual>
 </StorySection>
 
 <StorySection id="two-slots" timeline={(t) => {

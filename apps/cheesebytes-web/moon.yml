@@ -12,7 +12,7 @@ tasks:
   test:
     script: |
       set -euo pipefail
-      pnpm exec vitest run src/components/cave/how-a-heatmap-can-mislead-you/video/definition.test.ts src/components/cave/majority-vote/video/definition.test.ts src/components/cave/majority-vote/video/memory-shapes.test.ts src/components/cave/majority-vote/video/counter-flow.test.ts src/components/cave/majority-vote/video/presentation.test.ts src/components/cave/misra-gries/video/definition.test.ts src/components/cave/misra-gries/video/motion.test.ts
+      pnpm exec vitest run src/components/cave/how-a-heatmap-can-mislead-you/video/definition.test.ts src/components/cave/majority-vote/video/definition.test.ts src/components/cave/majority-vote/video/memory-shapes.test.ts src/components/cave/majority-vote/video/counter-flow.test.ts src/components/cave/majority-vote/video/presentation.test.ts src/components/cave/misra-gries/video/definition.test.ts src/components/cave/misra-gries/video/motion.test.ts src/components/cave/misra-gries/video/intro-memory.test.ts
       pnpm exec astro build
       rm -rf dist
     inputs:
