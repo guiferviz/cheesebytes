@@ -6,6 +6,7 @@ export const STREAM: Kind[] = [..."SCTCTDSCTSSSSSC"].map(
 );
 export interface Summary {
   counts: Partial<Record<Kind, number>>;
+  slots: (Kind | null)[];
   removed: number;
   event: "start" | "insert" | "increment" | "cancel";
   group: Kind[];
@@ -15,8 +16,9 @@ export function trace(values: readonly Kind[], capacity: number): Summary[] {
     throw new Error("Capacity must be a positive integer");
   let counts: Partial<Record<Kind, number>> = {},
     removed = 0;
+  const slots: (Kind | null)[] = Array(capacity).fill(null);
   const states: Summary[] = [
-    { counts: {}, removed: 0, event: "start", group: [] },
+    { counts: {}, slots: [...slots], removed: 0, event: "start", group: [] },
   ];
   for (const kind of values) {
     let event: Summary["event"],
@@ -26,6 +28,7 @@ export function trace(values: readonly Kind[], capacity: number): Summary[] {
       event = "increment";
     } else if (Object.keys(counts).length < capacity) {
       counts[kind] = 1;
+      slots[slots.indexOf(null)] = kind;
       event = "insert";
     } else {
       group = [...(Object.keys(counts) as Kind[]), kind];
@@ -33,10 +36,19 @@ export function trace(values: readonly Kind[], capacity: number): Summary[] {
       event = "cancel";
       for (const key of Object.keys(counts) as Kind[]) {
         counts[key]!--;
-        if (!counts[key]) delete counts[key];
+        if (!counts[key]) {
+          delete counts[key];
+          slots[slots.indexOf(key)] = null;
+        }
       }
     }
-    states.push({ counts: { ...counts }, removed, event, group });
+    states.push({
+      counts: { ...counts },
+      slots: [...slots],
+      removed,
+      event,
+      group,
+    });
   }
   return states;
 }

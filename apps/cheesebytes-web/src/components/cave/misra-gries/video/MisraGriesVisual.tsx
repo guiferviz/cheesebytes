@@ -13,18 +13,21 @@ import {
   type State,
   type Summary,
 } from "./definition";
+import {
+  clamp,
+  smooth,
+  mix,
+  slotX,
+  ribbonX,
+  transferPose,
+  cancellationPose,
+} from "./motion";
 export { misraGriesDefinition } from "./definition";
 const gold = "#fbbf24",
   blue = "#64b5f6",
-  ink = "#e2e8f0",
+  ink = "#edf2f7",
   muted = "#94a3b8",
   green = "#81c784";
-const clamp = (n: number) => Math.max(0, Math.min(1, n)),
-  smooth = (n: number) => {
-    const t = clamp(n);
-    return t * t * (3 - 2 * t);
-  },
-  lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const TWO = trace(STREAM, 2),
   THREE = trace(STREAM, 3);
 function Text({
@@ -53,133 +56,257 @@ function Text({
       opacity={opacity}
       textAnchor={anchor}
       dominantBaseline="middle"
-      fontFamily="'IosevkaTermSlab Nerd Font Mono', ui-monospace, monospace"
+      fontFamily="'Inter', system-ui, sans-serif"
+      fontWeight={450}
     >
       {children}
     </text>
   );
 }
-function Heading({ children }: { children: ReactNode }) {
+function Caption({
+  children,
+  opacity = 1,
+  y = 100,
+}: {
+  children: ReactNode;
+  opacity?: number;
+  y?: number;
+}) {
   return (
-    <Text y={100} size={40} fill={muted}>
+    <Text y={y} size={38} fill={muted} opacity={opacity}>
       {children}
     </Text>
   );
 }
-function Sequence({
-  processed = 0,
-  y = 225,
-  reveal = false,
+function Card({
+  x,
+  children,
+  opacity = 1,
+  pulse = 0,
 }: {
-  processed?: number;
-  y?: number;
-  reveal?: boolean;
+  x: number;
+  children?: ReactNode;
+  opacity?: number;
+  pulse?: number;
 }) {
   return (
-    <g>
-      {STREAM.map((kind, i) => (
-        <Shape
-          key={i}
-          kind={kind}
-          x={240 + i * 80}
-          y={y}
-          size={40}
-          opacity={processed && i < processed ? 0.4 : 1}
-          highlight={reveal && i < processed && kind === "square" ? 1 : 0}
-        />
-      ))}
-      <Text y={y + 65} size={25} fill={muted}>
-        15 shapes · same order
-      </Text>
+    <g opacity={opacity}>
+      <rect
+        x={x - 110}
+        y={355}
+        width={220}
+        height={245}
+        rx={23}
+        fill="#0a1017"
+        stroke={pulse ? blue : "#283644"}
+        strokeWidth={2 + pulse * 2}
+      />
+      {children}
     </g>
   );
 }
-function Slots({
+function FixedSummary({
   summary,
   capacity = 2,
-  x = 800,
-  y = 490,
-  size = 180,
+  opacity = 1,
 }: {
   summary: Summary;
   capacity?: number;
-  x?: number;
-  y?: number;
-  size?: number;
+  opacity?: number;
 }) {
-  const kinds =
-    capacity === 3 ? KINDS.slice(0, 3) : KINDS.filter((k) => summary.counts[k]);
   return (
-    <g>
-      {Array.from({ length: capacity }, (_, i) => {
-        const px = x + (i - (capacity - 1) / 2) * (size + 35),
-          kind = kinds[i];
-        return (
-          <g key={i}>
-            <rect
-              x={px - size / 2}
-              y={y - size / 2}
-              width={size}
-              height={size}
-              rx={20}
-              fill="#0b1018"
-              stroke="#334155"
-              strokeWidth={2}
-            />
-            {kind && summary.counts[kind] && (
-              <>
-                <Shape kind={kind} x={px} y={y - 20} size={size * 0.36} />
-                <Text x={px} y={y + size * 0.29} size={size * 0.25} fill={gold}>
-                  {summary.counts[kind]}
-                </Text>
-              </>
-            )}
-          </g>
-        );
-      })}
+    <g opacity={opacity}>
+      {summary.slots.map((kind, i) => (
+        <Card key={i} x={slotX(i, capacity)}>
+          {kind && (
+            <>
+              <Shape kind={kind} x={slotX(i, capacity)} y={445} size={88} />
+              <Text x={slotX(i, capacity)} y={545} size={66} fill={gold}>
+                {summary.counts[kind]}
+              </Text>
+            </>
+          )}
+        </Card>
+      ))}
     </g>
   );
 }
-function Interval({
-  low,
-  high,
-  y = 450,
-  kind = "square",
-  label = true,
-  threshold,
-  exact,
+function Ledger({ count, opacity = 1 }: { count: number; opacity?: number }) {
+  return (
+    <g opacity={opacity}>
+      <Text x={755} y={730} size={38} fill={muted} anchor="end">
+        groups removed
+      </Text>
+      <Text x={815} y={730} size={62} fill={gold} anchor="start">
+        {count}
+      </Text>
+      {Array.from({ length: count }, (_, i) => (
+        <g
+          key={i}
+          transform={`translate(${738 + (i - (count - 1) / 2) * 80} 795)`}
+        >
+          {[0, 1, 2].map((n) => (
+            <circle
+              key={n}
+              cx={n * 18}
+              cy={0}
+              r={5}
+              fill={gold}
+              opacity={0.75}
+            />
+          ))}
+        </g>
+      ))}
+    </g>
+  );
+}
+/** The original row stays in place. Only the active arrival leaves it. */
+function TraceBoard({
+  progress,
+  capacity,
 }: {
-  low: number;
-  high: number;
+  progress: number;
+  capacity: number;
+}) {
+  const states = capacity === 2 ? TWO : THREE,
+    p = Math.max(0, Math.min(15, progress)),
+    n = Math.min(14, Math.floor(p)),
+    f = p >= 15 ? 1 : p - n;
+  const before = states[n],
+    after = states[n + 1],
+    incoming = STREAM[n],
+    cancel = after.event === "cancel",
+    done = p >= 15;
+  const hit = smooth((f - 0.67) / 0.23),
+    removed = hit > 0.5 ? after.removed : before.removed;
+  const targetIndex = after.slots.indexOf(incoming),
+    target = targetIndex < 0 ? 800 : slotX(targetIndex, capacity);
+  return (
+    <g data-trace-progress={p} data-capacity={capacity}>
+      {STREAM.map((kind, i) =>
+        i === n && !done ? (
+          <g key={i} />
+        ) : (
+          <Shape
+            key={i}
+            kind={kind}
+            x={ribbonX(i)}
+            y={190}
+            size={50}
+            opacity={i < n || done ? 0.3 : 1}
+          />
+        ),
+      )}
+      <Text y={275} size={31} fill={muted}>
+        {done ? "15 / 15" : ""}
+      </Text>
+      {!done &&
+        before.slots.map((kind, i) => {
+          const x = slotX(i, capacity),
+            next = after.slots[i],
+            oldCount = kind ? (before.counts[kind] ?? 0) : 0,
+            newCount = next ? (after.counts[next] ?? 0) : 0;
+          return (
+            <Card
+              key={i}
+              x={x}
+              pulse={
+                !cancel && i === targetIndex ? Math.sin(Math.PI * hit) * 0.7 : 0
+              }
+            >
+              {kind && (
+                <Shape
+                  kind={kind}
+                  x={x}
+                  y={445}
+                  size={88}
+                  opacity={cancel && oldCount === 1 ? 0 : 1}
+                />
+              )}
+              {!kind && next && (
+                <Shape kind={next} x={x} y={445} size={88} opacity={hit} />
+              )}
+              {kind && (
+                <g opacity={oldCount === newCount ? 1 : 1 - hit}>
+                  <Text x={x} y={545 - hit * 12} size={66} fill={gold}>
+                    {oldCount}
+                  </Text>
+                </g>
+              )}
+              {newCount !== oldCount && newCount > 0 && (
+                <g opacity={hit}>
+                  <Text x={x} y={557 - hit * 12} size={66} fill={gold}>
+                    {newCount}
+                  </Text>
+                </g>
+              )}
+            </Card>
+          );
+        })}
+      {!done && !cancel && (
+        <Shape kind={incoming} {...transferPose(ribbonX(n), target, f)} />
+      )}
+      {!done && cancel && (
+        <>
+          {before.slots.map(
+            (kind, i) =>
+              kind && (
+                <Shape
+                  key={kind}
+                  kind={kind}
+                  {...cancellationPose(slotX(i, capacity), 445, f)}
+                  size={88}
+                />
+              ),
+          )}
+          <Shape
+            kind={incoming}
+            {...cancellationPose(ribbonX(n), 190, f)}
+            size={mix(50, 88, smooth(f / 0.5))}
+          />
+        </>
+      )}
+      {done && <FixedSummary summary={states[15]} capacity={capacity} />}
+      <Ledger count={done ? states[15].removed : removed} />
+    </g>
+  );
+}
+function Range({
+  low = 5,
+  high = 8,
+  y = 490,
+  threshold = 0,
+  exact,
+  opacity = 1,
+}: {
+  low?: number;
+  high?: number;
   y?: number;
-  kind?: Kind;
-  label?: boolean;
   threshold?: number;
   exact?: number;
+  opacity?: number;
 }) {
-  const x = (n: number) => 420 + n * 90;
+  const x = (n: number) => 370 + (n - 4) * 200;
   return (
-    <g>
-      <Shape kind={kind} x={285} y={y} size={54} />
-      <line x1={420} x2={1320} y1={y} y2={y} stroke="#25303e" strokeWidth={5} />
-      {Array.from({ length: 11 }, (_, i) => (
-        <g key={i}>
-          <line x1={x(i)} x2={x(i)} y1={y - 9} y2={y + 9} stroke="#475569" />
-          {label && (
-            <Text x={x(i)} y={y + 46} size={22} fill={muted}>
-              {i}
-            </Text>
-          )}
+    <g opacity={opacity} data-interval-low={low} data-interval-high={high}>
+      <Shape kind="square" x={205} y={y} size={82} />
+      <line x1={370} x2={1370} y1={y} y2={y} stroke="#344353" strokeWidth={4} />
+      {[4, 5, 6, 7, 8, 9].map((n) => (
+        <g key={n}>
+          <line x1={x(n)} x2={x(n)} y1={y - 8} y2={y + 8} stroke={muted} />
+          <Text x={x(n)} y={y + 55} size={30} fill={muted}>
+            {n}
+          </Text>
         </g>
       ))}
       <rect
         x={x(low)}
-        y={y - 18}
-        width={Math.max(4, (high - low) * 90)}
-        height={36}
-        rx={8}
+        y={y - 19}
+        width={Math.max(2, (high - low) * 200)}
+        height={38}
+        rx={12}
         fill={gold}
-        opacity={0.2}
+        opacity={0.16}
       />
       <line
         x1={x(low)}
@@ -187,38 +314,137 @@ function Interval({
         y1={y}
         y2={y}
         stroke={gold}
-        strokeWidth={7}
+        strokeWidth={8}
+        strokeLinecap="round"
       />
-      <circle cx={x(low)} cy={y} r={9} fill={blue} />
-      <circle cx={x(high)} cy={y} r={9} fill={gold} />
-      <Text x={(x(low) + x(high)) / 2} y={y - 57} size={42}>
-        {low === high ? low : `${low} ≤ count ≤ ${high}`}
+      <circle cx={x(low)} cy={y} r={11} fill={blue} />
+      <circle
+        cx={x(high)}
+        cy={y}
+        r={11}
+        fill={gold}
+        opacity={smooth((high - low) / 0.25)}
+      />
+      <Text x={x(low)} y={y - 68} size={66} fill={blue}>
+        {Math.round(low)}
       </Text>
-      {threshold !== undefined && (
+      <Text
+        x={x(high)}
+        y={y - 68}
+        size={66}
+        fill={gold}
+        opacity={smooth((high - low) / 0.25)}
+      >
+        {Math.round(high)}
+      </Text>
+      <g opacity={threshold}>
+        <line
+          x1={x(5)}
+          x2={x(5)}
+          y1={y - 125}
+          y2={y + 100}
+          stroke={muted}
+          strokeWidth={3}
+          strokeDasharray="9 9"
+        />
+        <Text x={x(5)} y={y + 145} size={37} fill={muted}>
+          ⅓ of 15 = 5
+        </Text>
+      </g>
+      {exact !== undefined && (
         <g>
-          <line
-            x1={x(threshold)}
-            x2={x(threshold)}
-            y1={y - 95}
-            y2={y + 70}
-            stroke={muted}
-            strokeWidth={2}
-            strokeDasharray="10 10"
-          />
-          <Text x={x(threshold)} y={y + 100} size={25} fill={muted}>
-            threshold {threshold}
+          <circle cx={x(exact)} cy={y} r={14} fill={green} />
+          <Text x={x(exact)} y={y - 145} size={42} fill={green}>
+            exactly {exact}
           </Text>
         </g>
       )}
-      {exact !== undefined && (
-        <>
-          <circle cx={x(exact)} cy={y} r={12} fill={green} />
-          <Text x={x(exact)} y={y - 110} size={30} fill={green}>
-            exactly {exact}
-          </Text>
-        </>
-      )}
     </g>
+  );
+}
+function River({
+  time,
+  opacity = 1,
+  y = 235,
+}: {
+  time: number;
+  opacity?: number;
+  y?: number;
+}) {
+  return (
+    <g opacity={opacity}>
+      {Array.from({ length: 24 }, (_, i) => {
+        const x = ((((i * 105 - time * 72) % 2520) + 2520) % 2520) - 460;
+        return (
+          <Shape
+            key={i}
+            kind={KINDS[(i * 7 + Math.floor(i / 5)) % 4]}
+            x={x}
+            y={y + Math.sin(time * 0.65 + i * 1.7) * 12}
+            size={64}
+            rotate={Math.sin(time * 0.55 + i) * 2}
+            opacity={smooth((x + 80) / 130) * (1 - smooth((x - 1440) / 160))}
+          />
+        );
+      })}
+    </g>
+  );
+}
+function Demo({ s, cancel = false }: { s: number; cancel?: boolean }) {
+  const first = smooth(s),
+    second = smooth(s - 1),
+    arrival = cancel ? smooth(s) : 0,
+    collision = cancel ? smooth(s - 1) : 0;
+  return (
+    <>
+      {[0, 1].map((i) => {
+        const x = slotX(i, 2),
+          q = cancel ? 1 : i === 0 ? first : second,
+          kind = i === 0 ? "square" : "circle",
+          flight = cancel
+            ? cancellationPose(x, 445, collision)
+            : { x, y: mix(190, 445, q), opacity: 1, size: 88 };
+        return (
+          <g key={i}>
+            <Card x={x} />
+            {q > 0 && (
+              <Shape
+                kind={kind}
+                x={flight.x}
+                y={flight.y}
+                size={mix(66, 88, q)}
+                opacity={flight.opacity}
+              />
+            )}
+            <Text
+              x={x}
+              y={545}
+              size={66}
+              fill={gold}
+              opacity={
+                smooth((q - 0.75) / 0.25) *
+                (cancel ? 1 - smooth((collision - 0.67) / 0.23) : 1)
+              }
+            >
+              1
+            </Text>
+          </g>
+        );
+      })}
+      {cancel && (
+        <Shape
+          kind="triangle"
+          x={800}
+          y={mix(mix(40, 190, arrival), 330, smooth(collision / 0.78))}
+          size={88}
+          opacity={arrival * (1 - smooth((collision - 0.68) / 0.24))}
+        />
+      )}
+      <Ledger
+        count={cancel && collision > 0.82 ? 1 : 0}
+        opacity={cancel ? smooth((s - 1.7) / 0.3) : 0}
+      />
+    </>
   );
 }
 export function MisraGriesVisual({ initial }: { initial: State }) {
@@ -226,321 +452,313 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
       misraGriesDefinition,
       initial,
     ),
-    section = useVideoSection(sectionId),
-    s = state.step,
-    scene = state.scene;
+    section = useVideoSection(sectionId);
+  const s = state.step,
+    scene = state.scene,
+    t = section.localTime,
+    global = section.globalTime,
+    float = Math.sin(global * 0.7) * 3;
   let content: ReactNode;
-  if (scene === "question")
+  if (scene === "hook")
     content = (
       <>
-        <Heading>One pass. A small memory.</Heading>
-        {Array.from({ length: 21 }, (_, i) => (
+        <River time={global} y={260} />
+        <g opacity={smooth(s)}>
+          <Shape kind="square" x={415} y={500} size={108} />
+          <Text x={940} y={505} size={104}>
+            more than ⅓?
+          </Text>
+        </g>
+        <g opacity={smooth((s - 1.45) / 0.55)}>
+          {KINDS.map((kind, i) => (
+            <g
+              key={kind}
+              opacity={1 - smooth((s - 1.45) / 0.55) * (i > 1 ? 0.8 : 0)}
+            >
+              <Shape kind={kind} x={620 + i * 120} y={700} size={54} />
+            </g>
+          ))}
+        </g>
+      </>
+    );
+  else if (scene === "slots")
+    content = (
+      <>
+        <Caption>Two counters</Caption>
+        <Demo s={s} />
+      </>
+    );
+  else if (scene === "cancel")
+    content = (
+      <>
+        <Caption opacity={1 - smooth((s - 1.65) / 0.35)}>
+          Two slots. A third kind.
+        </Caption>
+        <Demo s={s} cancel />
+        <Text y={100} size={42} fill={gold} opacity={smooth((s - 1.65) / 0.35)}>
+          One of each. One group removed.
+        </Text>
+      </>
+    );
+  else if (scene === "trace")
+    content = (
+      <>
+        <Caption>Same rule · 15 arrivals</Caption>
+        <TraceBoard progress={s} capacity={2} />
+      </>
+    );
+  else if (scene === "bounds") {
+    const spread = smooth(s),
+      hidden = smooth(s - 1),
+      rise = smooth(s - 2);
+    content = (
+      <>
+        <FixedSummary summary={TWO[15]} opacity={1 - spread} />
+        <Ledger count={3} opacity={1 - spread} />
+        {Array.from({ length: 5 }, (_, i) => (
           <Shape
             key={i}
-            kind={KINDS[i % 4]}
-            x={
-              ((((i * 100 - section.localTime * 38) % 2100) + 2100) % 2100) -
-              200
-            }
-            y={300 + Math.sin(i) * 24}
-            size={56}
-            opacity={0.8}
+            kind="square"
+            x={mix(615, 360 + i * 110, spread)}
+            y={mix(445, 310, spread)}
+            size={88}
+            opacity={i === 0 ? 1 : spread}
           />
         ))}
-        <Shape kind="square" x={680} y={540} size={90} />
-        <Text x={850} y={540} size={90} fill={gold}>
-          3
+        <Text
+          x={580}
+          y={430}
+          size={48}
+          fill={blue}
+          opacity={spread * (1 - rise)}
+        >
+          5 survived
         </Text>
-        <Text y={665} size={42} opacity={smooth(s - 1)}>
-          counter ≠ actual frequency
+        {Array.from({ length: 3 }, (_, i) => {
+          const x = 520 + i * 280,
+            target = 910 + i * 110;
+          return (
+            <g key={i} opacity={hidden}>
+              <g opacity={1 - rise}>
+                <rect
+                  x={x - 100}
+                  y={510}
+                  width={200}
+                  height={125}
+                  rx={24}
+                  stroke="#46586d"
+                  strokeWidth={3}
+                  strokeDasharray="8 8"
+                  fill="none"
+                />
+                <Text x={x} y={675} size={34} fill={muted}>
+                  at most 1
+                </Text>
+              </g>
+              <g
+                transform={`translate(${mix(x, target, rise)} ${mix(565, 310, rise)})`}
+              >
+                <rect
+                  x={-44}
+                  y={-44}
+                  width={88}
+                  height={88}
+                  rx={9}
+                  fill={blue}
+                  fillOpacity={0.08}
+                  stroke={blue}
+                  strokeWidth={3}
+                  strokeDasharray="9 7"
+                />
+                <Text x={0} y={3} size={42} fill={blue} opacity={1 - rise}>
+                  ?
+                </Text>
+              </g>
+            </g>
+          );
+        })}
+        <Caption opacity={spread * (1 - rise)}>
+          How many squares could we have lost?
+        </Caption>
+        <Caption opacity={rise}>5 survived + at most 3 lost</Caption>
+        <Range low={5} high={mix(5, 8, rise)} y={660} opacity={rise} />
+      </>
+    );
+  } else if (scene === "threshold") {
+    const move = smooth(s),
+      q = smooth(s - 1);
+    content = (
+      <>
+        <Caption>More than one third?</Caption>
+        <Range y={mix(660, 420, move)} threshold={move} />
+        <Text y={725} size={54} fill={gold} opacity={q}>
+          5 is still possible.
         </Text>
-        <Text y={770} size={36} fill={gold} opacity={smooth(s - 2)}>
-          How far off could we be?
+        <Text y={800} size={36} fill={muted} opacity={q}>
+          The summary cannot decide yet.
         </Text>
       </>
     );
-  else if (scene === "slots") {
-    const arriving = s < 2 ? "square" : "circle",
-      q = smooth(s < 2 ? s - 1 : s - 2);
+  } else if (scene === "replay") {
+    const reveal = smooth(s - 15);
     content = (
       <>
-        <Heading>Two counters</Heading>
-        <Slots
-          summary={{
-            counts:
-              s < 1.75
-                ? {}
-                : s < 2.75
-                  ? { square: 1 }
-                  : { square: 1, circle: 1 },
-            removed: 0,
-            event: "start",
-            group: [],
-          }}
-        />
-        {s > 1 && s < 3 && (
-          <Shape
-            kind={arriving}
-            x={lerp(800, arriving === "square" ? 692 : 908, q)}
-            y={lerp(230, 470, q)}
-            size={66}
-            opacity={1 - smooth((q - 0.75) / 0.25)}
-          />
-        )}
-        <Text y={740} size={35} fill={muted}>
-          match → increment · free slot → start at 1
-        </Text>
-      </>
-    );
-  } else if (scene === "cancel") {
-    const q = smooth(s - 1),
-      fade = 1 - smooth((q - 0.65) / 0.35);
-    content = (
-      <>
-        <Heading>A new value. Both slots full.</Heading>
-        <Slots
-          summary={{ counts: {}, removed: 0, event: "start", group: [] }}
-        />
-        <g opacity={fade}>
-          <Shape
-            kind="square"
-            x={lerp(692, 800, q)}
-            y={lerp(470, 345, q)}
-            size={65}
-          />
-          <Shape
-            kind="circle"
-            x={lerp(908, 800, q)}
-            y={lerp(470, 345, q)}
-            size={65}
-          />
-          <Shape kind="triangle" x={800} y={lerp(215, 345, q)} size={65} />
+        <Caption>Replay the same stream · three counters</Caption>
+        <g opacity={1 - reveal}>
+          <TraceBoard progress={Math.min(15, s)} capacity={3} />
         </g>
-        <Text y={700} size={50} fill={gold} opacity={q}>
-          3 different values → remove one of each
-        </Text>
-        <Text y={780} size={35} fill={muted} opacity={smooth(s - 2)}>
-          removed groups: 1
-        </Text>
-      </>
-    );
-  } else if (scene === "trace") {
-    const p = Math.min(15, Math.max(0, s)),
-      n = Math.min(14, Math.floor(p)),
-      f = p - n,
-      next = TWO[n + 1],
-      settled = p >= 15 || f > 0.8,
-      summary = TWO[Math.min(15, n + (settled ? 1 : 0))];
-    content = (
-      <>
-        <Heading>One pass through the same fifteen shapes</Heading>
-        <Sequence processed={n + (settled ? 1 : 0)} />
-        <Slots summary={summary} />
-        <Text y={700} fill={gold} size={43}>
-          removed groups: {summary.removed}
-        </Text>
-        {p < 15 && next.event === "cancel" && (
-          <g opacity={1 - smooth((f - 0.65) / 0.35)}>
-            {next.group.map((kind, i) => (
-              <Shape
-                key={kind}
-                kind={kind}
-                x={lerp(620 + i * 180, 800, smooth(f))}
-                y={lerp(i === 2 ? 280 : 410, 345, smooth(f))}
-                size={56}
-              />
-            ))}
-          </g>
-        )}
-        <Text y={790} size={28} fill={muted}>
-          {p >= 15
-            ? "summary: 5 squares + 1 circle"
-            : "match · insert · or cancel three distinct values"}
-        </Text>
-      </>
-    );
-  } else if (scene === "bounds")
-    content = (
-      <>
-        <Heading>The counter gives a lower bound</Heading>
-        <Interval low={5} high={s < 2 ? 5 : 8} y={330} />
-        {s > 2.5 && <Interval kind="circle" low={1} high={4} y={535} />}
-        <g opacity={smooth(s - 3)}>
-          <Shape kind="triangle" x={655} y={740} size={46} />
-          <Shape kind="diamond" x={725} y={740} size={46} />
-          <Text x={1000} y={740} size={37}>
-            untracked: 0 to 3
-          </Text>
-        </g>
-        <Text y={165} size={29} fill={muted}>
-          at most one hidden copy per removed group
-        </Text>
-      </>
-    );
-  else if (scene === "budget")
-    content = (
-      <>
-        <Heading>An error budget. Not a probability.</Heading>
-        <Slots summary={TWO[15]} y={340} size={130} />
-        <Text y={535} size={72} opacity={smooth(s - 1)}>
-          15 = 6 + 3 × 3
-        </Text>
-        <Text y={620} size={31} fill={muted} opacity={smooth(s - 1)}>
-          seen = survivors + group size × removed groups
-        </Text>
-        <Text y={760} size={64} fill={gold} opacity={smooth(s - 2)}>
-          cₓ ≤ fₓ ≤ cₓ + D
-        </Text>
-      </>
-    );
-  else if (scene === "threshold")
-    content = (
-      <>
-        <Heading>Surviving is not the same as qualifying</Heading>
-        <Text y={220} size={45} fill={muted}>
-          more than 15 / 3 = more than 5
-        </Text>
-        <Interval
-          low={5}
-          high={8}
-          y={440}
-          threshold={s > 1.5 ? 5 : undefined}
+        <Range
+          low={mix(5, 6, reveal)}
+          high={mix(8, 7, reveal)}
+          y={mix(600, 420, reveal)}
+          opacity={reveal}
         />
-        <Text y={710} size={53} fill={gold} opacity={smooth(s - 2)}>
-          Could be 5. Could be 8.
+        <Text y={695} size={54} fill={gold} opacity={reveal}>
+          6 survived + at most 1 lost
         </Text>
       </>
     );
-  else if (scene === "compare")
+  } else if (scene === "decide") {
+    const answer = smooth(s),
+      scan = clamp(s - 2),
+      visited = Math.min(15, Math.floor(scan * 15)),
+      count = STREAM.slice(0, visited).filter((k) => k === "square").length;
     content = (
       <>
-        <Heading>More memory. The same stream.</Heading>
-        <Sequence y={215} />
-        <line x1={800} x2={800} y1={340} y2={790} stroke="#263243" />
-        <Text x={410} y={370} size={37} fill={muted}>
-          2 counters
-        </Text>
-        <Text x={1190} y={370} size={37} fill={muted}>
-          3 counters
-        </Text>
-        <Slots summary={TWO[15]} x={410} y={505} size={120} />
-        <Slots
-          summary={s < 1.8 ? THREE[5] : s < 2.75 ? THREE[6] : THREE[15]}
-          capacity={3}
-          x={1190}
-          y={505}
-          size={110}
-        />
-        <Text x={410} y={650} size={32}>
-          after 15 arrivals · D = 3
-        </Text>
-        <Text x={1190} y={650} size={28}>
-          {s < 1.8
-            ? "after 5 arrivals"
-            : s < 2.75
-              ? "after 6 arrivals · D = 1"
-              : "after all 15 arrivals · D = 1"}
-        </Text>
-        {s > 1 && s < 2 && (
-          <g opacity={1 - smooth((s - 1.65) / 0.35)}>
-            {KINDS.map((kind, i) => (
-              <Shape
-                key={kind}
-                kind={kind}
-                x={lerp(1055 + i * 90, 1190, smooth(s - 1))}
-                y={416}
-                size={46}
-              />
-            ))}
-          </g>
-        )}
-        <Text x={410} y={760} size={57} fill={muted}>
-          5 ≤ count ≤ 8
-        </Text>
-        <Text x={1190} y={760} size={57} fill={gold} opacity={smooth(s - 2)}>
-          6 ≤ count ≤ 7
-        </Text>
-      </>
-    );
-  else if (scene === "decide") {
-    const q = clamp(s - 2),
-      visited = Math.floor(q * 15),
-      actual = STREAM.slice(0, visited).filter((k) => k === "square").length;
-    content = (
-      <>
-        <Heading>Enough information to decide</Heading>
-        <Interval
+        <Caption>More than one third?</Caption>
+        <Range
           low={6}
           high={7}
-          y={340}
-          threshold={5}
-          exact={q > 0.99 ? 7 : undefined}
+          y={420}
+          threshold={1}
+          exact={scan === 1 ? 7 : undefined}
         />
-        <Text y={540} size={48} fill={green} opacity={smooth(s - 1)}>
-          certain: more than one third
-        </Text>
-        {s > 2 && (
-          <>
-            <Sequence processed={visited} y={660} reveal />
-            <Text y={805} size={38} fill={gold}>
-              verification pass · exact count: {actual}
+        <g opacity={1 - smooth((s - 1) / 0.45)}>
+          <Text y={695} size={70} fill={green} opacity={answer}>
+            Yes. Even the minimum is above 5.
+          </Text>
+          <Text y={785} size={38} fill={muted} opacity={answer}>
+            No second pass for this decision.
+          </Text>
+        </g>
+        {s > 1 && (
+          <g opacity={smooth((s - 1.45) / 0.55)}>
+            {STREAM.map((kind, i) => (
+              <Shape
+                key={i}
+                kind={kind}
+                x={ribbonX(i)}
+                y={680}
+                size={50}
+                opacity={i < visited && kind !== "square" ? 0.4 : 1}
+                highlight={i < visited && kind === "square" ? 1 : 0}
+              />
+            ))}
+            <Text y={795} size={43} fill={scan === 1 ? green : muted}>
+              second pass · exact count: {count}
             </Text>
-          </>
+          </g>
         )}
       </>
     );
-  } else if (scene === "general")
+  } else if (scene === "general") {
+    const formula = smooth(s),
+      scale = smooth(s - 1),
+      m = Math.round(mix(2, 99, smooth((scale - 0.25) / 0.75))),
+      fraction = 1 / (m + 1);
     content = (
       <>
-        <Heading>Misra–Gries</Heading>
-        <Text y={245} size={46}>
-          m counters · cancel m + 1 distinct values
+        <Caption>Misra–Gries</Caption>
+        <Text x={600} y={290} size={130} fill={gold}>
+          {m}
         </Text>
-        <Text y={405} size={68} fill={gold} opacity={smooth(s - 1)}>
-          maximum error ≤ N / (m + 1)
+        <Text x={600} y={395} size={39} fill={muted}>
+          counters
         </Text>
-        <g opacity={smooth(s - 2)}>
-          <Text x={390} y={575} size={35} anchor="end">
-            9 counters
+        <g opacity={1 - smooth(scale / 0.25)}>
+          {["square", "circle", "triangle"].map((kind, i) => (
+            <Shape
+              key={i}
+              kind={kind as Kind}
+              x={1000 + (i - 1) * 100}
+              y={280}
+              size={65}
+            />
+          ))}
+          <Text x={1000} y={395} size={37} fill={muted}>
+            3 distinct values
           </Text>
+        </g>
+        <Text
+          x={1050}
+          y={290}
+          size={105}
+          fill={blue}
+          opacity={smooth((scale - 0.25) / 0.25)}
+        >
+          {Math.round(fraction * 100)}%
+        </Text>
+        <Text
+          x={1050}
+          y={395}
+          size={37}
+          fill={muted}
+          opacity={smooth((scale - 0.25) / 0.25)}
+        >
+          maximum error
+        </Text>
+        <Text y={540} size={74} fill={ink} opacity={formula}>
+          error ≤ N / (m + 1)
+        </Text>
+        <g opacity={formula}>
           <rect
-            x={460}
-            y={550}
-            width={650}
-            height={40}
-            rx={8}
-            fill={gold}
-            opacity={0.7}
+            x={400}
+            y={650}
+            width={800}
+            height={26}
+            rx={13}
+            fill="#1e2a38"
           />
-          <Text x={1260} y={575} size={37}>
-            ≤ 10% of N
-          </Text>
-          <Text x={390} y={690} size={35} anchor="end">
-            99 counters
-          </Text>
-          <rect x={460} y={665} width={65} height={40} rx={8} fill={blue} />
-          <Text x={1260} y={690} size={37}>
-            ≤ 1% of N
-          </Text>
-          <Text y={800} size={30} fill={muted}>
-            additive error · never a confidence percentage
+          <rect
+            x={400}
+            y={650}
+            width={800 * fraction}
+            height={26}
+            rx={Math.min(13, (800 * fraction) / 2)}
+            fill={blue}
+          />
+          <Text y={745} size={36} fill={muted}>
+            N = stream length
           </Text>
         </g>
       </>
     );
-  else
+  } else
     content = (
       <>
-        <Heading>A small summary. A useful guarantee.</Heading>
-        <Interval low={6} high={7} y={415} />
-        <Text y={650} size={47} fill={gold} opacity={smooth(s - 1)}>
-          Remember the survivors.
+        <River time={global} y={195} opacity={0.5} />
+        <Text y={335} size={34} fill={muted}>
+          one-pass summary
         </Text>
-        <Text y={725} size={40} fill={muted} opacity={smooth(s - 2)}>
-          Account for what was removed.
+        <Range low={6} high={7} y={460} />
+        <Text y={680} size={62} fill={green} opacity={smooth(s)}>
+          More than ⅓. Guaranteed.
+        </Text>
+        <Text y={785} size={45} fill={ink} opacity={smooth(s - 1)}>
+          Lose the exact count. Keep the answer.
         </Text>
       </>
     );
+  const fades = [
+    "hook",
+    "slots",
+    "trace",
+    "replay",
+    "general",
+    "closing",
+  ].includes(scene)
+    ? smooth(t / 0.45)
+    : 1;
   return (
     <main
       ref={ref}
@@ -563,12 +781,14 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
       >
         <defs>
           <radialGradient id={`mg-haze-${scene}`}>
-            <stop stopColor={blue} stopOpacity=".07" />
+            <stop stopColor={blue} stopOpacity=".045" />
             <stop offset="1" stopColor="#000" stopOpacity="0" />
           </radialGradient>
         </defs>
         <rect width="1600" height="900" fill={`url(#mg-haze-${scene})`} />
-        {content}
+        <g opacity={fades} transform={`translate(0 ${float})`}>
+          {content}
+        </g>
       </svg>
     </main>
   );

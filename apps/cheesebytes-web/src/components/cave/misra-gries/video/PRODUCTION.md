@@ -1,3 +1,35 @@
+# Misra–Gries — revised production
+
+The first delivered cut was rejected by the viewer: weak opening/ending, unclear explanation and insufficiently continuous animation. The records below do not substitute for that feedback.
+
+## Current production
+
+English narration, one canonical stream SCTCTDSCTSSSSSC, two-counter [5,8] and three-counter [6,7] bounds, exact 7 revealed only on a separately announced verification pass. Ten scenes, regenerated af_heart speech, measured phrase boundaries, approximate internal word timings, 1280×720 at 30 fps and a ten-second animated editing tail.
+
+# Dos rondas adicionales de guion y visuales
+
+## Guion, ronda 4
+La versión anterior arranca con «Last time» y un contador 3 sin historia. Su pregunta llega a los once segundos. Se sustituye por una pregunta concreta al inicio: si borramos datos, ¿podemos aún asegurar que los cuadrados superan un tercio? Se recupera esa misma decisión al final. Se suprimen la escena contable 15=6+3×3, el desvío al círculo y las clases ausentes, y la definición separada de heavy hitters. La prueba principal pasa a ser visible: cinco supervivientes + como máximo tres perdidos.
+
+## Guion, ronda 5
+Se revisa como explicación independiente. La restricción de memoria nace del crecimiento de la tabla. Se distingue explícitamente el resumen de la frecuencia real. Se introduce la pregunta del umbral antes de usarlo. La repetición con tres contadores se anuncia como repetición de los mismos datos, y la segunda pasada se condiciona a poder volver a leerlos. La garantía general define N al pronunciarlo. El cierre vuelve a los datos borrados y al sí que ya podemos justificar.
+
+## Diagnóstico visual de la versión publicada
+El mosaico contiene grandes zonas vacías, tipografía excesivamente estrecha y muchas diapositivas con títulos. La cancelación ocupa sólo 1,15 s y luego desaparece todo durante una frase larga. El intervalo cambia instantáneamente de 5 a 8. El repaso con tres contadores salta de los elementos 5 a 6 y luego al 15: falta el proceso. Las entradas del recorrido no viajan a los contadores. Se necesita movimiento que enseñe la operación, no sólo fundidos de texto.
+
+## Visuales, ronda 4 — nueva puesta en escena
+Se renderizaron diez escenas con la nueva voz. Cambios: fuente sin condensar, pregunta concreta grande, tres participantes visibles que convergen, entradas que viajan hasta su contador y recuentos que cambian al llegar, huecos de memoria estables, quince pasos reales en ambos recorridos, cinco copias sólidas y tres posibles con contorno discontinuo, intervalo que se expande/contrae. Se añadieron cuatro segundos de observación en cada recorrido para que las quince operaciones no se atropellen.
+
+La revisión del mosaico detectó tres fallos de esta ronda: el cuadrado inicial se solapaba con la pregunta, había un vacío entre la cancelación y el registro del grupo, y la respuesta verde se cruzaba con la fila de verificación durante un fundido. Se separa el icono inicial, se adelanta el registro al instante de la colisión y se hacen secuenciales los fundidos de respuesta y segunda pasada. El rótulo de los cinco supervivientes se centra sobre sus cinco objetos. Estas correcciones se comprueban en la ronda 5 con capturas de entrada, acción, resultado y transición.
+
+## Visuales, ronda 5 — continuidad y lectura
+Se revisaron los diez puntos medios y 23 estados focalizados, incluyendo cinco fases de la cancelación, el paso de cinco objetos reales a tres posibles, una cancelación de cuatro valores y la entrada/salida de la verificación. Se generaron cuatro clips de límites de escena a 30 fps. Se retiraron los números decorativos del inicio: no correspondían al stream visible. La segunda pasada se divide en marcas de frase medidas para que el siete exacto aparezca al terminar el recuento y permanezca durante la conclusión, en lugar de llegar en el último medio segundo. El cierre rotula el intervalo como resumen de una sola pasada, para distinguirlo del siete conocido tras verificar. En la generalización se desvanece el ejemplo de tres valores antes de aumentar m, para no mostrar m=3 junto a una cancelación de sólo tres.
+
+Pruebas: garantía de cotas y conservación de masa en todos los streams cortos; permanencia de las identidades en sus huecos de memoria; convergencia y continuidad de trayectorias/opacidad; TypeScript del visual y sus dependencias. La voz se ha regenerado para el texto actual y se usan tiempos medidos por frase; no se presenta como alineación fonética. No ha sido posible una escucha perceptiva mediante las herramientas disponibles. Los clips y muestras temporales permiten inspeccionar las transiciones; las capturas aisladas no prueban suavidad.
+
+
+## Previous cut: archived production record
+
 # Misra–Gries production record
 
 Source: `notes/Cheese Bytes/Cave/Majority Vote Algorithm.mdx`, its frequency-bound discussion and Misra–Gries reference. English narration continues the existing Majority Vote visual vocabulary.
