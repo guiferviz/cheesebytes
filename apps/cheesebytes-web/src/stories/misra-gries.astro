@@ -1,0 +1,162 @@
+---
+import Mark from "@guiferviz/cheese-bytes-video/astro/Mark.astro";
+import StorySection from "@guiferviz/cheese-bytes-video/astro/StorySection.astro";
+import VideoVisual from "@guiferviz/cheese-bytes-video/astro/VideoVisual.astro";
+import { MisraGriesVisual, misraGriesDefinition } from "../components/cave/misra-gries/video/MisraGriesVisual";
+---
+<StorySection id="question" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "summary", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "question", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />A stream of shapes passes once, and then it is gone.</p>
+    <p><Mark id="summary" />Last time, we kept one candidate and one counter. But that counter was not the number of times the candidate appeared.</p>
+    <p><Mark id="question" />Can we keep a little more memory, and know how far off our counts might be?</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "question", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="two-slots" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "square", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "circle", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />Let's give ourselves two counters.</p>
+    <p><Mark id="square" />A square arrives. We save it with a count of one. Another square would increase that counter.</p>
+    <p><Mark id="circle" />A circle arrives. The second slot is free, so we start another counter.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "slots", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="cancel-three" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "meet", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "different", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />Now a triangle arrives, and both slots are occupied.</p>
+    <p><Mark id="meet" />Instead of adding a third counter, remove one square, one circle, and the incoming triangle together.</p>
+    <p><Mark id="different" />Three different shapes. One of each. We'll keep a small tally of how many such groups we remove.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "cancel", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="one-pass" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 0.1, ease: "linear", params: { value: 0 } });
+    t.action(visual.advance, { from: "run", duration: 6.756, ease: "linear", params: { value: 15 } });
+    t.action(visual.advance, { from: "result", duration: 0.1, ease: "linear", params: { value: 15 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />Let's follow these fifteen shapes, in this order.</p>
+    <p><Mark id="run" />The same rule removes three groups. One of those groups has no square at all. Then the remaining shapes build up the counters.</p>
+    <p><Mark id="result" />At the end, we have five squares and one circle left in the summary. Three groups were removed.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "trace", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="bounds" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "hidden", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "interval", duration: 1.15, ease: "linear", params: { value: 3 } });
+    t.action(visual.advance, { from: "missing", duration: 1.15, ease: "linear", params: { value: 4 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />What does five actually tell us? At least five squares occurred: those copies survived.</p>
+    <p><Mark id="hidden" />Each removed group contained at most one square. Three groups could have hidden at most three more.</p>
+    <p><Mark id="interval" />So the true number of squares is somewhere from five to eight. The circle is somewhere from one to four.</p>
+    <p><Mark id="missing" />Even a shape missing from the summary cannot have appeared more than three times.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "bounds", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="error-budget" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "ledger", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "guarantee", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />That tally is an error budget, not a probability.</p>
+    <p><Mark id="ledger" />We saw fifteen shapes. Six remain in the counters. The other nine disappeared in groups of three. So there were exactly three cancellation steps.</p>
+    <p><Mark id="guarantee" />A count can be too low by at most three. It can never be too high. This is a guarantee, for every ordering of the stream.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "budget", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="heavy-hitters" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "line", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "uncertain", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />With two counters, any shape occurring more than a third of the time must survive.</p>
+    <p><Mark id="line" />Here, more than a third means more than five appearances.</p>
+    <p><Mark id="uncertain" />But surviving is not the same as passing that threshold. Our square could occur five times, or eight. The summary alone does not settle it.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "threshold", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="more-memory" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "four", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "narrow", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />Now replay the very same fifteen shapes, but allow three counters.</p>
+    <p><Mark id="four" />A cancellation needs four different shapes. This time, we remove just one group.</p>
+    <p><Mark id="narrow" />The square's surviving count is six. Its true count is between six and seven. One extra counter has made this interval much narrower.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "compare", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="decide" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "certain", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "exact", duration: 9.913, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />Put the threshold back at five. The entire interval, from six to seven, is above it.</p>
+    <p><Mark id="certain" />Now we can guarantee that the square appears more than a third of the time. No second pass needed for that decision.</p>
+    <p><Mark id="exact" />We still do not know its exact frequency. If we need that number, a second pass counts the surviving candidates. In our example, the square appears seven times.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "decide", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="tradeoff" timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "bound", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "scale", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />This is the Misra Gries algorithm. With m counters, we cancel groups of m plus one different values.</p>
+    <p><Mark id="bound" />There can be at most N divided by m plus one cancellation steps. That bounds how far any counter can underestimate its true frequency.</p>
+    <p><Mark id="scale" />Nine counters give an error of at most one tenth of the stream. Ninety nine give at most one percent. More memory buys a tighter guarantee, not a higher chance of being right.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "general", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
+<StorySection id="closing" holdAfter={10} timeline={(t) => {
+    const visual = t.visual("summary", misraGriesDefinition);
+    t.action(visual.advance, { from: "start", duration: 1.15, ease: "linear", params: { value: 1 } });
+    t.action(visual.advance, { from: "insight", duration: 1.15, ease: "linear", params: { value: 2 } });
+    t.action(visual.advance, { from: "end", duration: 1.15, ease: "linear", params: { value: 3 } });
+  }}>
+  <aside class="notes">
+    <p><Mark id="start" />We cannot remember every shape in a huge stream.</p>
+    <p><Mark id="insight" />But we can remember a few survivors, and account for what we threw away.</p>
+    <p><Mark id="end" />Sometimes the useful answer is not an exact count. It is an interval small enough to decide.</p>
+  </aside>
+  <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "closing", step: 0 }} client:only="react" /></VideoVisual>
+</StorySection>
+
