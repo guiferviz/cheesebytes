@@ -510,7 +510,8 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
   else if (scene === "bounds") {
     const spread = smooth(s),
       hidden = smooth(s - 1),
-      rise = smooth(s - 2);
+      rise = smooth(s - 2),
+      chart = smooth((rise - 0.55) / 0.45);
     content = (
       <>
         <FixedSummary summary={TWO[15]} opacity={1 - spread} />
@@ -539,7 +540,7 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
             target = 910 + i * 110;
           return (
             <g key={i} opacity={hidden}>
-              <g opacity={1 - rise}>
+              <g opacity={1 - smooth(rise / 0.35)}>
                 <rect
                   x={x - 100}
                   y={510}
@@ -583,7 +584,7 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
         <Caption opacity={smooth((rise - 0.5) / 0.5)}>
           5 survived + at most 3 lost
         </Caption>
-        <Range low={5} high={mix(5, 8, rise)} y={660} opacity={rise} />
+        <Range low={5} high={mix(5, 8, chart)} y={660} opacity={chart} />
       </>
     );
   } else if (scene === "threshold") {
@@ -602,20 +603,21 @@ export function MisraGriesVisual({ initial }: { initial: State }) {
       </>
     );
   } else if (scene === "replay") {
-    const reveal = smooth(s - 15);
+    const reveal = smooth(s - 15),
+      chart = smooth((reveal - 0.45) / 0.55);
     content = (
       <>
         <Caption>Replay the same stream · three counters</Caption>
-        <g opacity={1 - reveal}>
+        <g opacity={1 - smooth(reveal / 0.35)}>
           <TraceBoard progress={Math.min(15, s)} capacity={3} />
         </g>
         <Range
           low={mix(5, 6, reveal)}
           high={mix(8, 7, reveal)}
           y={mix(600, 420, reveal)}
-          opacity={reveal}
+          opacity={chart}
         />
-        <Text y={695} size={54} fill={gold} opacity={reveal}>
+        <Text y={695} size={54} fill={gold} opacity={chart}>
           6 survived + at most 1 lost
         </Text>
       </>
