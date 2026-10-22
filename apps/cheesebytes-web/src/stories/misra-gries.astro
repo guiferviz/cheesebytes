@@ -10,7 +10,8 @@ import { MisraGriesVisual, misraGriesDefinition } from "../components/cave/misra
     t.action(visual.advance, { from: "start", duration: 1.6, ease: "linear", params: { value: 1 } });
   }}>
   <aside class="notes">
-    <p><Mark id="start" />Does any shape appear more than a third of the time?</p>
+    <p><Mark id="look" />Look at this stream of shapes.</p>
+    <p><Mark id="start" />Does any one of them appear more than a third of the time?</p>
     <p><Mark id="memory" />Can we find it using as little memory as possible?</p>
   </aside>
   <VideoVisual id="summary"><MisraGriesVisual initial={{ scene: "hook", step: 0 }} client:only="react" /></VideoVisual>

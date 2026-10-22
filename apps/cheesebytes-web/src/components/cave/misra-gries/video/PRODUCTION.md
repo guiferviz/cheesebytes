@@ -17,7 +17,8 @@ every revision. Build instructions are in `preview/README.md` in this app.
 ## Self-contained opening
 
 The first frame already contains a moving mixture of familiar and irregular
-shapes, with recurring kinds among the variety. The spoken question asks whether
+shapes, with recurring kinds among the variety. The narration first invites us to look: “Look at this stream of shapes.” Only
+after that orientation does the question ask whether
 **any** kind exceeds a third, using as little memory as possible. It does not
 prescribe a counter for each kind or ask about a preselected square.
 
@@ -36,8 +37,8 @@ one candidate and one counter. Can we extend that idea by keeping a few more?”
 The picture shows >½, introduces the candidate/counter with the spoken clause,
 then carries the card into two empty slots. The fifteen-arrival example is
 announced explicitly, rather than pretending to continue the diverse stream.
-The opening occupies about 29 seconds; the complete interactive timeline is
-about 3:13, including the ending hold. English Kokoro af_heart narration and
+The opening occupies about 31 seconds; the complete interactive timeline is
+about 3:15, including the ending hold. English Kokoro af_heart narration and
 alignment were rebuilt for the changed words; unchanged paragraphs reuse the
 speech cache.
 
@@ -84,8 +85,7 @@ use the space above cards and their right gutters, keeping clear of existing
 shapes. Cancellation actors leave individually, settle at separate positions
 above their own slots, and fade together with the incoming kind. Surviving
 copies preserve their order as rows grow or shrink. Counts change when arrivals
-land or the removed group fades. Deletion groups show three dots
-with two counters and four with three. Incoming kinds, surviving identities and
+land or the removed group fades. The removed-group ledger shows only its total; repeated dot rows are omitted. Incoming kinds, surviving identities and
 fixed slot positions continue through cuts. Intro shapes vary geometrically to
 express an open set of kinds; the small worked example is announced explicitly.
 

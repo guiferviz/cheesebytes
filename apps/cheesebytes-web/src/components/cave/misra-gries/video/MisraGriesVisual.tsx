@@ -140,15 +140,7 @@ function FixedSummary({
     </g>
   );
 }
-function Ledger({
-  count,
-  capacity = 2,
-  opacity = 1,
-}: {
-  count: number;
-  capacity?: number;
-  opacity?: number;
-}) {
+function Ledger({ count, opacity = 1 }: { count: number; opacity?: number }) {
   return (
     <g opacity={opacity} data-removed={count}>
       <Text x={765} y={735} size={34} fill={muted} anchor="end">
@@ -157,22 +149,6 @@ function Ledger({
       <Text x={825} y={735} size={60} fill={gold}>
         {count}
       </Text>
-      {Array.from({ length: count }, (_, i) => (
-        <g
-          key={i}
-          transform={`translate(${800 + (i - (count - 1) / 2) * 95} 798)`}
-        >
-          {Array.from({ length: capacity + 1 }, (_, n) => (
-            <circle
-              key={n}
-              cx={(n - capacity / 2) * 18}
-              cy={0}
-              r={5}
-              fill={gold}
-            />
-          ))}
-        </g>
-      ))}
     </g>
   );
 }
@@ -241,7 +217,6 @@ function TraceBoard({
       )}
       <Ledger
         count={frame.summary.removed}
-        capacity={capacity}
         opacity={frame.summary.removed ? 1 : 0}
       />
     </g>
@@ -390,7 +365,7 @@ function SummaryToRange({ progress }: { progress: number }) {
             )}
           </Card>
         ))}
-        <Ledger count={1} capacity={3} />
+        <Ledger count={1} />
         {Array.from({ length: 5 }, (_, j) => (
           <Shape
             key={j}
