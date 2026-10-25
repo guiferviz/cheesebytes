@@ -65,8 +65,7 @@ import {
       <Mark id="many" />Eventually, we run out of space, even though the shapes keep arriving.
     </p>
     <p>
-      <Mark id="question" />So, can we find the majority without keeping a count for every
-      different shape?
+      <Mark id="question" />But do we need to count how often each shape appears to find the majority?
     </p>
     <Mark id="end" />
   </aside>
@@ -75,6 +74,7 @@ import {
   </VideoVisual>
 </StorySection>
 
+<!-- Narration: leave a brief pause after the preceding question. -->
 <StorySection id="cancel" timeline={(t) => {
     const visual = t.visual("majority", majorityVideoDefinition);
     t.action(visual.advance, { from: "pair-one", duration: 1.65, ease: "linear", params: { value: 1 } });
@@ -173,7 +173,8 @@ import {
       memory problem.
     </p>
     <p>
-      <Mark id="two" />Instead, we remember a candidate and its strength.
+      <Mark id="two" />Instead, we keep a candidate and a counter. The counter tells us how many
+      copies of that candidate haven't been cancelled. We'll call that its strength.
     </p>
     <p>
       <Mark id="first" />The first shape <Mark id="choose" />becomes our candidate, with a strength of <Mark id="one" />one.
@@ -278,14 +279,12 @@ import {
       existed. What happens if we don't know that?
     </p>
     <p>
-      <Mark id="candidate" />The algorithm can still leave us with a candidate.
+      Let's try a different stream, with seven shapes. <Mark id="candidate" />We run the same
+      process and finish with a <Mark id="survive" />square.
     </p>
     <p>
-      <Mark id="survive" />Surviving the cancellations doesn't prove that it appeared more
-      than half the time.
-    </p>
-    <p>
-      <Mark id="only" />It only means that the candidate survived those cancellations.
+      That gives us a candidate. <Mark id="only" />But to find out whether it's a majority,
+      we need to know how often it actually appeared.
     </p>
     <Mark id="end" />
   </aside>
@@ -302,17 +301,16 @@ import {
   }}>
   <aside class="notes">
     <p>
-      <Mark id="start" />In general, we need a second pass to check.
+      <Mark id="start" />If we can read the data again, we make a <Mark id="scan" />second pass
+      and count only the candidate.
     </p>
     <p>
-      <Mark id="scan" />This time, we count only the candidate and compare its frequency with
-      half the total.
+      Here, there are three squares out of seven. <Mark id="none" />That's less than half,
+      so there is no majority.
     </p>
     <p>
-      <Mark id="none" />If it doesn't exceed that threshold, there isn't a majority.
-    </p>
-    <p>
-      <Mark id="yes" />If it does, we have a <Mark id="confirmed" />majority.
+      <Mark id="yes" />In our earlier example, there were six squares out of ten.
+      <Mark id="confirmed" />That's more than half, so the square is confirmed as the majority.
     </p>
     <Mark id="end" />
   </aside>
